@@ -5,6 +5,18 @@ import { ErrorHandler } from '../errors/error-handler.js';
 import { GitMcpError } from '../errors/error-types.js';
 
 export class RepositoryValidator {
+  /**
+   * Get list of configured remotes
+   */
+  static async getRemotes(path: string, operation: string): Promise<string[]> {
+    const result = await CommandExecutor.executeGitCommand(
+      'remote',
+      operation,
+      path
+    );
+    return result.stdout.split('\n').filter(Boolean);
+  }
+
   static async validateLocalRepo(path: string, operation: string): Promise<void> {
     try {
       const gitDir = join(path, '.git');
