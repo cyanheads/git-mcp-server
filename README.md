@@ -2,9 +2,9 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue.svg)](https://www.typescriptlang.org/)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.4-green.svg)](https://modelcontextprotocol.io/)
-[![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Status](https://img.shields.io/badge/Status-Beta-yellow.svg)]()
+[![Status](https://img.shields.io/badge/Status-Stable-green.svg)]()
 
 A Model Context Protocol server that provides Git operations to Large Language Models. This tool enables LLMs to interact with Git repositories through a robust and flexible API.
 
