@@ -1,6 +1,6 @@
 # Git MCP Server
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue.svg)](https://www.typescriptlang.org/)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.4-green.svg)](https://modelcontextprotocol.io/)
 [![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -221,14 +221,21 @@ Push commits to remote:
 ```
 
 ### bulk_action
-Execute multiple operations:
+Execute multiple operations atomically. This is the preferred method for executing multiple Git operations as it:
+- Ensures operations are executed in the correct order
+- Provides atomic execution (all succeed or all fail)
+- Optimizes performance through reduced command overhead
+- Maintains consistent repository state
+- Automatically handles cache invalidation
+
+Example usage:
 ```typescript
 {
   "path": "/path/to/repo", // Optional
   "actions": [
     {
       "type": "stage",
-      "files": ["file1", "file2"]
+      "files": ["file1", "file2"] // Optional - if omitted, stages all changes
     },
     {
       "type": "commit",
@@ -236,17 +243,27 @@ Execute multiple operations:
     },
     {
       "type": "push",
-      "branch": "main"
+      "branch": "main",
+      "remote": "origin" // Optional - defaults to "origin"
     }
   ]
 }
 ```
 
+The bulk_action tool supports three types of operations:
+1. `stage`: Stage files for commit
+   - `files`: Optional array of files to stage. If omitted, stages all changes
+2. `commit`: Create a new commit
+   - `message`: Required commit message
+3. `push`: Push changes to remote
+   - `branch`: Required branch name
+   - `remote`: Optional remote name (defaults to "origin")
+
 ## Performance
 
 ### Caching Strategy
 
-The server implements two-level caching:
+The server implements a robust caching system built on top of simple-git, providing two-level caching:
 
 1. Repository State Cache:
    - Branch information
@@ -261,10 +278,19 @@ The server implements two-level caching:
    - Repository metadata
 
 Cache invalidation:
-- Automatic on state-changing operations
-- TTL-based expiration
-- Memory pressure-based eviction
-- LRU eviction policy
+- Automatic on state-changing operations (commit, push, etc.)
+- TTL-based expiration (configurable via GIT_CACHE_TTL)
+- Memory pressure-based eviction (monitored via GIT_MAX_MEMORY)
+- LRU eviction policy for optimal cache utilization
+- Smart invalidation based on operation dependencies
+- Partial cache updates for efficiency
+
+Implementation details:
+- Uses simple-git for reliable Git operations
+- Implements optimistic locking for cache updates
+- Maintains cache coherency across operations
+- Provides cache warming for frequently accessed data
+- Supports concurrent cache access with proper synchronization
 
 ### Performance Monitoring
 
