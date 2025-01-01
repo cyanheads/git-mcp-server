@@ -135,11 +135,12 @@ export class PerformanceMonitor {
    */
   recordMemoryUsage(context?: Record<string, any>): void {
     const memoryUsage = process.memoryUsage();
+    const memoryUsageMB = memoryUsage.heapUsed / 1024 / 1024; // Convert to MB
     
     // Record heap usage
     this.recordMetric({
       type: MetricType.MEMORY_USAGE,
-      value: memoryUsage.heapUsed / 1024 / 1024, // Convert to MB
+      value: memoryUsageMB,
       timestamp: Date.now(),
       labels: { type: 'heap' },
       context: {
@@ -151,7 +152,7 @@ export class PerformanceMonitor {
     });
 
     // Check thresholds
-    this.checkMemoryThresholds(memoryUsage.heapUsed / 1024 / 1024);
+    this.checkMemoryThresholds(memoryUsageMB);
   }
 
   /**
@@ -317,7 +318,9 @@ export class PerformanceMonitor {
             currentUsage: memoryUsageMB,
             threshold: this.thresholds.memory.critical
           },
-          operation: 'memory_monitor'
+          operation: 'memory_monitor',
+          severity: ErrorSeverity.CRITICAL,
+          category: ErrorCategory.SYSTEM
         }
       );
       ErrorHandler.handleSystemError(error, {
