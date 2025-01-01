@@ -66,10 +66,16 @@ export interface CommitOptions extends GitOptions, BasePathOptions {
 export interface PushPullOptions extends GitOptions, BasePathOptions {
   remote?: string;
   branch: string;
+  force?: boolean;  // Allow force push/pull
+  noVerify?: boolean;  // Skip pre-push/pre-pull hooks
+  tags?: boolean;  // Include tags
 }
 
 export interface BranchOptions extends GitOptions, BasePathOptions {
   name: string;
+  force?: boolean;  // Allow force operations
+  track?: boolean;  // Set up tracking mode
+  setUpstream?: boolean;  // Set upstream for push/pull
 }
 
 export interface CheckoutOptions extends GitOptions, BasePathOptions {
@@ -79,16 +85,25 @@ export interface CheckoutOptions extends GitOptions, BasePathOptions {
 export interface TagOptions extends GitOptions, BasePathOptions {
   name: string;
   message?: string;
+  force?: boolean;  // Allow force operations
+  annotated?: boolean;  // Create an annotated tag
+  sign?: boolean;  // Create a signed tag
 }
 
 export interface RemoteOptions extends GitOptions, BasePathOptions {
   name: string;
   url?: string;
+  force?: boolean;  // Allow force operations
+  mirror?: boolean;  // Mirror all refs
+  tags?: boolean;  // Include tags
 }
 
 export interface StashOptions extends GitOptions, BasePathOptions {
   message?: string;
   index?: number;
+  includeUntracked?: boolean;  // Include untracked files
+  keepIndex?: boolean;  // Keep staged changes
+  all?: boolean;  // Include ignored files
 }
 
 // New bulk action interfaces

@@ -254,7 +254,7 @@ export class GitOperations {
     );
   }
 
-  static async push({ path, remote = 'origin', branch }: PushPullOptions, context: GitToolContext): Promise<GitToolResult> {
+  static async push({ path, remote = 'origin', branch, force, noVerify, tags }: PushPullOptions, context: GitToolContext): Promise<GitToolResult> {
     const resolvedPath = this.getPath({ path });
     return await this.executeOperation(
       context.operation,
@@ -265,7 +265,7 @@ export class GitOperations {
         await RepositoryValidator.validateBranchExists(repoPath, branch, context.operation);
         
         const result = await CommandExecutor.executeGitCommand(
-          `push ${remote} ${branch}`,
+          `push ${remote} ${branch}${force ? ' --force' : ''}${noVerify ? ' --no-verify' : ''}${tags ? ' --tags' : ''}`,
           context.operation,
           repoPath
         );
@@ -399,7 +399,7 @@ export class GitOperations {
     );
   }
 
-  static async branchCreate({ path, name }: BranchOptions, context: GitToolContext): Promise<GitToolResult> {
+  static async branchCreate({ path, name, force, track, setUpstream }: BranchOptions, context: GitToolContext): Promise<GitToolResult> {
     const resolvedPath = this.getPath({ path });
     return await this.executeOperation(
       context.operation,
@@ -409,7 +409,7 @@ export class GitOperations {
         PathValidator.validateBranchName(name);
         
         const result = await CommandExecutor.executeGitCommand(
-          `checkout -b ${name}`,
+          `checkout -b ${name}${force ? ' --force' : ''}${track ? ' --track' : ' --no-track'}${setUpstream ? ' --set-upstream' : ''}`,
           context.operation,
           repoPath
         );
@@ -718,16 +718,26 @@ export class GitOperations {
     );
   }
 
-  static async stashSave({ path, message }: StashOptions, context: GitToolContext): Promise<GitToolResult> {
+  static async stashSave({ path, message, includeUntracked, keepIndex, all }: StashOptions, context: GitToolContext): Promise<GitToolResult> {
     const resolvedPath = this.getPath({ path });
     return await this.executeOperation(
       context.operation,
       resolvedPath,
       async () => {
         const { path: repoPath } = PathValidator.validateGitRepo(resolvedPath);
-        const command = typeof message === 'string' && message.length > 0 
-          ? `stash save "${message}"`
-          : 'stash';
+        let command = 'stash';
+        if (typeof message === 'string' && message.length > 0) {
+          command += ` save "${message}"`;
+        }
+        if (includeUntracked) {
+          command += ' --include-untracked';
+        }
+        if (keepIndex) {
+          command += ' --keep-index';
+        }
+        if (all) {
+          command += ' --all';
+        }
         const result = await CommandExecutor.executeGitCommand(
           command,
           context.operation,

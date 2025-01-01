@@ -172,6 +172,21 @@ export class ToolHandler {
                 type: 'string',
                 description: 'Branch name',
               },
+              force: {
+                type: 'boolean',
+                description: 'Force push changes',
+                default: false
+              },
+              noVerify: {
+                type: 'boolean',
+                description: 'Skip pre-push hooks',
+                default: false
+              },
+              tags: {
+                type: 'boolean',
+                description: 'Push all tags',
+                default: false
+              }
             },
             required: ['branch'],
           },
@@ -227,6 +242,21 @@ export class ToolHandler {
                 type: 'string',
                 description: 'Branch name',
               },
+              force: {
+                type: 'boolean',
+                description: 'Force create branch even if it exists',
+                default: false
+              },
+              track: {
+                type: 'boolean',
+                description: 'Set up tracking mode',
+                default: true
+              },
+              setUpstream: {
+                type: 'boolean',
+                description: 'Set upstream for push/pull',
+                default: false
+              }
             },
             required: ['name'],
           },
@@ -299,6 +329,21 @@ export class ToolHandler {
                 type: 'string',
                 description: 'Tag message',
               },
+              force: {
+                type: 'boolean',
+                description: 'Force create tag even if it exists',
+                default: false
+              },
+              annotated: {
+                type: 'boolean',
+                description: 'Create an annotated tag',
+                default: true
+              },
+              sign: {
+                type: 'boolean',
+                description: 'Create a signed tag',
+                default: false
+              }
             },
             required: ['name'],
           },
@@ -403,6 +448,21 @@ export class ToolHandler {
                 type: 'string',
                 description: 'Stash message',
               },
+              includeUntracked: {
+                type: 'boolean',
+                description: 'Include untracked files',
+                default: false
+              },
+              keepIndex: {
+                type: 'boolean',
+                description: 'Keep staged changes',
+                default: false
+              },
+              all: {
+                type: 'boolean',
+                description: 'Include ignored files',
+                default: false
+              }
             },
             required: [],
           },
