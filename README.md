@@ -1,11 +1,12 @@
 # Git MCP Server
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
-[![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.3-green.svg)](https://modelcontextprotocol.io/)
+[![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.4-green.svg)](https://modelcontextprotocol.io/)
+[![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Status](https://img.shields.io/badge/Status-Beta-orange.svg)]()
+[![Status](https://img.shields.io/badge/Status-Beta-yellow.svg)]()
 
-A Model Context Protocol server that provides comprehensive Git functionality to Large Language Models, enabling them to perform version control operations through a secure and standardized interface.
+A Model Context Protocol server that provides Git operations to Large Language Models. This tool enables LLMs to interact with Git repositories through a robust and flexible API.
 
 ## Table of Contents
 
@@ -14,75 +15,97 @@ A Model Context Protocol server that provides comprehensive Git functionality to
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Tools](#tools)
+- [Performance](#performance)
+- [Error Handling](#error-handling)
 - [Best Practices](#best-practices)
 - [Development](#development)
-- [Up Next](#up-next)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
 
-### Model Context Protocol Server
-
-The Git MCP Server implements the Model Context Protocol (MCP), created by Anthropic, which provides a standardized communication protocol between LLMs and external systems. The architecture consists of:
+Git MCP Server implements the Model Context Protocol (MCP), enabling standardized communication between LLMs and Git repositories through:
 
 - **Clients** (Claude Desktop, IDEs) that maintain server connections
-- **Servers** that provide tools and resources to clients
+- **Servers** that provide tools and resources (Like our Git MCP Server)
 - **LLMs** that interact with servers through client applications
 
-This architecture creates a secure boundary between LLMs and external systems while enabling controlled access to Git functionality. Through the MCP protocol, the Git server empowers LLMs to perform version control operations, manage repositories, and handle complex Git workflows — all within a secure and validated environment.
+### Core Components
+
+- **GitOperations**: Core Git command execution with error handling
+- **RepositoryValidator**: Comprehensive repository validation
+- **PathValidator**: Path validation and security checks
+- **CommandExecutor**: Secure command execution
+- **PerformanceMonitor**: Performance tracking and optimization
+- **RepositoryCache**: Caching system for Git operations
+- **ErrorHandler**: Structured error handling with recovery
 
 ## Features
 
-### Core Git Operations
+### Git Operations
+
 - Repository initialization and cloning
 - File staging and committing
 - Branch management
-- Remote operations
-- Tag handling
+- Tag operations
+- Remote repository handling
 - Stash management
+- Bulk operations support
 
-### Bulk Operations
-- Sequential operation execution
-- Atomic commits
-- Smart defaults
-- Error resilience
+### Performance Optimization
 
-### Safety Features
-- Path validation
-- Repository state verification
-- Embedded repository handling
-- Comprehensive error reporting
+- Repository state caching
+- Command result caching
+- Performance monitoring:
+  - Operation timing
+  - Memory usage tracking
+  - Resource utilization
+  - Cache hit rates
+- Automatic cache invalidation
+- Memory pressure monitoring
+
+### Error Handling
+
+Error severity levels:
+- CRITICAL: System-level failures
+- HIGH: Operation-blocking errors
+- MEDIUM: Non-blocking issues
+- LOW: Minor problems
+
+Error categories:
+- SYSTEM: System-level errors
+- VALIDATION: Input validation errors
+- OPERATION: Git operation errors
+- REPOSITORY: Repository state errors
+- NETWORK: Network-related errors
+- CONFIGURATION: Configuration errors
+- SECURITY: Security-related errors
+
+Error context tracking:
+- Operation details
+- Timestamps
+- Stack traces
+- Recovery steps
+- Technical context
+
+### Security
+
+- Path validation and sanitization
+- Command injection prevention
+- Repository access control
+- Secure credential handling
+- Input validation
+- Error message sanitization
 
 ## Installation
 
-### Setup Steps
+1. Install the package:
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/cyanheads/git-mcp-server.git
+npm install git-mcp-server
 ```
 
-2. Navigate to the project directory:
-```bash
-cd git-mcp-server
-```
-
-3. Install dependencies:
-```bash
-npm install
-```
-
-4. Build the project:
-```bash
-npm run build
-```
-
-The server is now ready to be configured and used with your MCP client.
-
-## Configuration
-
-The Git MCP Server requires configuration in your MCP client settings:
+2. Add to your MCP client settings:
 
 ```json
 {
@@ -91,141 +114,357 @@ The Git MCP Server requires configuration in your MCP client settings:
       "command": "node",
       "args": ["/path/to/git-mcp-server/build/index.js"],
       "env": {
-        "GIT_DEFAULT_PATH": "/optional/default/path/for/git/operations"
+        "GIT_DEFAULT_PATH": "/path/to/default/repo/directory",
+        "GIT_MAX_MEMORY": "1024", // Optional, in MB
+        "GIT_CACHE_TTL": "300", // Optional, in seconds
+        "GIT_LOG_LEVEL": "info" // Optional: debug, info, warn, error
       }
     }
   }
 }
 ```
 
+## Configuration
+
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| GIT_DEFAULT_PATH | Default path for Git operations | No |
+- `GIT_DEFAULT_PATH`: Default repository directory
+- `GIT_MAX_MEMORY`: Maximum memory usage (MB)
+- `GIT_CACHE_TTL`: Cache time-to-live (seconds)
+- `GIT_LOG_LEVEL`: Logging level
+- `GIT_PERFORMANCE_MONITOR`: Enable performance monitoring
+- `GIT_ERROR_DETAILS`: Include detailed error information
 
-### Path Requirements
+### Performance Tuning
 
-All paths must be absolute. For example:
-- Repository path: `/Users/username/projects/my-repo`
-- File paths: `/Users/username/projects/my-repo/src/file.js`
+Cache configuration:
+```json
+{
+  "repository": {
+    "ttl": 300,
+    "maxSize": 100
+  },
+  "command": {
+    "ttl": 60,
+    "maxSize": 500
+  }
+}
+```
+
+Resource thresholds:
+```json
+{
+  "memory": {
+    "warning": 1024,
+    "critical": 2048
+  },
+  "operations": {
+    "warning": 100,
+    "critical": 200
+  }
+}
+```
 
 ## Tools
 
-### Basic Operations
-
-#### init
-Initializes a new Git repository.
+### init
+Initialize a new Git repository:
 ```typescript
 {
-  "path": string  // Path to initialize
+  "path": "/path/to/repo" // Optional if GIT_DEFAULT_PATH is set
 }
 ```
 
-#### clone
-Clones a repository.
+### clone
+Clone a repository:
 ```typescript
 {
-  "url": string,  // Repository URL (required)
-  "path": string  // Clone destination
+  "url": "https://github.com/user/repo.git",
+  "path": "/path/to/destination" // Optional
 }
 ```
 
-#### status
-Gets repository status.
+### status
+Get repository status:
 ```typescript
 {
-  "path": string  // Repository path
+  "path": "/path/to/repo" // Optional
 }
 ```
 
-### Bulk Operations
-
-#### bulk_action
-Executes multiple Git operations in sequence. This is the preferred way to execute multiple operations.
-
+### add
+Stage files:
 ```typescript
 {
-  "path": string,     // Repository path
-  "actions": [        // Array of operations to execute
+  "path": "/path/to/repo", // Optional
+  "files": ["/path/to/file1", "/path/to/file2"]
+}
+```
+
+### commit
+Create a commit:
+```typescript
+{
+  "path": "/path/to/repo", // Optional
+  "message": "Commit message"
+}
+```
+
+### push
+Push commits to remote:
+```typescript
+{
+  "path": "/path/to/repo", // Optional
+  "remote": "origin", // Optional, defaults to "origin"
+  "branch": "main"
+}
+```
+
+### bulk_action
+Execute multiple operations:
+```typescript
+{
+  "path": "/path/to/repo", // Optional
+  "actions": [
     {
       "type": "stage",
-      "files": string[]  // Optional - if omitted, stages all changes
+      "files": ["file1", "file2"]
     },
     {
       "type": "commit",
-      "message": string
+      "message": "Commit message"
     },
     {
       "type": "push",
-      "branch": string,
-      "remote": string   // Optional - defaults to "origin"
+      "branch": "main"
     }
   ]
 }
 ```
 
-### Branch Operations
+## Performance
 
-#### branch_list, branch_create, branch_delete, checkout
-Manage branches and working tree.
+### Caching Strategy
 
-### Tag Operations
+The server implements two-level caching:
 
-#### tag_list, tag_create, tag_delete
-Manage repository tags.
+1. Repository State Cache:
+   - Branch information
+   - Status
+   - Tags
+   - Remotes
+   - Stash entries
 
-### Remote Operations
+2. Command Result Cache:
+   - Common command outputs
+   - Validation results
+   - Repository metadata
 
-#### remote_list, remote_add, remote_remove
-Manage remote repositories.
+Cache invalidation:
+- Automatic on state-changing operations
+- TTL-based expiration
+- Memory pressure-based eviction
+- LRU eviction policy
 
-### Stash Operations
+### Performance Monitoring
 
-#### stash_list, stash_save, stash_pop
-Manage working directory changes.
+Metrics collected:
+- Operation timing
+- Memory usage
+- Cache hit rates
+- Resource utilization
+- Command execution stats
+
+Monitoring tools:
+```typescript
+// Get performance statistics
+const stats = await performanceMonitor.getStatistics();
+
+// Get cache statistics
+const cacheStats = await repositoryCache.getStats();
+
+// Get operation metrics
+const metrics = await performanceMonitor.getMetrics(
+  MetricType.OPERATION_DURATION,
+  startTime,
+  endTime
+);
+```
+
+## Error Handling
+
+### Error Types
+
+```typescript
+// System errors
+throw new SystemError('Disk space exhausted', {
+  operation: 'clone',
+  path: '/path/to/repo'
+});
+
+// Validation errors
+throw new ValidationError('Invalid branch name', {
+  operation: 'branch_create',
+  details: { name: 'invalid/name' }
+});
+
+// Operation errors
+throw new OperationError('Push failed', {
+  operation: 'push',
+  command: 'git push origin main'
+});
+```
+
+### Error Recovery
+
+Each error includes recovery steps:
+```typescript
+try {
+  await gitOps.push(options);
+} catch (error) {
+  if (error instanceof GitMcpError) {
+    console.log('Recovery steps:', error.getRecoverySteps());
+  }
+}
+```
+
+### Error Context
+
+Errors include detailed context:
+```typescript
+{
+  "name": "OperationError",
+  "message": "Push failed: remote connection error",
+  "code": "INTERNAL_ERROR",
+  "severity": "HIGH",
+  "category": "NETWORK",
+  "context": {
+    "operation": "push",
+    "path": "/path/to/repo",
+    "command": "git push origin main",
+    "timestamp": 1234567890,
+    "recoverySteps": [
+      "Check network connection",
+      "Verify remote URL",
+      "Check credentials"
+    ]
+  }
+}
+```
 
 ## Best Practices
 
-### Path Management
-- Always use absolute paths
-- Validate paths before operations
-- Handle embedded repositories properly
+### Repository Operations
 
-### Bulk Operations
-- Use bulk_action for multiple operations
-- Handle operation dependencies correctly
-- Provide clear commit messages
+1. Use bulk operations for multiple changes:
+```typescript
+await gitOps.executeBulkActions({
+  actions: [
+    { type: 'stage', files: ['file1', 'file2'] },
+    { type: 'commit', message: 'Update files' },
+    { type: 'push', branch: 'main' }
+  ]
+});
+```
 
-### Error Handling
-- Check operation results
-- Handle partial success scenarios
-- Validate repository state
+2. Validate paths and inputs:
+```typescript
+PathValidator.validatePath(path, {
+  mustExist: true,
+  allowDirectory: true
+});
+```
 
-## Development
+3. Handle embedded repositories:
+```typescript
+const { path, hasEmbeddedRepo } = PathValidator.validateGitRepo(path);
+if (hasEmbeddedRepo) {
+  // Handle embedded .git directories
+}
+```
 
-```bash
-# Build the project
-npm run build
+### Performance
 
-# Watch for changes
-npm run watch
+1. Use caching appropriately:
+```typescript
+const result = await repositoryCache.getState(
+  repoPath,
+  RepoStateType.BRANCH,
+  'branch -a',
+  () => executeGitCommand('branch -a')
+);
+```
 
-# Run MCP inspector
-npm run inspector
+2. Monitor resource usage:
+```typescript
+performanceMonitor.recordMemoryUsage();
+performanceMonitor.recordResourceUsage('cpu', cpuUsage);
+```
+
+3. Handle cache invalidation:
+```typescript
+repositoryCache.invalidateState(repoPath, RepoStateType.STATUS);
+repositoryCache.invalidateCommand(repoPath, 'status');
 ```
 
 ### Error Handling
 
-The server provides detailed error information:
-- Invalid paths or arguments
-- Git command failures
-- Repository state errors
-- Permission issues
+1. Use appropriate error types:
+```typescript
+if (!isValidBranch(name)) {
+  throw new ValidationError(`Invalid branch name: ${name}`, {
+    operation: 'branch_create',
+    details: { name }
+  });
+}
+```
+
+2. Include recovery steps:
+```typescript
+throw new NetworkError('Remote unreachable', {
+  operation: 'push',
+  recoverySteps: [
+    'Check network connection',
+    'Verify remote URL'
+  ]
+});
+```
+
+3. Log errors appropriately:
+```typescript
+logger.error(
+  operation,
+  'Operation failed',
+  path,
+  error,
+  { command, context }
+);
+```
+
+## Development
+
+1. Clone the repository:
+```bash
+git clone https://github.com/your-org/git-mcp-server.git
+cd git-mcp-server
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Build the project:
+```bash
+npm run build
+```
+
+4. Run tests:
+```bash
+npm test
+```
 
 ## Contributing
-
-I welcome contributions! Please follow these steps:
 
 1. Fork the repository
 2. Create a feature branch

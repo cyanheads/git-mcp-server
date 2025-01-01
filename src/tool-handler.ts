@@ -7,7 +7,8 @@ import {
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { GitOperations } from './git-operations.js';
 import { logger } from './utils/logger.js';
-import { CommandError } from './utils/command.js';
+import { ErrorHandler } from './errors/error-handler.js';
+import { GitMcpError } from './errors/error-types.js';
 import {
   isInitOptions,
   isCloneOptions,
@@ -40,12 +41,13 @@ export class ToolHandler {
 
   private validateArguments<T extends BasePathOptions>(operation: string, args: unknown, validator: (obj: any) => obj is T): T {
     if (!args || !validator(args)) {
-      const error = new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid arguments for operation: ${operation}`
+      throw ErrorHandler.handleValidationError(
+        new Error(`Invalid arguments for operation: ${operation}`),
+        { 
+          operation,
+          details: { args }
+        }
       );
-      logger.error(operation, 'Argument validation failed', undefined, error, { args });
-      throw error;
     }
 
     // If path is not provided, use default path from environment
@@ -609,20 +611,25 @@ export class ToolHandler {
           }
 
           default:
-            logger.error(operation, `Unknown tool: ${request.params.name}`);
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `Unknown tool: ${request.params.name}`
+            throw ErrorHandler.handleValidationError(
+              new Error(`Unknown tool: ${request.params.name}`),
+              { operation }
             );
         }
-      } catch (error) {
-        if (error instanceof McpError) throw error;
-        if (error instanceof CommandError) {
-          throw new McpError(ErrorCode.InternalError, error.message);
+      } catch (error: unknown) {
+        // If it's already a GitMcpError or McpError, rethrow it
+        if (error instanceof GitMcpError || error instanceof McpError) {
+          throw error;
         }
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Git operation failed: ${(error as Error).message}`
+
+        // Otherwise, wrap it in an appropriate error type
+        throw ErrorHandler.handleOperationError(
+          error instanceof Error ? error : new Error('Unknown error'),
+          {
+            operation,
+            path: context.path,
+            details: { tool: request.params.name }
+          }
         );
       }
     });

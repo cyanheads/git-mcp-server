@@ -1,7 +1,9 @@
 import { ExecException, exec, ExecOptions } from 'child_process';
-import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { logger } from './logger.js';
 import { PathResolver } from './paths.js';
+import { ErrorHandler } from '../errors/error-handler.js';
+import { ErrorCategory, ErrorSeverity, GitMcpError } from '../errors/error-types.js';
 
 export interface CommandResult {
   stdout: string;
@@ -10,45 +12,89 @@ export interface CommandResult {
   workingDir?: string;
 }
 
-export class CommandError extends McpError {
-  constructor(
-    error: ExecException,
-    result: Partial<CommandResult>,
-    operation: string
-  ) {
-    const message = CommandError.formatErrorMessage(error, result);
-    super(ErrorCode.InternalError, message);
-    
-    // Log the error with full context
-    logger.error(operation, 'Command execution failed', result.workingDir, this, {
-      command: result.command,
+/**
+ * Formats a command error message with detailed context
+ */
+function formatCommandError(error: ExecException, result: Partial<CommandResult>): string {
+  let message = `Command failed with exit code ${error.code}`;
+  
+  if (result.command) {
+    message += `\nCommand: ${result.command}`;
+  }
+  
+  if (result.workingDir) {
+    message += `\nWorking Directory: ${result.workingDir}`;
+  }
+  
+  if (result.stdout) {
+    message += `\nOutput: ${result.stdout}`;
+  }
+  
+  if (result.stderr) {
+    message += `\nError: ${result.stderr}`;
+  }
+  
+  return message;
+}
+
+/**
+ * Creates a command error with appropriate category and severity
+ */
+function createCommandError(
+  error: ExecException,
+  result: Partial<CommandResult>,
+  operation: string
+): GitMcpError {
+  const message = formatCommandError(error, result);
+  const context = {
+    operation,
+    path: result.workingDir,
+    command: result.command,
+    details: {
       exitCode: error.code,
       stdout: result.stdout,
-      stderr: result.stderr,
-    });
+      stderr: result.stderr
+    }
+  };
+
+  // Determine error category and severity based on error code and context
+  const errorCode = error.code?.toString() || '';
+
+  // System errors
+  if (errorCode === 'ENOENT') {
+    return ErrorHandler.handleSystemError(error, context);
   }
 
-  private static formatErrorMessage(error: ExecException, result: Partial<CommandResult>): string {
-    let message = `Command failed with exit code ${error.code}`;
-    
-    if (result.command) {
-      message += `\nCommand: ${result.command}`;
-    }
-    
-    if (result.workingDir) {
-      message += `\nWorking Directory: ${result.workingDir}`;
-    }
-    
-    if (result.stdout) {
-      message += `\nOutput: ${result.stdout}`;
-    }
-    
-    if (result.stderr) {
-      message += `\nError: ${result.stderr}`;
-    }
-    
-    return message;
+  // Security errors
+  if (errorCode === 'EACCES') {
+    return ErrorHandler.handleSecurityError(error, context);
   }
+
+  // Validation errors
+  if (errorCode === 'ENOTDIR' || errorCode === 'ENOTEMPTY') {
+    return ErrorHandler.handleValidationError(error, context);
+  }
+
+  // Git-specific error codes
+  const numericCode = typeof error.code === 'number' ? error.code : 
+                     typeof error.code === 'string' ? parseInt(error.code, 10) : 
+                     null;
+  
+  if (numericCode !== null) {
+    switch (numericCode) {
+      case 128: // Repository not found or invalid
+        return ErrorHandler.handleRepositoryError(error, context);
+      case 129: // Invalid command or argument
+        return ErrorHandler.handleValidationError(error, context);
+      case 130: // User interrupt
+        return ErrorHandler.handleOperationError(error, context);
+      default:
+        return ErrorHandler.handleOperationError(error, context);
+    }
+  }
+
+  // Default to operation error for unknown cases
+  return ErrorHandler.handleOperationError(error, context);
 }
 
 export class CommandExecutor {
@@ -88,7 +134,7 @@ export class CommandExecutor {
 
         // Log command result
         if (error) {
-          reject(new CommandError(error, result, operation));
+          reject(createCommandError(error, result, operation));
           return;
         }
 
@@ -135,7 +181,7 @@ export class CommandExecutor {
     try {
       return await this.execute(`git ${command}`, operation, workingDir, gitOptions);
     } catch (error) {
-      if (error instanceof CommandError) {
+      if (error instanceof GitMcpError) {
         // Add git-specific context to error
         logger.error(operation, 'Git command failed', workingDir, error, {
           command: `git ${command}`,

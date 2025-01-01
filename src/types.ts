@@ -1,5 +1,11 @@
 import { ExecOptions } from 'child_process';
 
+export enum ErrorCode {
+  InvalidParams = 'InvalidParams',
+  InternalError = 'InternalError',
+  InvalidState = 'InvalidState'
+}
+
 export interface GitOptions {
   /**
    * Absolute path to the working directory
