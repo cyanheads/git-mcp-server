@@ -8,6 +8,10 @@
 
 A Model Context Protocol server that provides Git operations to Large Language Models. This tool enables LLMs to interact with Git repositories through a robust and flexible API.
 
+<a href="https://glama.ai/mcp/servers/e0hyslgby6">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/e0hyslgby6/badge" alt="Git Server MCP server" />
+</a>
+
 ## Table of Contents
 
 - [Overview](#overview)
