@@ -27,7 +27,7 @@ export class GlobalSettings {
     }
     // Normalize the base directory path
     this._allowedBaseDir = path.resolve(baseDir); 
-    console.log(`[GlobalSettings] Allowed base directory set to: ${this._allowedBaseDir}`);
+    console.error(`[GlobalSettings] Allowed base directory set to: ${this._allowedBaseDir}`);
   }
 
   /**
