@@ -86,7 +86,7 @@ export function setupBranchTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            text: `Error: ${error instanceof Error ? error.message : JSON.stringify(error, null, 2)}`
           }],
           isError: true
         };
@@ -147,7 +147,7 @@ export function setupBranchTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            text: `Error: ${error instanceof Error ? error.message : JSON.stringify(error, null, 2)}`
           }],
           isError: true
         };
@@ -203,7 +203,7 @@ export function setupBranchTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            text: `Error: ${error instanceof Error ? error.message : JSON.stringify(error, null, 2)}`
           }],
           isError: true
         };
@@ -259,7 +259,7 @@ export function setupBranchTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            text: `Error: ${error instanceof Error ? error.message : JSON.stringify(error, null, 2)}`
           }],
           isError: true
         };
@@ -333,7 +333,7 @@ export function setupBranchTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`
+            text: `Error: ${error instanceof Error ? error.message : JSON.stringify(error, null, 2)}`
           }],
           isError: true
         };
