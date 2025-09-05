@@ -1,0 +1,13 @@
+services:
+  git-mcp-server:
+    image: git-mcp-server
+    container_name: gitmcp
+    ports:
+      - "3015:3015"
+    volumes:
+      # Use to expose your code base to the service.
+      # Example mount for linux/wsl/mac, replace <username> with your actual username.
+      - /home/<username>/code:/home/<username>/code
+      # Example mount for windows, replace <username> with your actual username.
+      - /mnt/c/Users/<username>/code:/windows-code
+    restart: unless-stopped

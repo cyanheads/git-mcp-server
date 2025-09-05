@@ -120,7 +120,7 @@ Add the following to your MCP client's configuration file (e.g., `cline_mcp_sett
 npm install @cyanheads/git-mcp-server
 ```
 
-### 3. Running the Server
+##### Running the Server
 
 - **Production (Stdio):**
   ```bash
@@ -138,6 +138,44 @@ npm install @cyanheads/git-mcp-server
   ```bash
   npm run dev:http
   ```
+
+### Installing witrh Docker
+
+You can use the Dockerfile to create an image that hosts the mcp server. To build:
+
+```sh
+./scripts/build-docker.sh
+```
+
+Once complete, run the docker container. Refer to the example [docker-compose](./scripts/docker-compose.example.yaml) to create a docker compose file for your container. Once completed you can start the server with, for example, if you've put a file called `docker-compose.git-mcp.yaml` in your home directory;
+
+
+```sh
+docker compose -f ~/docker-compose.git-mcp.yaml up -d
+```
+
+#### Considerations when running with docker
+
+Your local file system is made available to the server in Docker using a volume mount. This doesn't change the permissions; it appears inside the container
+with the same uid/gid as your host machine.
+
+##### Privileges to read/write files in the mount
+
+The docker image MUST be built with the same uid/gid as your active user using the server. Otherwise, it may not be able to access the files on the mount. The build script should configure this correctly.
+
+You need to add a volume that exposes the root of the git repos you plan to work with. The best strategy for this depends on the operating system
+
+##### Linux/Mac/WSL
+
+It's recommended to  configure the volume at the same path inside the container as the actual path on your computer. This way agents are likely to find your repositories easily since the path will be the same as from the host where it's making the request.
+
+##### Windows
+
+If you're using Windows, this won't work, since the paths may include drive letters or UNC paths. Additionally, Docker on Windows 
+
+  - Repos in the WSL filesystem work the same way as linux/mac
+  - Repos in the windows filesystem will need to be accessed through the WSL mount, e.g. /mnt/c for the C drive. Since paths won't map the same way as the do in *nix type systems, I'd suggest making a volume called `/windows-code` or similar. Agents can be trained to map windows paths to this root when querying the server.
+
 
 ## ⚙️ Configuration
 
