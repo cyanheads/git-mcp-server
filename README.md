@@ -139,7 +139,7 @@ npm install @cyanheads/git-mcp-server
   npm run dev:http
   ```
 
-### Installing witrh Docker
+### Installing with Docker
 
 You can use the Dockerfile to create an image that hosts the mcp server. To build:
 
@@ -167,14 +167,14 @@ You need to add a volume that exposes the root of the git repos you plan to work
 
 ##### Linux/Mac/WSL
 
-It's recommended to  configure the volume at the same path inside the container as the actual path on your computer. This way agents are likely to find your repositories easily since the path will be the same as from the host where it's making the request.
+It's recommended that you configure the volume at the same path inside the container as the actual path on your computer. This way agents are likely to find your repositories easily since the path will be the same as from the host where it's making the request.
 
 ##### Windows
 
-If you're using Windows, this won't work, since the paths may include drive letters or UNC paths. Additionally, Docker on Windows 
+If you're using Windows, this won't work, since the paths may include drive letters or UNC paths.
 
   - Repos in the WSL filesystem work the same way as linux/mac
-  - Repos in the windows filesystem will need to be accessed through the WSL mount, e.g. /mnt/c for the C drive. Since paths won't map the same way as the do in *nix type systems, I'd suggest making a volume called `/windows-code` or similar. Agents can be trained to map windows paths to this root when querying the server.
+  - Repos in the windows filesystem will need to be accessed through the WSL mount, e.g. `/mnt/c` for the C drive. Since paths won't map the same way as the do in *nix type systems, I'd suggest making a volume called `/windows-code` or similar. Agents can be trained to map windows paths to this root when querying the server.
 
 
 ## ⚙️ Configuration
