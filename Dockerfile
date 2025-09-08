@@ -2,7 +2,6 @@
 # Use a specific Node.js version known to work, Alpine for smaller size
 FROM node:23-alpine AS base
 WORKDIR /usr/src/app
-#ENV NODE_ENV=production
 
 ENV MCP_TRANSPORT_TYPE=http 
 ARG MCP_HTTP_HOST=0.0.0.0
@@ -11,19 +10,6 @@ ARG MCP_HTTP_PORT=3015
 ENV MCP_HTTP_PORT=${MCP_HTTP_PORT}
 ARG MCP_LOG_LEVEL=info
 ENV MCP_LOG_LEVEL=${MCP_LOG_LEVEL}
-ARG USER_ID
-ARG GROUP_ID
-ARG GIT_USER_EMAIL
-ARG GIT_USER_NAME
-
-# The user/group ID must match your local user/group ID
-RUN test -n "$USER_ID" || (echo "ERROR: USER_ID build argument is required" && exit 1)
-RUN test -n "$GROUP_ID" || (echo "ERROR: GROUP_ID build argument is required" && exit 1)
-RUN test -n "$GIT_USER_EMAIL" || (echo "ERROR: GIT_USER_EMAIL build argument is required" && exit 1)
-RUN test -n "$GIT_USER_NAME" || (echo "ERROR: GIT_USER_NAME build argument is required" && exit 1)
-
-ENV GIT_USER_EMAIL=${GIT_USER_EMAIL}
-ENV GIT_USER_NAME=${GIT_USER_NAME}
 
 # Force to log to console
 ENV MCP_LOG_LEVEL=info
@@ -64,24 +50,21 @@ COPY package.json .
 RUN apk update
 RUN apk add git
 
-# The container has a default user called node(1000), we need to delete it
-# in case this conflicts with our local user/group ID
-RUN deluser node
-
-# Create a non-root user and switch to ituse
-RUN addgroup -g ${GROUP_ID} appgroup 
-RUN adduser -u ${USER_ID} -G appgroup -D appuser
-
 # This seems to need to exist, though we really just want to log to the console
-RUN mkdir logs && chown appuser:appgroup logs
+RUN mkdir logs && chmod 777 logs
 
-USER appuser:appgroup
+COPY ./scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Configure git before switching to non-root user
-RUN git config --global user.email "${GIT_USER_EMAIL}"
-RUN git config --global user.name "${GIT_USER_NAME}"
+# In this base image "node" is 1000:1000. It doesn't matter what user is used to run the server;
+# rather the user ID should match the uid/gid of the host user so that the server can 
+# read and write files in the volume mount.
+RUN chmod 777 /home/node
+ENV HOME=/home/node
+USER node:node
 
+ENV NODE_ENV=production
 EXPOSE ${MCP_HTTP_PORT}
 
-# Command to run the application
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

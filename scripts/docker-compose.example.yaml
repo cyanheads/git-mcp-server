@@ -4,6 +4,13 @@ services:
     container_name: gitmcp
     ports:
       - "3015:3015"
+    environment:
+      # Git user configuration - set these to your Git user details
+      - GIT_USER_NAME=Your Name
+      - GIT_USER_EMAIL=your.email@example.com
+      # Optional: Override other MCP settings
+      # - MCP_LOG_LEVEL=debug
+      # - GIT_SIGN_COMMITS=true
     volumes:
       # Use to expose your code base to the service.
       # Example mount for linux/wsl/mac, replace <username> with your actual username.
