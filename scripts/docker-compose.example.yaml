@@ -4,6 +4,8 @@ services:
     container_name: gitmcp
     ports:
       - "3015:3015"
+    # Configure to run with the same user ID as the host user
+    user: "1000:1000"
     environment:
       # Git user configuration - set these to your Git user details
       - GIT_USER_NAME=Your Name
