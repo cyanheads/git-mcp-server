@@ -163,3 +163,7 @@ coverage/
 repomix-output*
 mcp-servers.json
 mcp-config.json
+
+# AI Agents
+
+.claude/
