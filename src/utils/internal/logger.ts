@@ -105,7 +105,11 @@ export class Logger {
     // CRITICAL: STDIO transport MUST NOT output colored logs to stdout.
     // The MCP specification requires clean JSON-RPC on stdout with no ANSI codes.
     // Only use pretty/colored output for HTTP mode or when explicitly debugging.
-    const useColoredOutput = isDevelopment && transportType !== 'stdio';
+    // Respect NO_COLOR environment variable (https://no-color.org/)
+    const noColorEnv =
+      process.env.NO_COLOR === '1' || process.env.FORCE_COLOR === '0';
+    const useColoredOutput =
+      isDevelopment && transportType !== 'stdio' && !noColorEnv;
 
     if (useColoredOutput && !isServerless) {
       // Try to resolve 'pino-pretty' robustly even when bundled (e.g., Bun/ESM),
