@@ -28,7 +28,7 @@ describe('logStartupBanner', () => {
     restoreIsTTY();
   });
 
-  it('logs the banner when stdout is a TTY', () => {
+  it('logs the banner to stdout when stdout is a TTY (no transport type)', () => {
     Object.defineProperty(process.stdout, 'isTTY', {
       configurable: true,
       value: true,
@@ -41,6 +41,36 @@ describe('logStartupBanner', () => {
     expect(logSpy).toHaveBeenCalledWith('Test banner');
   });
 
+  it('logs the banner to stdout when stdout is a TTY in HTTP mode', () => {
+    Object.defineProperty(process.stdout, 'isTTY', {
+      configurable: true,
+      value: true,
+    });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    logStartupBanner('Test banner', 'http');
+
+    expect(logSpy).toHaveBeenCalledWith('Test banner');
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('logs the banner to stderr when stdout is a TTY in STDIO mode', () => {
+    Object.defineProperty(process.stdout, 'isTTY', {
+      configurable: true,
+      value: true,
+    });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    logStartupBanner('Test banner', 'stdio');
+
+    expect(errorSpy).toHaveBeenCalledWith('Test banner');
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
   it('does not log when stdout is not a TTY', () => {
     Object.defineProperty(process.stdout, 'isTTY', {
       configurable: true,
@@ -48,9 +78,11 @@ describe('logStartupBanner', () => {
     });
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     logStartupBanner('Should not appear');
 
     expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });

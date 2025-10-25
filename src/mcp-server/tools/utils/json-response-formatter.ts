@@ -155,7 +155,9 @@ export function createJsonFormatter<T>(
           cacheKey = JSON.stringify({ result: filteredResult, verbosity });
           const cached = cache.get(cacheKey);
           if (cached) {
-            if (debug) console.log('[JsonFormatter] Cache hit');
+            if (debug && process.stderr?.isTTY) {
+              console.log('[JsonFormatter] Cache hit');
+            }
             return [{ type: 'text', text: cached }];
           }
         } catch {
@@ -175,7 +177,7 @@ export function createJsonFormatter<T>(
         cache.set(cacheKey, jsonString);
       }
 
-      if (debug) {
+      if (debug && process.stderr?.isTTY) {
         const elapsed = Date.now() - startTime;
         console.log(
           `[JsonFormatter] ${elapsed}ms, ~${estimateTokenCount(jsonString)} tokens`,
@@ -189,7 +191,9 @@ export function createJsonFormatter<T>(
           ? error.message
           : 'Unknown formatting error';
 
-      if (debug) console.error('[JsonFormatter] Error:', error);
+      if (debug && process.stderr?.isTTY) {
+        console.error('[JsonFormatter] Error:', error);
+      }
 
       return [
         {

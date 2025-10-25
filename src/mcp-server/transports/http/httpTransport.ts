@@ -381,6 +381,7 @@ function startHttpServerWithRetry(
                 });
                 logStartupBanner(
                   `\n🚀 MCP Server running at: ${serverAddress}`,
+                  'http',
                 );
               },
             );

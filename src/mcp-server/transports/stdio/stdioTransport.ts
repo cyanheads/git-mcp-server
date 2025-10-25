@@ -74,6 +74,7 @@ export async function startStdioTransport(
     );
     logStartupBanner(
       `\n🚀 MCP Server running in STDIO mode.\n   (MCP Spec: 2025-06-18 Stdio Transport)\n`,
+      'stdio',
     );
     return server;
   } catch (err) {

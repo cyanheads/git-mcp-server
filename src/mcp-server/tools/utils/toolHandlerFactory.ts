@@ -146,13 +146,16 @@ export function createMcpToolHandler<
     // Note: This is purely defensive - the MCP SDK should always provide a valid context
     if (!validateSdkContext(callContext)) {
       // Log without context since we don't have a RequestContext yet
-      console.warn(
-        `[${toolName}] Invalid SDK context received from MCP framework:`,
-        {
-          contextType: typeof callContext,
-          hasContext: !!callContext,
-        },
-      );
+      // Only log to console if TTY to avoid polluting stderr in STDIO mode
+      if (process.stderr?.isTTY) {
+        console.warn(
+          `[${toolName}] Invalid SDK context received from MCP framework:`,
+          {
+            contextType: typeof callContext,
+            hasContext: !!callContext,
+          },
+        );
+      }
       // Continue anyway - MCP SDK controls this, so we trust it
     }
 
