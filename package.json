@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/cyanheads/git-mcp-server#readme",
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --external pino --external pino-pretty",
     "build:worker": "bun build ./src/worker.ts --outdir ./dist --target bun --no-external",
     "deploy:dev": "MCP_TRANSPORT_TYPE=http bunx wrangler dev",
     "deploy:prod": "MCP_TRANSPORT_TYPE=http bunx wrangler deploy",
