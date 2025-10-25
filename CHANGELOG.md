@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.5.4 - 2025-10-24
+
+### Fixed
+
+- **Console Output in Non-TTY Environments**: Enhanced logging to prevent ANSI codes and debug output from polluting non-TTY environments, especially STDIO mode. Added TTY checks (`process.stderr?.isTTY`) throughout logging infrastructure to ensure clean JSON-RPC output.
+  - JSON response formatter now checks TTY before debug logging
+  - Tool handler factory validates SDK context only when TTY available
+  - Logger startup messages conditional on TTY to avoid stderr pollution
+  - Startup banner uses stderr in STDIO mode (stdout reserved for MCP JSON-RPC)
+
+### Changed
+
+- **Dependencies**: Moved `pino` and `pino-pretty` from devDependencies to regular dependencies for better production deployment
+- **Dependency Updates**:
+  - Updated OpenTelemetry packages from 0.206.x to 0.207.x
+  - Updated MCP SDK from 1.20.0 to 1.20.2
+  - Updated ESLint and TypeScript-ESLint packages (9.37.0 → 9.38.0, 8.46.0 → 8.46.2)
+  - Updated Vitest from 3.2.4 to 4.0.3
+  - Updated Hono from 4.9.12 to 4.10.3
+  - Updated Vite from 7.1.9 to 7.1.12
+  - Various other package updates (MSW, OpenAI, Repomix, etc.)
+
+### Technical Details
+
+- The STDIO transport requires pristine stdout for MCP JSON-RPC protocol compliance
+- All startup banners, debug output, and logs now respect TTY detection
+- In STDIO mode, banners and errors use stderr; HTTP mode continues to use stdout
+- Enhanced test coverage to verify transport-specific logging behavior
+
 ## v2.5.3 - 2025-10-15
 
 ### Fixed
