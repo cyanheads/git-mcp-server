@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.5.7 - 2025-10-24
+
+### Changed
+
+- **API Refinement**: Renamed `includeContext` parameter to `includeMetadata` in `git_set_working_dir` tool for better clarity. Changed default from `true` to `false` to minimize response size and improve performance. The metadata (status, branches, remotes, recent commits) is now opt-in rather than opt-out.
+
+### Improved
+
+- **Tool Descriptions**: Enhanced `git_commit` tool description with explicit examples showing proper JSON string formatting for single-line and multi-line commit messages.
+- **Code Formatting**: Improved readability of conditional statements in logger error handlers with better line breaks.
+
 ## v2.5.6 - 2025-10-24
 
 ### Fixed
