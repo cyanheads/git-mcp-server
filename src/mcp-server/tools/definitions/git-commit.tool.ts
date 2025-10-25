@@ -11,21 +11,29 @@ import {
   PathSchema,
   SignSchema,
 } from '../schemas/common.js';
+import { flattenChanges } from '../utils/git-formatters.js';
+import {
+  createJsonFormatter,
+  type VerbosityLevel,
+} from '../utils/json-response-formatter.js';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
 } from '../utils/toolHandlerFactory.js';
-import {
-  createJsonFormatter,
-  type VerbosityLevel,
-} from '../utils/json-response-formatter.js';
-import { flattenChanges } from '../utils/git-formatters.js';
 
 const TOOL_NAME = 'git_commit';
 const TOOL_TITLE = 'Git Commit';
-const TOOL_DESCRIPTION =
-  'Create a new commit with staged changes in the repository. Records a snapshot of the staging area with a commit message.';
+const TOOL_DESCRIPTION = `Create a new commit with staged changes in the repository. Records a snapshot of the staging area with a commit message.
+
+**Commit Message Format:**
+Pass commit messages as JSON string parameters. Multi-line messages are supported using standard JSON string escaping.
+
+**Examples:**
+- Single line: { "message": "feat: add user authentication" }
+- Multi-line: { "message": "feat: add user authentication\\n\\nImplemented OAuth2 flow with JWT tokens.\\nAdded tests for login and logout." }
+
+Note: Do not use bash heredoc syntax.`;
 
 const InputSchema = z.object({
   path: PathSchema,
