@@ -1,6 +1,6 @@
 {
   "name": "@cyanheads/git-mcp-server",
-  "version": "2.5.5",
+  "version": "2.5.6",
   "mcpName": "io.github.cyanheads/git-mcp-server",
   "description": "A secure and scalable Git MCP server enabling AI agents to perform comprehensive Git version control operations via STDIO and Streamable HTTP.",
   "main": "dist/index.js",
@@ -103,7 +103,7 @@
     "execa": "^9.6.0",
     "fast-xml-parser": "^5.3.0",
     "globals": "^16.4.0",
-    "hono": "^4.9.12",
+    "hono": "^4.10.3",
     "husky": "^9.1.7",
     "ignore": "^7.0.5",
     "jose": "^6.1.0",

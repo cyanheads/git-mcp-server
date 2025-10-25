@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.5.6 - 2025-10-24
+
+### Fixed
+
+- **Critical: Worker Thread Crashes**: Externalized `pino` and `pino-pretty` from the bundle to fix ThreadStream worker exit errors. Pino's worker threads require actual files on disk, which fail when bundled. This resolves the immediate crash on startup reported in [#27](https://github.com/cyanheads/git-mcp-server/issues/27).
+  - Added `--external pino --external pino-pretty` to build command
+  - Reduced bundle size from 7.30 MB to 7.18 MB (1992 vs 2021 modules)
+  - Logger now loads from node_modules at runtime instead of being embedded
+
 ## v2.5.5 - 2025-10-24
 
 > **Note**: Version 2.5.4 was published but I messed up the changelog somehow. Skipped to avoid conflicts. This release supersedes 2.5.4.
