@@ -256,7 +256,11 @@ export class Logger {
           this.pinoLogger.flush((err) => {
             // Only log to console if TTY AND not in STDIO mode
             // In STDIO mode, stdout is reserved for MCP JSON-RPC, so avoid polluting stderr with shutdown noise
-            if (err && process.stderr?.isTTY && this.transportType !== 'stdio') {
+            if (
+              err &&
+              process.stderr?.isTTY &&
+              this.transportType !== 'stdio'
+            ) {
               console.error('Error flushing main logger:', err);
             }
             resolve();
@@ -270,7 +274,11 @@ export class Logger {
           this.interactionLogger.flush((err) => {
             // Only log to console if TTY AND not in STDIO mode
             // In STDIO mode, stdout is reserved for MCP JSON-RPC, so avoid polluting stderr with shutdown noise
-            if (err && process.stderr?.isTTY && this.transportType !== 'stdio') {
+            if (
+              err &&
+              process.stderr?.isTTY &&
+              this.transportType !== 'stdio'
+            ) {
               console.error('Error flushing interaction logger:', err);
             }
             resolve();
