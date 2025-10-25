@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.5.5 - 2025-10-24
+
+> **Note**: Version 2.5.4 was published briefly but skipped to avoid conflicts. This release supersedes it.
+
 ## v2.5.4 - 2025-10-24
 
 ### Fixed
