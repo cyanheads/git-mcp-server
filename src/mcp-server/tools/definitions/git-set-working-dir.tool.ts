@@ -35,11 +35,11 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe("If not a Git repository, initialize it with 'git init'."),
-  includeContext: z
+  includeMetadata: z
     .boolean()
-    .default(true)
+    .default(false)
     .describe(
-      'Include repository context (status, branches, remotes, recent commits) in the response. Provides immediate understanding of repository state.',
+      'Include repository metadata (status, branches, remotes, recent commits) in the response. Set to true for immediate repository context understanding. Defaults to false to minimize response size.',
     ),
 });
 
@@ -128,7 +128,7 @@ const OutputSchema = z.object({
     })
     .optional()
     .describe(
-      'Rich repository context including status, branches, remotes, and recent history. Only included when includeContext is true.',
+      'Rich repository metadata including status, branches, remotes, and recent history. Only included when includeMetadata parameter is true.',
     ),
 });
 
@@ -302,8 +302,8 @@ async function gitSetWorkingDirLogic(
   const storageKey = `session:workingDir:${tenantId}`;
   await storage.set(storageKey, input.path, appContext);
 
-  // Gather repository context if requested
-  const repositoryContext = input.includeContext
+  // Gather repository metadata only if requested
+  const repositoryContext = input.includeMetadata
     ? await gatherRepositoryContext(input.path, dependencies)
     : undefined;
 
@@ -319,15 +319,18 @@ async function gitSetWorkingDirLogic(
  * Filter git_set_working_dir output based on verbosity level.
  *
  * Verbosity levels:
- * - minimal: Success and path only (no context or message)
- * - standard: Success, path, message, and full repository context (RECOMMENDED for LLM understanding)
- * - full: Complete output (same as standard - all fields included)
+ * - minimal: Success and path only (omits message and metadata)
+ * - standard: Success, path, message, and full repository metadata (if includeMetadata was true)
+ * - full: Complete output (same as standard)
+ *
+ * Note: Repository metadata is only gathered when includeMetadata parameter is true.
+ * Verbosity filtering applies to the response format, not whether metadata is gathered.
  */
 function filterGitSetWorkingDirOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // minimal: Essential info only - no context
+  // minimal: Essential info only - no message, no metadata
   if (level === 'minimal') {
     return {
       success: result.success,
@@ -335,8 +338,7 @@ function filterGitSetWorkingDirOutput(
     };
   }
 
-  // standard & full: Complete output including repository context
-  // Repository context is critical for LLM understanding - don't filter it
+  // standard & full: Complete output including metadata (if it was requested)
   return result;
 }
 
