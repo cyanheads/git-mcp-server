@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.5.8 - 2025-10-27
+
+### Changed
+
+- **Dependency Updates**: Updated several core dependencies to their latest versions for improved security and performance:
+  - Updated `axios` from 1.12.2 to 1.13.0
+  - Updated `hono` from 4.9.12 to 4.10.3
+  - Updated `validator` from 13.15.15 to 13.15.20
+  - Updated `@types/validator` from 13.15.3 to 13.15.4
+  - Updated `vitest` and related testing packages from 4.0.3 to 4.0.4
+
 ## v2.5.7 - 2025-10-24
 
 ### Changed
