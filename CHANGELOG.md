@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.3 - 2025-12-12
+
+### Fixed
+
+- **Windows Git Executable Resolution**: Fixed `ENOENT` error when spawning git commands on Windows. Node.js `child_process.spawn()` doesn't search PATH like cmd.exe does. Replaced with `cross-spawn` package for proper Windows PATH resolution. Fixes [#37](https://github.com/cyanheads/git-mcp-server/issues/37).
+
+### Changed
+
+- **Runtime Adapter**: Updated Node.js spawn implementation to use `cross-spawn` for cross-platform compatibility while maintaining array-based argument passing for security
+
+### Added
+
+- **Runtime Adapter Tests**: Added unit tests for `detectRuntime()` and `spawnGitCommand()` covering runtime detection, git command execution, timeout handling, and abort signal cancellation
+- **Command Builder Tests**: Added unit tests for `buildGitEnv()`, `buildGitCommand()`, `validateGitArgs()`, and `escapeShellArg()` covering PATH preservation, git-specific environment variables, null byte rejection, and shell metacharacter safety
+
 ## v2.6.2 - 2025-12-12
 
 ### Fixed

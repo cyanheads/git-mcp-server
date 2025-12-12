@@ -4,8 +4,8 @@
  *
  * This module provides a unified interface for spawning git processes
  * that works in both Bun and Node.js runtimes. When running via bunx
- * (Node.js), it uses child_process.spawn. When running in native Bun,
- * it uses Bun.spawn for better performance and security.
+ * (Node.js), it uses cross-spawn for proper Windows PATH resolution.
+ * When running in native Bun, it uses Bun.spawn for better performance.
  *
  * ## Why eslint-disable is necessary
  *
@@ -20,7 +20,7 @@
  * - Using TypeScript interfaces for all downstream usage
  */
 
-import { spawn } from 'node:child_process';
+import spawn from 'cross-spawn';
 
 /**
  * Result of executing a git command.
@@ -237,6 +237,12 @@ async function spawnWithNode(
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+
+    // With stdio: ['ignore', 'pipe', 'pipe'], stdout/stderr are guaranteed non-null
+    if (!proc.stdout || !proc.stderr) {
+      reject(new Error('Failed to capture process streams'));
+      return;
+    }
 
     const stdoutChunks: Buffer[] = [];
     const stderrChunks: Buffer[] = [];
