@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.1 - 2025-12-12
+
+### Fixed
+
+- **Cross-Platform Path Validation**: Replaced Unix-specific `/` prefix check with `path.isAbsolute()` for proper Windows and POSIX path handling in `GIT_BASE_DIR` validation. Fixes [#36](https://github.com/cyanheads/git-mcp-server/issues/36).
+- **Path Sanitization**: Fixed absolute path handling when a rootDir is specified - paths within rootDir are now correctly validated instead of being rejected. Related to [#36](https://github.com/cyanheads/git-mcp-server/issues/36).
+
+### Security
+
+- **Enhanced Path Traversal Detection**: Improved path normalization in sanitization logic to consistently compare normalized paths, preventing bypass attempts via redundant slashes or dot segments
+
+### Added
+
+- **Path Sanitization Tests**: Added comprehensive test suite covering absolute paths within/outside rootDir, nested paths, redundant slashes, dot segments, and path traversal scenarios
+
 ## v2.6.0 - 2025-12-12
 
 ### Changed
