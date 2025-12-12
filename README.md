@@ -7,7 +7,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/Version-2.5.8-blue.svg?style=flat-square)](./CHANGELOG.md) [![MCP Spec](https://img.shields.io/badge/MCP%20Spec-2025--06--18-8A2BE2.svg?style=flat-square)](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2025-06-18/changelog.mdx) [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-^1.20.2-green.svg?style=flat-square)](https://modelcontextprotocol.io/) [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg?style=flat-square)](./LICENSE) [![Status](https://img.shields.io/badge/Status-Stable-brightgreen.svg?style=flat-square)](https://github.com/cyanheads/git-mcp-server/issues) [![TypeScript](https://img.shields.io/badge/TypeScript-^5.9.3-3178C6.svg?style=flat-square)](https://www.typescriptlang.org/) [![Bun](https://img.shields.io/badge/Bun-v1.2.21-blueviolet.svg?style=flat-square)](https://bun.sh/)
+[![Version](https://img.shields.io/badge/Version-2.6.0-blue.svg?style=flat-square)](./CHANGELOG.md) [![MCP Spec](https://img.shields.io/badge/MCP%20Spec-2025--11--25-8A2BE2.svg?style=flat-square)](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2025-11-25/changelog.mdx) [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-^1.24.3-green.svg?style=flat-square)](https://modelcontextprotocol.io/) [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg?style=flat-square)](./LICENSE) [![Status](https://img.shields.io/badge/Status-Stable-brightgreen.svg?style=flat-square)](https://github.com/cyanheads/git-mcp-server/issues) [![TypeScript](https://img.shields.io/badge/TypeScript-^5.9.3-3178C6.svg?style=flat-square)](https://www.typescriptlang.org/) [![Bun](https://img.shields.io/badge/Bun-v1.2.21-blueviolet.svg?style=flat-square)](https://bun.sh/)
 
 </div>
 
@@ -48,10 +48,10 @@ The server provides structured prompt templates that guide AI agents through com
 
 This server works with **both Bun and Node.js runtimes**:
 
-| Runtime     | Command                                 | Minimum Version | Notes                                    |
-| ----------- | --------------------------------------- | --------------- | ---------------------------------------- |
-| **Bun**     | `bunx @cyanheads/git-mcp-server@latest` | ≥ 1.2.0         | Native Bun runtime (optimal performance) |
-| **Node.js** | `npx @cyanheads/git-mcp-server@latest`  | ≥ 20.0.0        | Via npx/bunx (universal compatibility)   |
+| Runtime     | Command                                 | Minimum Version | Notes                      |
+| ----------- | --------------------------------------- | --------------- | -------------------------- |
+| **Node.js** | `npx @cyanheads/git-mcp-server@latest`  | ≥ 20.0.0        | Universal compatibility    |
+| **Bun**     | `bunx @cyanheads/git-mcp-server@latest` | ≥ 1.2.0         | Alternative runtime option |
 
 The server automatically detects the runtime and uses the appropriate process spawning method for git operations.
 
@@ -61,14 +61,14 @@ Add the following to your MCP Client configuration file (e.g., `cline_mcp_settin
 
 **Be sure to update environment variables as needed (especially your Git information!)**
 
-#### Using Bun (bunx)
+#### Using npx (Node.js)
 
 ```json
 {
   "mcpServers": {
     "git-mcp-server": {
       "type": "stdio",
-      "command": "bunx",
+      "command": "npx",
       "args": ["@cyanheads/git-mcp-server@latest"],
       "env": {
         "MCP_TRANSPORT_TYPE": "stdio",
@@ -84,14 +84,14 @@ Add the following to your MCP Client configuration file (e.g., `cline_mcp_settin
 }
 ```
 
-#### Using Node.js (npx)
+#### Using bunx (Bun)
 
 ```json
 {
   "mcpServers": {
     "git-mcp-server": {
       "type": "stdio",
-      "command": "npx",
+      "command": "bunx",
       "args": ["@cyanheads/git-mcp-server@latest"],
       "env": {
         "MCP_TRANSPORT_TYPE": "stdio",
@@ -141,10 +141,8 @@ Plus, specialized features for **Git integration**:
 
 ### Prerequisites
 
-- **Either** [Bun v1.2.0+](https://bun.sh/) **OR** [Node.js v20.0.0+](https://nodejs.org/)
+- [Node.js v20.0.0+](https://nodejs.org/) (or [Bun v1.2.0+](https://bun.sh/) as an alternative)
 - [Git](https://git-scm.com/) installed and accessible in your system PATH
-
-> **Note**: Development uses Bun for the best experience, but the published package works with both Bun (`bunx`) and Node.js (`npx`).
 
 ### Installation
 
@@ -161,14 +159,6 @@ cd git-mcp-server
 ```
 
 3. **Install dependencies:**
-
-**With Bun (recommended for development):**
-
-```sh
-bun install
-```
-
-**With Node.js:**
 
 ```sh
 npm install
@@ -203,21 +193,13 @@ All configuration is centralized and validated at startup in `src/config/index.t
 
 ### For End Users (via Package Manager)
 
-The easiest way to use the server is via `bunx` or `npx` (no installation required):
-
-**With Bun:**
-
-```sh
-bunx @cyanheads/git-mcp-server@latest
-```
-
-**With Node.js:**
+The easiest way to use the server is via `npx` (no installation required):
 
 ```sh
 npx @cyanheads/git-mcp-server@latest
 ```
 
-Both commands work identically and are configured through environment variables or your MCP client configuration.
+Configured through environment variables or your MCP client configuration. Bun users can alternatively use `bunx @cyanheads/git-mcp-server@latest`.
 
 ### Local Development
 
@@ -225,26 +207,26 @@ Both commands work identically and are configured through environment variables 
 
   ```sh
   # One-time build
-  bun rebuild
+  npm run rebuild
 
   # Run the built server
-  bun start:http
+  npm run start:http
   # or
-  bun start:stdio
+  npm run start:stdio
   ```
 
 - **Development mode with hot reload**:
 
   ```sh
-  bun dev:http
+  npm run dev:http
   # or
-  bun dev:stdio
+  npm run dev:stdio
   ```
 
 - **Run checks and tests**:
   ```sh
-  bun devcheck # Lints, formats, type-checks, and more
-  bun test     # Runs the test suite
+  npm run devcheck  # Lints, formats, type-checks, and more
+  npm test          # Runs the test suite
   ```
 
 ### Cloudflare Workers
@@ -252,19 +234,19 @@ Both commands work identically and are configured through environment variables 
 1. **Build the Worker bundle**:
 
 ```sh
-bun build:worker
+npm run build:worker
 ```
 
 2. **Run locally with Wrangler**:
 
 ```sh
-bun deploy:dev
+npm run deploy:dev
 ```
 
 3. **Deploy to Cloudflare**:
 
 ```sh
-bun deploy:prod
+npm run deploy:prod
 ```
 
 ## 📂 Project Structure
@@ -283,7 +265,7 @@ bun deploy:prod
 
 ## 📤 Understanding Tool Responses
 
-This server follows MCP's dual-output architecture for all tools ([MCP Tools Specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)):
+This server follows MCP's dual-output architecture for all tools ([MCP Tools Specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)):
 
 ### Response Format Options
 
@@ -325,7 +307,7 @@ When you invoke a tool through your MCP client, you see a **formatted summary** 
 
 ### What the LLM Sees (Complete Structured Data)
 
-Behind the scenes, the LLM receives **complete structured data** as [content blocks](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-results) via the `responseFormatter` function. This includes:
+Behind the scenes, the LLM receives **complete structured data** as [content blocks](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-results) via the `responseFormatter` function. This includes:
 
 - All metadata (commit hashes, timestamps, authors)
 - Full file lists and change details (never truncated - LLMs need complete context)
@@ -340,7 +322,7 @@ Behind the scenes, the LLM receives **complete structured data** as [content blo
 - **Standard**: Balanced output with essential context (recommended)
 - **Full**: Complete data including all metadata and statistics
 
-**For Developers**: When creating custom tools, always include complete data in your `responseFormatter`. Balance human-readable summaries with comprehensive structured information. See [`AGENTS.md`](AGENTS.md) for response formatter best practices and the [MCP specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools) for technical details.
+**For Developers**: When creating custom tools, always include complete data in your `responseFormatter`. Balance human-readable summaries with comprehensive structured information. See [`AGENTS.md`](AGENTS.md) for response formatter best practices and the [MCP specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) for technical details.
 
 ## 🧑‍💻 Agent Development Guide
 
@@ -368,18 +350,18 @@ This server uses [Vitest](https://vitest.dev/) for testing.
 - **Run all tests:**
 
   ```sh
-  bun test
+  npm test
   ```
 
 - **Run tests with coverage:**
 
   ```sh
-  bun test:coverage
+  npm run test:coverage
   ```
 
 - **Run tests in watch mode:**
   ```sh
-  bun test --watch
+  npm test -- --watch
   ```
 
 ## 🗺️ Roadmap
@@ -415,8 +397,8 @@ The provider system allows seamless switching between implementations based on d
 Issues and pull requests are welcome! If you plan to contribute, please run the local checks and tests before submitting your PR.
 
 ```sh
-bun run devcheck
-bun test
+npm run devcheck
+npm test
 ```
 
 ### Development Workflow
@@ -424,8 +406,8 @@ bun test
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes following the existing patterns
-4. Run `bun devcheck` to ensure code quality
-5. Run `bun test` to verify all tests pass
+4. Run `npm run devcheck` to ensure code quality
+5. Run `npm test` to verify all tests pass
 6. Commit your changes with conventional commits
 7. Push to your fork and open a Pull Request
 
