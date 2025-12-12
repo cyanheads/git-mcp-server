@@ -54,10 +54,10 @@ const OutputSchema = z.object({
         .nullable()
         .describe('Current branch name after staging.'),
       staged_changes: z
-        .record(z.any())
+        .record(z.string(), z.any())
         .describe('All staged changes after this operation.'),
       unstaged_changes: z
-        .record(z.any())
+        .record(z.string(), z.any())
         .describe('Remaining unstaged changes.'),
       untracked_files: z
         .array(z.string())
