@@ -47,7 +47,6 @@ export async function createMcpServerInstance(): Promise<McpServer> {
     {
       name: config.mcpServerName,
       version: config.mcpServerVersion,
-      description: config.mcpServerDescription,
     },
     {
       capabilities: {

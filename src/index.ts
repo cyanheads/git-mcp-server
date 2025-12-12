@@ -25,8 +25,9 @@ if (isStdioMode || isHttpModeWithoutTty) {
   process.env.FORCE_COLOR = '0'; // Disable forced coloring
 }
 
-import { shutdownOpenTelemetry } from '@/utils/telemetry/instrumentation.js';
+// CRITICAL: reflect-metadata must be imported FIRST, before any module that uses tsyringe
 import 'reflect-metadata';
+import { shutdownOpenTelemetry } from '@/utils/telemetry/instrumentation.js';
 
 import {
   initializePerformance_Hrt,

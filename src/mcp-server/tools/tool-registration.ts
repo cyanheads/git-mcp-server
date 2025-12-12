@@ -4,9 +4,12 @@
  * McpServer instance.
  * @module src/mcp-server/tools/tool-registration
  */
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  McpServer,
+  type ToolCallback,
+} from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type DependencyContainer, injectable, injectAll } from 'tsyringe';
-import { ZodObject, type ZodRawShape } from 'zod';
+import type { z } from 'zod';
 
 import { ToolDefinitions } from '@/container/index.js';
 import { JsonRpcErrorCode } from '@/types-global/errors.js';
@@ -20,8 +23,8 @@ export class ToolRegistry {
   constructor(
     @injectAll(ToolDefinitions, { isOptional: true })
     private toolDefs: ToolDefinition<
-      ZodObject<ZodRawShape>,
-      ZodObject<ZodRawShape>
+      z.ZodObject<z.ZodRawShape>,
+      z.ZodObject<z.ZodRawShape>
     >[],
   ) {}
 
@@ -46,8 +49,8 @@ export class ToolRegistry {
   }
 
   private async registerTool<
-    TInputSchema extends ZodObject<ZodRawShape>,
-    TOutputSchema extends ZodObject<ZodRawShape>,
+    TInputSchema extends z.ZodObject<z.ZodRawShape>,
+    TOutputSchema extends z.ZodObject<z.ZodRawShape>,
   >(
     server: McpServer,
     tool: ToolDefinition<TInputSchema, TOutputSchema>,
@@ -63,6 +66,7 @@ export class ToolRegistry {
       () => {
         const handler = createMcpToolHandler({
           toolName: tool.name,
+          inputSchema: tool.inputSchema,
           logic: tool.logic,
           ...(tool.responseFormatter && {
             responseFormatter: tool.responseFormatter,
@@ -79,11 +83,12 @@ export class ToolRegistry {
           {
             title,
             description: tool.description,
-            inputSchema: tool.inputSchema.shape,
-            outputSchema: tool.outputSchema.shape,
+            inputSchema: tool.inputSchema,
+            outputSchema: tool.outputSchema,
             ...(tool.annotations && { annotations: tool.annotations }),
           },
-          handler,
+          // Type assertion needed: SDK's conditional types don't resolve with generic constraints
+          handler as ToolCallback<TInputSchema>,
         );
 
         logger.notice(
