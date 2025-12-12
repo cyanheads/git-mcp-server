@@ -32,9 +32,8 @@ vi.mock('@/config/index.js', () => ({
 let metricsRegistry: typeof import('../../../src/utils/metrics/registry.js').metricsRegistry;
 
 beforeAll(async () => {
-  ({ metricsRegistry } = await import(
-    '../../../src/utils/metrics/registry.js'
-  ));
+  ({ metricsRegistry } =
+    await import('../../../src/utils/metrics/registry.js'));
 });
 
 describe('metricsRegistry', () => {

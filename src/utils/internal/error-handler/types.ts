@@ -112,8 +112,9 @@ export interface BaseErrorMapping {
  * Used by `ErrorHandler.mapError`.
  * @template T The type of `Error` this mapping will produce, defaults to `Error`.
  */
-export interface ErrorMapping<T extends Error = Error>
-  extends BaseErrorMapping {
+export interface ErrorMapping<
+  T extends Error = Error,
+> extends BaseErrorMapping {
   /**
    * A factory function that creates and returns an instance of the mapped error type `T`.
    * @param error - The original error that occurred.
