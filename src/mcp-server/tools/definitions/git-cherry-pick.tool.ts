@@ -43,7 +43,7 @@ const InputSchema = z.object({
   mainline: z
     .number()
     .int()
-    .positive()
+    .min(1)
     .optional()
     .describe(
       'For merge commits, specify which parent to follow (1 for first parent, 2 for second, etc.).',

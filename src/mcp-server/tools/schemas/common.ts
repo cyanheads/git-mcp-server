@@ -162,7 +162,7 @@ export const CommitMessageSchema = z
 export const LimitSchema = z
   .number()
   .int()
-  .positive()
+  .min(1)
   .max(1000)
   .optional()
   .describe('Maximum number of items to return (1-1000).');
@@ -247,7 +247,7 @@ export const PruneSchema = z
 export const DepthSchema = z
   .number()
   .int()
-  .positive()
+  .min(1)
   .optional()
   .describe('Create a shallow clone with history truncated to N commits.');
 
