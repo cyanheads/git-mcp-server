@@ -434,16 +434,30 @@ export class Sanitization {
       let finalSanitizedPath: string;
 
       if (resolvedRootDir) {
-        const fullPath = path.resolve(resolvedRootDir, normalized);
+        let fullPath: string;
+
+        // If the input is already absolute, use it directly
+        // Otherwise, resolve it relative to rootDir
+        if (path.isAbsolute(normalized)) {
+          fullPath = path.normalize(normalized);
+        } else {
+          fullPath = path.resolve(resolvedRootDir, normalized);
+        }
+
+        // Normalize both paths for consistent comparison
+        const normalizedRoot = path.normalize(resolvedRootDir);
+        const normalizedFull = path.normalize(fullPath);
+
+        // Validate the path is within rootDir
         if (
-          !fullPath.startsWith(resolvedRootDir + path.sep) &&
-          fullPath !== resolvedRootDir
+          !normalizedFull.startsWith(normalizedRoot + path.sep) &&
+          normalizedFull !== normalizedRoot
         ) {
           throw new Error(
             'Path traversal detected: attempts to escape the defined root directory.',
           );
         }
-        finalSanitizedPath = path.relative(resolvedRootDir, fullPath);
+        finalSanitizedPath = path.relative(normalizedRoot, normalizedFull);
         finalSanitizedPath =
           finalSanitizedPath === '' ? '.' : finalSanitizedPath;
         if (
