@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.2 - 2025-12-12
+
+### Fixed
+
+- **JSON Schema Compatibility**: Changed numeric schema validators from `.positive()` to `.min(1)` for Draft 4 compatibility. Go clients using Draft 4 JSON Schema parsers failed when `exclusiveMinimum` was a number (Draft 7 format) instead of a boolean (Draft 4 format). Using `.min(1)` outputs `minimum: 1` which works across all JSON Schema drafts. Fixes [#34](https://github.com/cyanheads/git-mcp-server/issues/34).
+  - Updated `LimitSchema` and `DepthSchema` in common schemas
+  - Updated `mainline` parameter in `git_cherry_pick` tool
+
+### Added
+
+- **Schema Compatibility Tests**: Added comprehensive test suite (`tests/mcp-server/tools/schemas/common.test.ts`) validating JSON Schema output for Draft 4 compatibility across all numeric constraints
+
 ## v2.6.1 - 2025-12-12
 
 ### Fixed
