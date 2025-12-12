@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.0 - 2025-12-12
+
+### Changed
+
+- **MCP SDK 1.24.x Upgrade**: Upgraded to MCP SDK 1.24.3 with breaking API changes:
+  - Updated tool handler signatures to use new SDK types (`ServerRequest`, `ServerNotification`)
+  - Changed resource registration to use `title` property instead of `name`
+  - Updated tool registration to pass schemas directly instead of `.shape`
+  - Removed deprecated `description` property from server configuration
+- **Zod 4.x Migration**: Upgraded from Zod 3.x to 4.x:
+  - Updated `z.record(z.any())` to `z.record(z.string(), z.any())` in git-add, git-commit, and git-show tools
+  - All tool schemas now compatible with Zod 4.x strict typing
+- **MCP Spec Compliance**: Updated spec version reference from 2025-06-18 to 2025-11-25
+- **Runtime Recommendation**: Changed primary recommendation from Bun to Node.js for end users:
+  - Documentation now recommends `npx` as the primary installation method
+  - `bunx` remains available as an alternative
+  - Development commands updated from `bun` to `npm run`
+- **Documentation**: Simplified prerequisites and streamlined installation instructions
+
+### Fixed
+
+- **Import Order**: Added critical comment noting `reflect-metadata` must be imported before any module using tsyringe
+
+### Dependencies
+
+- Updated MCP SDK from 1.20.2 to 1.24.3
+- Updated Zod from 3.23.8 to 4.1.13
+- Updated Hono from 4.10.3 to 4.10.8
+- Updated @hono/mcp from 0.1.4 to 0.2.2
+- Updated @hono/node-server from 1.19.5 to 1.19.7
+- Updated OpenTelemetry packages from 0.207.x to 0.208.x
+- Updated TypeScript-ESLint from 8.46.2 to 8.49.0
+- Updated Vitest from 4.0.4 to 4.0.15
+- Updated numerous other dependencies to latest versions
+
 ## v2.5.8 - 2025-10-27
 
 ### Changed
