@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.5 - 2025-12-13
+
+### Added
+
+- **git_log stat/patch support**: Added `stat` and `patch` options to git_log tool for viewing file change statistics and full diff patches per commit
+- **git_log skip support**: Added `skip` option for pagination of commit history
+- **git_diff includeUntracked support**: Implemented full support for including untracked files in diff output using `git ls-files --others` and `git diff --no-index`
+- **git_checkout track support**: Added `track` option for setting up branch tracking when creating branches
+
+### Changed
+
+- **Tool Option Mapping**: Refactored git_log and git_diff tools to use cleaner spread operator pattern for mapping tool interface to provider options
+- **Diff Command Ordering**: Corrected flag ordering in diff operations to place flags before commits/paths per git convention
+
+### Fixed
+
+- **git_diff nameOnly mode**: Fixed nameOnly output to properly count and return file list including untracked files
+- **git_diff stat mode**: Fixed stat-only mode to return complete diffstat output
+
+### Dependencies
+
+- Updated `@cloudflare/workers-types` from 4.20251212.0 to 4.20251213.0
+- Updated `@eslint/js` from 9.39.1 to 9.39.2
+- Updated `clipboardy` from 5.0.1 to 5.0.2
+- Updated `eslint` from 9.39.1 to 9.39.2
+- Updated `repomix` from 1.10.0 to 1.10.1
+
 ## v2.6.4 - 2025-12-12
 
 ### Fixed
