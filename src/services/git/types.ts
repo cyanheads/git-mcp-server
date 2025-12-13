@@ -257,6 +257,8 @@ export interface GitCommitResult {
 export interface GitLogOptions {
   /** Maximum number of commits to return */
   maxCount?: number;
+  /** Number of commits to skip before starting output */
+  skip?: number;
   /** Show commits more recent than this date */
   since?: string;
   /** Show commits older than this date */
@@ -271,6 +273,12 @@ export interface GitLogOptions {
   branch?: string;
   /** Include GPG signature verification information */
   showSignature?: boolean;
+  /** Show abbreviated one-line output (hash + subject only) */
+  oneline?: boolean;
+  /** Include file change statistics for each commit */
+  stat?: boolean;
+  /** Include full diff patch for each commit */
+  patch?: boolean;
 }
 
 export interface GitCommitInfo {
@@ -292,6 +300,10 @@ export interface GitCommitInfo {
   parents: string[];
   /** References (branches, tags) pointing to this commit */
   refs?: string[];
+  /** File change statistics (when stat option is used) */
+  stat?: string;
+  /** Full diff patch (when patch option is used) */
+  patch?: string;
 }
 
 export interface GitLogResult {
@@ -330,14 +342,16 @@ export interface GitDiffOptions {
   commit2?: string;
   /** Show diff of staged changes */
   staged?: boolean;
-  /** Limit diff to specific path */
+  /** Limit diff to specific path(s) */
   path?: string;
   /** Number of context lines */
   unified?: number;
   /** Include untracked files */
   includeUntracked?: boolean;
-  /** Show statistics only */
+  /** Show statistics only (diffstat) */
   stat?: boolean;
+  /** Show only names of changed files */
+  nameOnly?: boolean;
 }
 
 export interface GitDiffResult {
@@ -432,6 +446,8 @@ export interface GitCheckoutOptions {
   force?: boolean;
   /** Checkout specific paths only */
   paths?: string[];
+  /** Set up tracking for the new branch (requires createBranch) */
+  track?: boolean;
 }
 
 export interface GitCheckoutResult {

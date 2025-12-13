@@ -87,39 +87,26 @@ async function gitDiffLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Build options object with only defined properties
-  const diffOptions: {
-    target?: string;
-    source?: string;
-    paths?: string[];
-    staged?: boolean;
-    includeUntracked?: boolean;
-    nameOnly?: boolean;
-    stat?: boolean;
-    contextLines?: number;
-  } = {
-    staged: input.staged,
-    includeUntracked: input.includeUntracked,
-    nameOnly: input.nameOnly,
-    stat: input.stat,
-    contextLines: input.contextLines,
-  };
-
-  if (input.target !== undefined) {
-    diffOptions.target = input.target;
-  }
-  if (input.source !== undefined) {
-    diffOptions.source = input.source;
-  }
-  if (input.paths !== undefined) {
-    diffOptions.paths = input.paths;
-  }
-
-  const result = await provider.diff(diffOptions, {
-    workingDirectory: targetPath,
-    requestContext: appContext,
-    tenantId: appContext.tenantId || 'default-tenant',
-  });
+  // Map tool interface to GitDiffOptions
+  // Tool uses user-friendly names, provider uses git terminology
+  const result = await provider.diff(
+    {
+      // Only include optional properties when defined (exactOptionalPropertyTypes)
+      ...(input.target && { commit2: input.target }),
+      ...(input.source && { commit1: input.source }),
+      ...(input.paths?.length && { path: input.paths.join(' ') }),
+      staged: input.staged,
+      includeUntracked: input.includeUntracked,
+      nameOnly: input.nameOnly,
+      stat: input.stat,
+      unified: input.contextLines,
+    },
+    {
+      workingDirectory: targetPath,
+      requestContext: appContext,
+      tenantId: appContext.tenantId || 'default-tenant',
+    },
+  );
 
   return {
     success: true,
