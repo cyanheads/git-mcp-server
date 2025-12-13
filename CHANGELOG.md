@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.4 - 2025-12-12
+
+### Fixed
+
+- **Build Artifact Version Mismatch**: Rebuilt dist to embed correct version. v2.6.3 was published with stale build artifacts containing v2.6.2 version string.
+
 ## v2.6.3 - 2025-12-12
 
 ### Fixed
