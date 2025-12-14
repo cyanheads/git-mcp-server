@@ -29,6 +29,10 @@ export async function executeCheckout(
 
     if (options.createBranch) {
       args.push('-b', options.target);
+      // --track sets up tracking when creating a branch
+      if (options.track) {
+        args.push('--track');
+      }
     } else {
       args.push(options.target);
     }

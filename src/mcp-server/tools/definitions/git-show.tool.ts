@@ -50,7 +50,7 @@ const OutputSchema = z.object({
     .describe('Type of git object shown.'),
   content: z.string().describe('Formatted output showing the object details.'),
   metadata: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .optional()
     .describe('Additional metadata about the object.'),
 });

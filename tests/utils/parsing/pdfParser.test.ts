@@ -1198,30 +1198,26 @@ describe('PdfParser', () => {
 
   describe('Singleton export', () => {
     it('should export pdfParser singleton', async () => {
-      const { pdfParser } = await import(
-        '../../../src/utils/parsing/pdfParser.js'
-      );
+      const { pdfParser } =
+        await import('../../../src/utils/parsing/pdfParser.js');
       expect(pdfParser).toBeInstanceOf(PdfParser);
     });
 
     it('should export PDFDocument class', async () => {
-      const { PDFDocument: ExportedPDFDocument } = await import(
-        '../../../src/utils/parsing/pdfParser.js'
-      );
+      const { PDFDocument: ExportedPDFDocument } =
+        await import('../../../src/utils/parsing/pdfParser.js');
       expect(ExportedPDFDocument).toBe(PDFDocument);
     });
 
     it('should export StandardFonts enum', async () => {
-      const { StandardFonts: ExportedStandardFonts } = await import(
-        '../../../src/utils/parsing/pdfParser.js'
-      );
+      const { StandardFonts: ExportedStandardFonts } =
+        await import('../../../src/utils/parsing/pdfParser.js');
       expect(ExportedStandardFonts).toBe(StandardFonts);
     });
 
     it('should export rgb utility', async () => {
-      const { rgb: exportedRgb } = await import(
-        '../../../src/utils/parsing/pdfParser.js'
-      );
+      const { rgb: exportedRgb } =
+        await import('../../../src/utils/parsing/pdfParser.js');
       expect(exportedRgb).toBe(rgb);
     });
   });

@@ -26,7 +26,12 @@ import {
 import type {
   CallToolResult,
   ContentBlock,
+  ServerRequest,
+  ServerNotification,
 } from '@modelcontextprotocol/sdk/types.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import type { z } from 'zod';
 
 import { resolveWorkingDirectory } from './git-validators.js';
 
@@ -112,12 +117,13 @@ const defaultResponseFormatter = (result: unknown): ContentBlock[] => [
 ];
 
 export type ToolHandlerFactoryOptions<
-  TInput,
+  TInputSchema extends AnySchema,
   TOutput extends Record<string, unknown>,
 > = {
   toolName: string;
+  inputSchema: TInputSchema;
   logic: (
-    input: TInput,
+    input: z.infer<TInputSchema>,
     appContext: RequestContext,
     sdkContext: SdkContext,
   ) => Promise<TOutput>;
@@ -129,38 +135,44 @@ export type ToolHandlerFactoryOptions<
  * This factory encapsulates context creation, performance measurement,
  * error handling, and response formatting. It separates the app's internal
  * RequestContext from the SDK's `callContext` (which we type as `SdkContext`).
+ *
+ * Returns a callback compatible with the MCP SDK's registerTool method.
  */
 export function createMcpToolHandler<
-  TInput,
+  TInputSchema extends AnySchema,
   TOutput extends Record<string, unknown>,
 >({
   toolName,
+  inputSchema: _inputSchema,
   logic,
   responseFormatter = defaultResponseFormatter,
-}: ToolHandlerFactoryOptions<TInput, TOutput>) {
+}: ToolHandlerFactoryOptions<TInputSchema, TOutput>): (
+  input: z.infer<TInputSchema>,
+  extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+) => Promise<CallToolResult> {
   return async (
-    input: TInput,
-    callContext: Record<string, unknown>,
+    input: z.infer<TInputSchema>,
+    extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
   ): Promise<CallToolResult> => {
     // Validate SDK context (defensive programming)
     // Note: This is purely defensive - the MCP SDK should always provide a valid context
-    if (!validateSdkContext(callContext)) {
+    if (!validateSdkContext(extra)) {
       // Log without context since we don't have a RequestContext yet
       // Only log to console if TTY to avoid polluting stderr in STDIO mode
       if (process.stderr?.isTTY) {
         console.warn(
           `[${toolName}] Invalid SDK context received from MCP framework:`,
           {
-            contextType: typeof callContext,
-            hasContext: !!callContext,
+            contextType: typeof extra,
+            hasContext: !!extra,
           },
         );
       }
       // Continue anyway - MCP SDK controls this, so we trust it
     }
 
-    // The `callContext` from the SDK is our specific SdkContext type.
-    const sdkContext = callContext as SdkContext;
+    // The `extra` from the SDK is our specific SdkContext type.
+    const sdkContext = extra as unknown as SdkContext;
 
     const sessionId =
       typeof sdkContext?.sessionId === 'string'

@@ -56,9 +56,8 @@ describe('Configuration Service', () => {
 
     process.env.NODE_ENV = 'production';
     // Since we can't easily reset modules, we'll just re-run parseConfig
-    const { parseConfig: prodParseConfig } = await import(
-      '../../src/config/index.js'
-    );
+    const { parseConfig: prodParseConfig } =
+      await import('../../src/config/index.js');
     const prodConfig = prodParseConfig();
     expect(prodConfig.environment).toBe('production');
   });

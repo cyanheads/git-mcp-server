@@ -53,9 +53,8 @@ describe('RateLimiter', () => {
     process.env.NODE_ENV = 'production';
 
     const configModule = await import('../../../src/config/index.js');
-    const rateLimiterModule = await import(
-      '../../../src/utils/security/rateLimiter.js'
-    );
+    const rateLimiterModule =
+      await import('../../../src/utils/security/rateLimiter.js');
     config = configModule.config;
     RateLimiter = rateLimiterModule.RateLimiter;
 
@@ -110,9 +109,8 @@ describe('RateLimiter', () => {
     process.env.NODE_ENV = 'development';
     // Re-import modules to get the updated config
     const configModule = await import('../../../src/config/index.js');
-    const rateLimiterModule = await import(
-      '../../../src/utils/security/rateLimiter.js'
-    );
+    const rateLimiterModule =
+      await import('../../../src/utils/security/rateLimiter.js');
     config = configModule.parseConfig(); // Use parseConfig to get a fresh config
     RateLimiter = rateLimiterModule.RateLimiter;
 

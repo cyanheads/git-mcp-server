@@ -2,6 +2,116 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.6.5 - 2025-12-13
+
+### Added
+
+- **git_log stat/patch support**: Added `stat` and `patch` options to git_log tool for viewing file change statistics and full diff patches per commit
+- **git_log skip support**: Added `skip` option for pagination of commit history
+- **git_diff includeUntracked support**: Implemented full support for including untracked files in diff output using `git ls-files --others` and `git diff --no-index`
+- **git_checkout track support**: Added `track` option for setting up branch tracking when creating branches
+
+### Changed
+
+- **Tool Option Mapping**: Refactored git_log and git_diff tools to use cleaner spread operator pattern for mapping tool interface to provider options
+- **Diff Command Ordering**: Corrected flag ordering in diff operations to place flags before commits/paths per git convention
+
+### Fixed
+
+- **git_diff nameOnly mode**: Fixed nameOnly output to properly count and return file list including untracked files
+- **git_diff stat mode**: Fixed stat-only mode to return complete diffstat output
+
+### Dependencies
+
+- Updated `@cloudflare/workers-types` from 4.20251212.0 to 4.20251213.0
+- Updated `@eslint/js` from 9.39.1 to 9.39.2
+- Updated `clipboardy` from 5.0.1 to 5.0.2
+- Updated `eslint` from 9.39.1 to 9.39.2
+- Updated `repomix` from 1.10.0 to 1.10.1
+
+## v2.6.4 - 2025-12-12
+
+### Fixed
+
+- **Build Artifact Version Mismatch**: Rebuilt dist to embed correct version. v2.6.3 was published with stale build artifacts containing v2.6.2 version string.
+
+## v2.6.3 - 2025-12-12
+
+### Fixed
+
+- **Windows Git Executable Resolution**: Fixed `ENOENT` error when spawning git commands on Windows. Node.js `child_process.spawn()` doesn't search PATH like cmd.exe does. Replaced with `cross-spawn` package for proper Windows PATH resolution. Fixes [#37](https://github.com/cyanheads/git-mcp-server/issues/37).
+
+### Changed
+
+- **Runtime Adapter**: Updated Node.js spawn implementation to use `cross-spawn` for cross-platform compatibility while maintaining array-based argument passing for security
+
+### Added
+
+- **Runtime Adapter Tests**: Added unit tests for `detectRuntime()` and `spawnGitCommand()` covering runtime detection, git command execution, timeout handling, and abort signal cancellation
+- **Command Builder Tests**: Added unit tests for `buildGitEnv()`, `buildGitCommand()`, `validateGitArgs()`, and `escapeShellArg()` covering PATH preservation, git-specific environment variables, null byte rejection, and shell metacharacter safety
+
+## v2.6.2 - 2025-12-12
+
+### Fixed
+
+- **JSON Schema Compatibility**: Changed numeric schema validators from `.positive()` to `.min(1)` for Draft 4 compatibility. Go clients using Draft 4 JSON Schema parsers failed when `exclusiveMinimum` was a number (Draft 7 format) instead of a boolean (Draft 4 format). Using `.min(1)` outputs `minimum: 1` which works across all JSON Schema drafts. Fixes [#34](https://github.com/cyanheads/git-mcp-server/issues/34).
+  - Updated `LimitSchema` and `DepthSchema` in common schemas
+  - Updated `mainline` parameter in `git_cherry_pick` tool
+
+### Added
+
+- **Schema Compatibility Tests**: Added comprehensive test suite (`tests/mcp-server/tools/schemas/common.test.ts`) validating JSON Schema output for Draft 4 compatibility across all numeric constraints
+
+## v2.6.1 - 2025-12-12
+
+### Fixed
+
+- **Cross-Platform Path Validation**: Replaced Unix-specific `/` prefix check with `path.isAbsolute()` for proper Windows and POSIX path handling in `GIT_BASE_DIR` validation. Fixes [#36](https://github.com/cyanheads/git-mcp-server/issues/36).
+- **Path Sanitization**: Fixed absolute path handling when a rootDir is specified - paths within rootDir are now correctly validated instead of being rejected. Related to [#36](https://github.com/cyanheads/git-mcp-server/issues/36).
+
+### Security
+
+- **Enhanced Path Traversal Detection**: Improved path normalization in sanitization logic to consistently compare normalized paths, preventing bypass attempts via redundant slashes or dot segments
+
+### Added
+
+- **Path Sanitization Tests**: Added comprehensive test suite covering absolute paths within/outside rootDir, nested paths, redundant slashes, dot segments, and path traversal scenarios
+
+## v2.6.0 - 2025-12-12
+
+### Changed
+
+- **MCP SDK 1.24.x Upgrade**: Upgraded to MCP SDK 1.24.3 with breaking API changes:
+  - Updated tool handler signatures to use new SDK types (`ServerRequest`, `ServerNotification`)
+  - Changed resource registration to use `title` property instead of `name`
+  - Updated tool registration to pass schemas directly instead of `.shape`
+  - Removed deprecated `description` property from server configuration
+- **Zod 4.x Migration**: Upgraded from Zod 3.x to 4.x:
+  - Updated `z.record(z.any())` to `z.record(z.string(), z.any())` in git-add, git-commit, and git-show tools
+  - All tool schemas now compatible with Zod 4.x strict typing
+- **MCP Spec Compliance**: Updated spec version reference from 2025-06-18 to 2025-11-25
+- **Runtime Recommendation**: Changed primary recommendation from Bun to Node.js for end users:
+  - Documentation now recommends `npx` as the primary installation method
+  - `bunx` remains available as an alternative
+  - Development commands updated from `bun` to `npm run`
+- **Documentation**: Simplified prerequisites and streamlined installation instructions
+
+### Fixed
+
+- **Import Order**: Added critical comment noting `reflect-metadata` must be imported before any module using tsyringe
+
+### Dependencies
+
+- Updated MCP SDK from 1.20.2 to 1.24.3
+- Updated Zod from 3.23.8 to 4.1.13
+- Updated Hono from 4.10.3 to 4.10.8
+- Updated @hono/mcp from 0.1.4 to 0.2.2
+- Updated @hono/node-server from 1.19.5 to 1.19.7
+- Updated OpenTelemetry packages from 0.207.x to 0.208.x
+- Updated TypeScript-ESLint from 8.46.2 to 8.49.0
+- Updated Vitest from 4.0.4 to 4.0.15
+- Updated numerous other dependencies to latest versions
+
 ## v2.5.8 - 2025-10-27
 
 ### Changed

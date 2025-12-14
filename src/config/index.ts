@@ -8,6 +8,7 @@
  * @module src/config/index
  */
 import { homedir } from 'os';
+import path from 'node:path';
 
 import dotenv from 'dotenv';
 import { z } from 'zod';
@@ -72,6 +73,21 @@ const expandTildePath = (path: unknown): string | undefined => {
 
   // Return as-is (already absolute or relative)
   return trimmed;
+};
+
+/**
+ * Cross-platform check for absolute paths.
+ * Uses Node's path.isAbsolute which handles:
+ * - POSIX: /home/user, /var/www
+ * - Windows: C:\Users, D:\Projects, C:/Users
+ * - UNC: \\server\share
+ *
+ * @param p - Path to check
+ * @returns true if path is absolute on the current platform
+ */
+const isAbsolutePath = (p: string): boolean => {
+  if (!p) return false;
+  return path.isAbsolute(p);
 };
 
 // --- Schema Definition ---
@@ -231,9 +247,9 @@ const ConfigSchema = z.object({
       (val) => expandTildePath(emptyStringAsUndefined(val)),
       z
         .string()
-        .refine((path) => !path || path.startsWith('/'), {
+        .refine((p) => !p || isAbsolutePath(p), {
           message:
-            'GIT_BASE_DIR must be an absolute path starting with "/" (tilde expansion is supported)',
+            'GIT_BASE_DIR must be an absolute path (tilde expansion is supported)',
         })
         .optional(),
     ),

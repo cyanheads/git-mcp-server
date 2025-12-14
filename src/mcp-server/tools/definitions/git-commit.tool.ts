@@ -101,10 +101,10 @@ const OutputSchema = z.object({
         .nullable()
         .describe('Current branch name after commit.'),
       staged_changes: z
-        .record(z.any())
+        .record(z.string(), z.any())
         .describe('Remaining staged changes after commit.'),
       unstaged_changes: z
-        .record(z.any())
+        .record(z.string(), z.any())
         .describe('Unstaged changes after commit.'),
       untracked_files: z
         .array(z.string())

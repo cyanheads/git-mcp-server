@@ -62,9 +62,8 @@ describe('schedulerService', () => {
       .spyOn(cron, 'createTask')
       .mockImplementation(createTaskMock as never);
 
-    const module: SchedulerModule = await import(
-      '../../../src/utils/scheduling/scheduler.js'
-    );
+    const module: SchedulerModule =
+      await import('../../../src/utils/scheduling/scheduler.js');
     schedulerService = module.schedulerService;
     (
       schedulerService as unknown as { jobs: Map<string, unknown> }

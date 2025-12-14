@@ -45,9 +45,8 @@ async function gitWorkingDirectoryLogic(
 
   // Resolve dependencies via DI
   const { container } = await import('tsyringe');
-  const { StorageService: StorageServiceToken } = await import(
-    '@/container/tokens.js'
-  );
+  const { StorageService: StorageServiceToken } =
+    await import('@/container/tokens.js');
 
   const storage = container.resolve<StorageService>(StorageServiceToken);
 

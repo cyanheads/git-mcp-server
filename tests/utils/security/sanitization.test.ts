@@ -130,6 +130,129 @@ describe('Sanitization Utility', () => {
           .sanitizedPath,
       ).toBe(absolutePath);
     });
+
+    it('should handle absolute path within rootDir correctly', () => {
+      const rootDir = '/app/projects';
+      const absolutePath = '/app/projects/my-repo';
+
+      // Absolute path within rootDir should resolve to relative path
+      const result = sanitization.sanitizePath(absolutePath, {
+        rootDir,
+        allowAbsolute: true,
+      });
+      expect(result.sanitizedPath).toBe('my-repo');
+    });
+
+    it('should reject absolute path outside rootDir', () => {
+      const rootDir = '/app/projects';
+      const absolutePath = '/etc/passwd';
+
+      // Absolute path outside rootDir should throw
+      expect(() =>
+        sanitization.sanitizePath(absolutePath, {
+          rootDir,
+          allowAbsolute: true,
+        }),
+      ).toThrow(McpError);
+      expect(() =>
+        sanitization.sanitizePath(absolutePath, {
+          rootDir,
+          allowAbsolute: true,
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          message: expect.stringContaining('Path traversal detected'),
+        }),
+      );
+    });
+
+    it('should handle rootDir as the exact path', () => {
+      const rootDir = '/app/projects';
+
+      // Using rootDir as the path should return '.'
+      const result = sanitization.sanitizePath(rootDir, {
+        rootDir,
+        allowAbsolute: true,
+      });
+      expect(result.sanitizedPath).toBe('.');
+    });
+
+    it('should handle nested absolute paths within rootDir', () => {
+      const rootDir = '/app/projects';
+      const absolutePath = '/app/projects/deep/nested/path';
+
+      const result = sanitization.sanitizePath(absolutePath, {
+        rootDir,
+        allowAbsolute: true,
+      });
+      expect(result.sanitizedPath).toBe('deep/nested/path');
+    });
+
+    describe('POSIX/Unix path handling', () => {
+      it('should handle home directory paths', () => {
+        const rootDir = '/home/user/projects';
+        const absolutePath = '/home/user/projects/repo';
+
+        const result = sanitization.sanitizePath(absolutePath, {
+          rootDir,
+          allowAbsolute: true,
+        });
+        expect(result.sanitizedPath).toBe('repo');
+      });
+
+      it('should reject paths attempting to escape via symlink-style traversal', () => {
+        const rootDir = '/app/projects';
+        // Even though this looks like it could be inside, the ../.. takes us out
+        const escapePath = '/app/projects/../../etc/passwd';
+
+        expect(() =>
+          sanitization.sanitizePath(escapePath, {
+            rootDir,
+            allowAbsolute: true,
+          }),
+        ).toThrow(McpError);
+      });
+
+      it('should handle paths with redundant slashes', () => {
+        const rootDir = '/app/projects';
+        const pathWithSlashes = '/app/projects//repo///file.txt';
+
+        const result = sanitization.sanitizePath(pathWithSlashes, {
+          rootDir,
+          allowAbsolute: true,
+        });
+        // path.normalize handles redundant slashes
+        expect(result.sanitizedPath).toBe('repo/file.txt');
+      });
+
+      it('should handle paths with dot segments', () => {
+        const rootDir = '/app/projects';
+        const pathWithDots = '/app/projects/./repo/./file.txt';
+
+        const result = sanitization.sanitizePath(pathWithDots, {
+          rootDir,
+          allowAbsolute: true,
+        });
+        expect(result.sanitizedPath).toBe('repo/file.txt');
+      });
+
+      it('should handle relative paths with rootDir', () => {
+        const rootDir = '/app/projects';
+        const relativePath = 'my-repo/src';
+
+        const result = sanitization.sanitizePath(relativePath, { rootDir });
+        expect(result.sanitizedPath).toBe('my-repo/src');
+      });
+
+      it('should reject relative path traversal outside rootDir', () => {
+        const rootDir = '/app/projects';
+        const escapePath = '../../etc/passwd';
+
+        expect(() =>
+          sanitization.sanitizePath(escapePath, { rootDir }),
+        ).toThrow(McpError);
+      });
+    });
   });
 
   describe('sanitizeForLogging', () => {

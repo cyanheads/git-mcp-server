@@ -86,6 +86,14 @@ const CommitSchema = z.object({
     .array(z.string())
     .optional()
     .describe('References (branches, tags) pointing to this commit.'),
+  stat: z
+    .string()
+    .optional()
+    .describe('File change statistics (when stat option is used).'),
+  patch: z
+    .string()
+    .optional()
+    .describe('Full diff patch (when patch option is used).'),
 });
 
 const OutputSchema = z.object({
@@ -104,64 +112,29 @@ async function gitLogLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Build options object with only defined properties
-  const logOptions: {
-    maxCount?: number;
-    skip?: number;
-    since?: string;
-    until?: string;
-    author?: string;
-    grep?: string;
-    branch?: string;
-    filePath?: string;
-    oneline?: boolean;
-    stat?: boolean;
-    patch?: boolean;
-    showSignature?: boolean;
-  } = {};
-
-  if (input.maxCount !== undefined) {
-    logOptions.maxCount = input.maxCount;
-  }
-  if (input.skip !== undefined) {
-    logOptions.skip = input.skip;
-  }
-  if (input.since !== undefined) {
-    logOptions.since = input.since;
-  }
-  if (input.until !== undefined) {
-    logOptions.until = input.until;
-  }
-  if (input.author !== undefined) {
-    logOptions.author = input.author;
-  }
-  if (input.grep !== undefined) {
-    logOptions.grep = input.grep;
-  }
-  if (input.branch !== undefined) {
-    logOptions.branch = input.branch;
-  }
-  if (input.filePath !== undefined) {
-    logOptions.filePath = input.filePath;
-  }
-  if (input.oneline !== undefined) {
-    logOptions.oneline = input.oneline;
-  }
-  if (input.stat !== undefined) {
-    logOptions.stat = input.stat;
-  }
-  if (input.patch !== undefined) {
-    logOptions.patch = input.patch;
-  }
-  if (input.showSignature !== undefined) {
-    logOptions.showSignature = input.showSignature;
-  }
-
-  const result = await provider.log(logOptions, {
-    workingDirectory: targetPath,
-    requestContext: appContext,
-    tenantId: appContext.tenantId || 'default-tenant',
-  });
+  // Map tool interface to GitLogOptions
+  const result = await provider.log(
+    {
+      ...(input.maxCount && { maxCount: input.maxCount }),
+      ...(input.skip && { skip: input.skip }),
+      ...(input.since && { since: input.since }),
+      ...(input.until && { until: input.until }),
+      ...(input.author && { author: input.author }),
+      ...(input.grep && { grep: input.grep }),
+      ...(input.branch && { branch: input.branch }),
+      // Map filePath → path (GitLogOptions uses 'path')
+      ...(input.filePath && { path: input.filePath }),
+      ...(input.showSignature && { showSignature: input.showSignature }),
+      ...(input.oneline && { oneline: input.oneline }),
+      ...(input.stat && { stat: input.stat }),
+      ...(input.patch && { patch: input.patch }),
+    },
+    {
+      workingDirectory: targetPath,
+      requestContext: appContext,
+      tenantId: appContext.tenantId || 'default-tenant',
+    },
+  );
 
   return {
     success: true,
