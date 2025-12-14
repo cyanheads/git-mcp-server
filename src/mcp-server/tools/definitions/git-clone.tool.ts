@@ -3,6 +3,7 @@
  * @module mcp-server/tools/definitions/git-clone
  */
 import { z } from 'zod';
+import { dirname, resolve } from 'node:path';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
@@ -57,6 +58,10 @@ async function gitCloneLogic(
   input: ToolInput,
   { provider, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
+  // Resolve clone target to an absolute, sanitized path and pick an existing cwd
+  const resolvedLocalPath = resolve(input.localPath);
+  const cloneCwd = dirname(resolvedLocalPath) || process.cwd();
+
   // Build options object with only defined properties
   const cloneOptions: {
     remoteUrl: string;
@@ -67,7 +72,7 @@ async function gitCloneLogic(
     mirror?: boolean;
   } = {
     remoteUrl: input.url,
-    localPath: input.localPath,
+    localPath: resolvedLocalPath,
     bare: input.bare,
     mirror: input.mirror,
   };
@@ -80,7 +85,7 @@ async function gitCloneLogic(
   }
 
   const result = await provider.clone(cloneOptions, {
-    workingDirectory: input.localPath,
+    workingDirectory: cloneCwd,
     requestContext: appContext,
     tenantId: appContext.tenantId || 'default-tenant',
   });
