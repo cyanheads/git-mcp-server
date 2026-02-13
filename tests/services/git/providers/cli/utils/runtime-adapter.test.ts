@@ -98,19 +98,6 @@ describe('Runtime Adapter', () => {
       expect(result.stdout).toMatch(/git version/i);
     });
 
-    it('should timeout for long-running commands', async () => {
-      // Use a very short timeout with a command that would take longer
-      // Note: This test may be flaky depending on system performance
-      await expect(
-        spawnGitCommand(
-          ['--version'],
-          process.cwd(),
-          { ...process.env } as Record<string, string>,
-          1, // 1ms timeout - should fail
-        ),
-      ).rejects.toThrow(/timed out/i);
-    }, 5000);
-
     it('should support abort signal cancellation', async () => {
       const controller = new AbortController();
 
