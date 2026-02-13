@@ -1,7 +1,7 @@
 <div align="center">
   <h1>@cyanheads/git-mcp-server</h1>
   <p><b>A secure and scalable Git MCP server giving AI agents powerful version control for local and (soon) serverless environments. STDIO & Streamable HTTP</b>
-  <div>27 Tools • 1 Resource • 1 Prompt</div>
+  <div>28 Tools • 1 Resource • 1 Prompt</div>
   </p>
 </div>
 
@@ -15,16 +15,17 @@
 
 ## 🛠️ Tools Overview
 
-This server provides 27 comprehensive Git operations organized into six functional categories:
+This server provides 28 comprehensive Git operations organized into seven functional categories:
 
-| Category                  | Tools                                                                                                                          | Description                                                                                                           |
-| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
-| **Repository Management** | `git_init`, `git_clone`, `git_status`, `git_clean`                                                                             | Initialize repos, clone from remotes, check status, and clean untracked files                                         |
-| **Staging & Commits**     | `git_add`, `git_commit`, `git_diff`                                                                                            | Stage changes, create commits, and compare changes                                                                    |
-| **History & Inspection**  | `git_log`, `git_show`, `git_blame`, `git_reflog`                                                                               | View commit history, inspect objects, trace line-by-line authorship, and view ref logs                                |
-| **Branching & Merging**   | `git_branch`, `git_checkout`, `git_merge`, `git_rebase`, `git_cherry_pick`                                                     | Manage branches, switch contexts, integrate changes, and apply specific commits                                       |
-| **Remote Operations**     | `git_remote`, `git_fetch`, `git_pull`, `git_push`                                                                              | Configure remotes, download updates, synchronize repositories, and publish changes                                    |
-| **Advanced Workflows**    | `git_tag`, `git_stash`, `git_reset`, `git_worktree`, `git_set_working_dir`, `git_clear_working_dir`, `git_wrapup_instructions` | Tag releases, stash changes, reset state, manage worktrees, set/clear session directory, and access workflow guidance |
+| Category                  | Tools                                                                                                                          | Description                                                                                                                                   |
+| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Repository Management** | `git_init`, `git_clone`, `git_status`, `git_clean`                                                                             | Initialize repos, clone from remotes, check status, and clean untracked files                                                                 |
+| **Staging & Commits**     | `git_add`, `git_commit`, `git_diff`                                                                                            | Stage changes, create commits, and compare changes                                                                                            |
+| **History & Inspection**  | `git_log`, `git_show`, `git_blame`, `git_reflog`                                                                               | View commit history, inspect objects, trace line-by-line authorship, and view ref logs                                                        |
+| **Analysis**              | `git_changelog_analyze`                                                                                                        | Gather git context and review instructions for LLM-driven changelog analysis (security, features, storyline, gaps, breaking changes, quality) |
+| **Branching & Merging**   | `git_branch`, `git_checkout`, `git_merge`, `git_rebase`, `git_cherry_pick`                                                     | Manage branches, switch contexts, integrate changes, and apply specific commits                                                               |
+| **Remote Operations**     | `git_remote`, `git_fetch`, `git_pull`, `git_push`                                                                              | Configure remotes, download updates, synchronize repositories, and publish changes                                                            |
+| **Advanced Workflows**    | `git_tag`, `git_stash`, `git_reset`, `git_worktree`, `git_set_working_dir`, `git_clear_working_dir`, `git_wrapup_instructions` | Tag releases, stash changes, reset state, manage worktrees, set/clear session directory, and access workflow guidance                         |
 
 ## 📦 Resources Overview
 
@@ -131,7 +132,7 @@ Plus, specialized features for **Git integration**:
 - **Cross-Runtime Compatibility**: Works seamlessly with both Bun and Node.js runtimes. Automatically detects the runtime and uses optimal process spawning (Bun.spawn in Bun, child_process.spawn in Node.js).
 - **Provider-Based Architecture**: Pluggable git provider system with current CLI implementation and planned isomorphic-git provider for edge deployment.
 - **Optimized Git Execution**: Direct git CLI interaction with cross-runtime support for high-performance process management, streaming I/O, and timeout handling (current CLI provider).
-- **Comprehensive Coverage**: 27 tools covering all essential Git operations from init to push.
+- **Comprehensive Coverage**: 28 tools covering all essential Git operations from init to push, plus changelog analysis.
 - **Working Directory Management**: Session-specific directory context for multi-repo workflows.
 - **Configurable Git Identity**: Override author/committer information via environment variables with automatic fallback to global git config.
 - **Safety Features**: Explicit confirmations for destructive operations like `git clean` and `git reset --hard`.
@@ -372,7 +373,7 @@ Tests run via [Bun's test runner](https://bun.sh/docs/cli/test) with Vitest comp
 The server uses a **provider-based architecture** to support multiple git implementation backends:
 
 - **✅ CLI Provider** (Current): Full-featured git operations via native git CLI
-  - Implementation coverage for all 27 git tools
+  - Implementation coverage for all 28 git tools
   - Executes git commands using Bun.spawn for optimal performance
   - Streaming I/O handling for large outputs (10MB buffer limit)
   - Configurable timeouts (60s default) and automatic process cleanup
