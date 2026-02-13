@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.7.0 - 2026-02-12
+
+### Changed
+
+- **Removed roots, elicitation, and sampling capabilities** from MCP server registration; simplified server to logging, resources, tools, and prompts
+- **Removed `ElicitableContext`** and elicitation bridging logic from tool handler factory, simplifying `appContext` creation
+- **Deleted `roots-registration.ts`** module and its import/usage in server setup
+- **Rewrote CLAUDE.md** (v2.4.1 → v2.5.0): consolidated agent protocol docs, updated tool workflow to use `createToolHandler` pattern, removed redundant sections
+- **Deleted `.clinerules/clinerules.md`**: obsolete hard-linked copy replaced by AGENTS.md symlink
+- **Updated `docs/tree.md`** to reflect removal of roots directory
+
+### Improved
+
+- **Test type safety**: Added explicit `ExecGitFn` type for mock functions and non-null assertions on mock call access in checkout, diff, and log tests
+- **Test formatting**: Minor formatting cleanups across test files
+
+### Dependencies
+
+- Bumped `@modelcontextprotocol/sdk` from ^1.24.3 to ^1.26.0
+- Bumped `eslint` from ^9.39.2 to ^10.0.0 and `@eslint/js` from ^9.39.2 to ^10.0.1
+- Bumped `zod` from ^4.1.13 to ^4.3.6
+- Bumped `hono` from ^4.10.8 to ^4.11.9 and `@hono/node-server` from ^1.19.7 to ^1.19.9
+- Bumped `vitest` from ^4.0.15 to ^4.0.18 and `@vitest/coverage-v8` from 4.0.15 to 4.0.18
+- Bumped `pino` from ^10.1.0 to ^10.3.1
+- Bumped `typescript-eslint` from 8.49.0 to 8.55.0
+- Bumped `vite` from 7.2.7 to 7.3.1 and `vite-tsconfig-paths` from ^5.1.4 to ^6.1.1
+- Bumped `globals` from ^16.5.0 to ^17.3.0
+- Updated numerous other dev dependencies to latest versions
+
 ## v2.6.5 - 2025-12-13
 
 ### Added
