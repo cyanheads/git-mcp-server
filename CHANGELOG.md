@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.7.1 - 2026-02-12
+
+### Fixed
+
+- **Literal escape sequences in messages**: Added `normalizeMessage()` utility that converts literal `\n`, `\r`, `\t`, and `\r\n` sequences to actual characters in commit, tag, and stash messages — LLM clients frequently send these as two-character literal sequences instead of real control characters
+- **CommitMessageSchema transform**: Applied `normalizeMessage` as a Zod `.transform()` on `CommitMessageSchema` so commit messages are normalized at parse time
+- **Stash and tag message normalization**: Applied `normalizeMessage` to stash (`git_stash`) and tag (`git_tag`) message inputs
+- **Commit tool description**: Updated `git_commit` tool description to document escape sequence normalization behavior
+
+### Added
+
+- **`normalizeMessage` tests**: Added unit tests for `normalizeMessage` covering all escape sequences, mixed input, empty strings, and realistic multi-line commit messages
+- **`CommitMessageSchema` tests**: Added schema-level tests verifying transform behavior, passthrough of real newlines, and validation constraints
+
 ## v2.7.0 - 2026-02-12
 
 ### Added
