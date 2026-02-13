@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.8.2 - 2026-02-12
+
+### Added
+
+- **Protected branch guards**: `git_push` and `git_reset` now enforce confirmation before destructive operations (force push, branch deletion, hard reset) on protected branches (main, master, production, etc.) via a `confirmed` input flag
+- **CORS wildcard warning**: HTTP transport logs a warning when `MCP_ALLOWED_ORIGINS` is unconfigured in production, making permissive CORS visible rather than silent
+
+### Changed
+
+- **Config validation hardening**: `authorName` and `committerName` now reject newlines and null bytes via regex validation, preventing header injection in git identity fields
+- **Removed `environment` from public endpoint**: The `GET /mcp` identity response no longer exposes the deployment environment, reducing information leakage
+- **Removed `escapeShellArg`**: Deleted unused shell escaping utility from command builder — git commands use `execFile` array args, making shell escaping unnecessary and misleading
+
 ## v2.8.1 - 2026-02-12
 
 ### Added
