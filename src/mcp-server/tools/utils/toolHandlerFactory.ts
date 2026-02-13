@@ -103,14 +103,6 @@ function validateSdkContext(ctx: unknown): ctx is SdkContext {
   return true;
 }
 
-// Define a type for a context that may have elicitation capabilities.
-type ElicitableContext = RequestContext & {
-  elicitInput?: (args: {
-    message: string;
-    schema: unknown;
-  }) => Promise<unknown>;
-};
-
 // Default formatter for successful responses
 const defaultResponseFormatter = (result: unknown): ContentBlock[] => [
   { type: 'text', text: JSON.stringify(result, null, 2) },
@@ -180,24 +172,11 @@ export function createMcpToolHandler<
         : undefined;
 
     // Create the application's internal logger/tracing context.
-    const appContext: ElicitableContext =
-      requestContextService.createRequestContext({
-        parentContext: sdkContext,
-        operation: 'HandleToolRequest',
-        additionalContext: { toolName, sessionId, input },
-      });
-
-    // If the SDK context supports elicitation, add it to our app context.
-    // This makes it available to the tool's logic function.
-    if (
-      'elicitInput' in sdkContext &&
-      typeof sdkContext.elicitInput === 'function'
-    ) {
-      appContext.elicitInput = sdkContext.elicitInput as (args: {
-        message: string;
-        schema: unknown;
-      }) => Promise<unknown>;
-    }
+    const appContext = requestContextService.createRequestContext({
+      parentContext: sdkContext,
+      operation: 'HandleToolRequest',
+      additionalContext: { toolName, sessionId, input },
+    });
 
     try {
       const result = await measureToolExecution(

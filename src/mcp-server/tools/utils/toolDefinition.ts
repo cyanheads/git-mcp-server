@@ -92,7 +92,7 @@ export interface ToolDefinition<
    * SDK. This provides access to lower-level protocol capabilities:
    * - `signal`: An `AbortSignal` for handling request cancellation.
    * - `sendNotification`: Send a notification back to the client.
-   * - `sendRequest`: Send a new request to the client (e.g., for elicitation).
+   * - `sendRequest`: Send a new request to the client.
    * - `authInfo`: Raw, validated authentication information.
    *
    * @returns A promise that resolves with the structured output, conforming to `outputSchema`.

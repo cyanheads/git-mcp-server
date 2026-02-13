@@ -49,8 +49,6 @@ git-mcp-server
 │   │   │   │   ├── resourceDefinition.ts
 │   │   │   │   └── resourceHandlerFactory.ts
 │   │   │   └── resource-registration.ts
-│   │   ├── roots
-│   │   │   └── roots-registration.ts
 │   │   ├── tools
 │   │   │   ├── definitions
 │   │   │   │   ├── git-add.tool.ts
