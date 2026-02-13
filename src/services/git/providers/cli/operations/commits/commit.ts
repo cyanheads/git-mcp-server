@@ -58,7 +58,25 @@ export async function executeCommit(
     }
 
     const cmd = buildGitCommand({ command: 'commit', args });
-    await execGit(cmd, context.workingDirectory, context.requestContext);
+
+    try {
+      await execGit(cmd, context.workingDirectory, context.requestContext);
+    } catch (error) {
+      if (shouldSign && options.forceUnsignedOnFailure) {
+        const unsignedArgs = args.filter((a) => a !== '--gpg-sign');
+        const unsignedCmd = buildGitCommand({
+          command: 'commit',
+          args: unsignedArgs,
+        });
+        await execGit(
+          unsignedCmd,
+          context.workingDirectory,
+          context.requestContext,
+        );
+      } else {
+        throw error;
+      }
+    }
 
     // Get commit hash reliably
     const hashCmd = buildGitCommand({

@@ -11,6 +11,7 @@ import {
   TagNameSchema,
   CommitRefSchema,
   ForceSchema,
+  SignSchema,
   normalizeMessage,
 } from '../schemas/common.js';
 import {
@@ -47,6 +48,13 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe('Create annotated tag with message.'),
+  sign: SignSchema,
+  forceUnsignedOnFailure: z
+    .boolean()
+    .default(false)
+    .describe(
+      'If GPG/SSH signing fails, retry the tag creation without signing instead of failing.',
+    ),
   force: ForceSchema.describe(
     'Force tag creation/deletion (overwrite existing).',
   ),
@@ -90,9 +98,12 @@ async function gitTagLogic(
     commit?: string;
     message?: string;
     annotated?: boolean;
+    sign?: boolean;
+    forceUnsignedOnFailure?: boolean;
     force?: boolean;
   } = {
     mode: input.mode,
+    forceUnsignedOnFailure: input.forceUnsignedOnFailure,
   };
 
   if (input.tagName !== undefined) {
@@ -106,6 +117,9 @@ async function gitTagLogic(
   }
   if (input.annotated !== undefined) {
     tagOptions.annotated = input.annotated;
+  }
+  if (input.sign !== undefined) {
+    tagOptions.sign = input.sign;
   }
   if (input.force !== undefined) {
     tagOptions.force = input.force;

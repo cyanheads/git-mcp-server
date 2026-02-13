@@ -170,6 +170,91 @@ describe('executeTag', () => {
       expect(args).not.toContain('-m');
     });
 
+    it('creates a signed tag when sign is true', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executeTag(
+        { mode: 'create', tagName: 'v1.0.0', sign: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('-s');
+      expect(args).toContain('-m');
+      expect(args).toContain('Tag v1.0.0');
+    });
+
+    it('creates a signed tag with custom message', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executeTag(
+        {
+          mode: 'create',
+          tagName: 'v1.0.0',
+          sign: true,
+          message: 'Custom message',
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('-s');
+      expect(args).toContain('-m');
+      expect(args).toContain('Custom message');
+    });
+
+    it('retries unsigned when forceUnsignedOnFailure is true and signing fails', async () => {
+      mockExecGit
+        .mockRejectedValueOnce(new Error('error: gpg failed to sign the data'))
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeTag(
+        {
+          mode: 'create',
+          tagName: 'v1.0.0',
+          sign: true,
+          forceUnsignedOnFailure: true,
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit).toHaveBeenCalledTimes(2);
+      // Second call should not contain -s
+      const [retryArgs] = mockExecGit.mock.calls[1]!;
+      expect(retryArgs).not.toContain('-s');
+      expect(result.created).toBe('v1.0.0');
+    });
+
+    it('does not retry when forceUnsignedOnFailure is false and signing fails', async () => {
+      mockExecGit.mockRejectedValueOnce(
+        new Error('error: gpg failed to sign the data'),
+      );
+
+      await expect(
+        executeTag(
+          {
+            mode: 'create',
+            tagName: 'v1.0.0',
+            sign: true,
+            forceUnsignedOnFailure: false,
+          },
+          mockContext,
+          mockExecGit,
+        ),
+      ).rejects.toThrow();
+
+      expect(mockExecGit).toHaveBeenCalledTimes(1);
+    });
+
     it('throws error when tagName is missing', async () => {
       await expect(
         executeTag({ mode: 'create' } as any, mockContext, mockExecGit),

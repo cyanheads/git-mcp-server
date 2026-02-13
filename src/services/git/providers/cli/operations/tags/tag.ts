@@ -67,29 +67,57 @@ export async function executeTag(
           throw new Error('Tag name is required for create operation');
         }
 
-        args.push(options.tagName);
-
         // Determine if we should sign the tag - use explicit option or fall back to config default
         const shouldSign = options.sign ?? shouldSignCommits();
 
-        // Signing implies annotated tag, and requires a message
-        if (shouldSign) {
-          const message = options.message || `Tag ${options.tagName}`;
-          args.push('-s', '-m', message);
-        } else if (options.message && options.annotated) {
-          args.push('-a', '-m', options.message);
-        }
+        // Build args for create, factored out so we can retry unsigned on failure
+        const buildCreateArgs = (sign: boolean): string[] => {
+          const createArgs: string[] = [options.tagName!];
 
-        if (options.commit) {
-          args.push(options.commit);
-        }
+          if (sign) {
+            const message = options.message || `Tag ${options.tagName}`;
+            createArgs.push('-s', '-m', message);
+          } else if (options.message && options.annotated) {
+            createArgs.push('-a', '-m', options.message);
+          }
 
-        if (options.force) {
-          args.push('--force');
-        }
+          if (options.commit) {
+            createArgs.push(options.commit);
+          }
 
-        const cmd = buildGitCommand({ command: 'tag', args });
-        await execGit(cmd, context.workingDirectory, context.requestContext);
+          if (options.force) {
+            createArgs.push('--force');
+          }
+
+          return createArgs;
+        };
+
+        const createCmd = buildGitCommand({
+          command: 'tag',
+          args: buildCreateArgs(shouldSign),
+        });
+
+        try {
+          await execGit(
+            createCmd,
+            context.workingDirectory,
+            context.requestContext,
+          );
+        } catch (error) {
+          if (shouldSign && options.forceUnsignedOnFailure) {
+            const unsignedCmd = buildGitCommand({
+              command: 'tag',
+              args: buildCreateArgs(false),
+            });
+            await execGit(
+              unsignedCmd,
+              context.workingDirectory,
+              context.requestContext,
+            );
+          } else {
+            throw error;
+          }
+        }
 
         const createResult = {
           mode: 'create' as const,

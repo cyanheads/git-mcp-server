@@ -207,6 +207,71 @@ describe('executeCommit', () => {
     });
   });
 
+  describe('forceUnsignedOnFailure option', () => {
+    it('retries without signing when forceUnsignedOnFailure is true and signing fails', async () => {
+      const showOutput = `Author${FIELD_DELIM}0${RECORD_DELIM}\nfile.ts\n`;
+
+      mockExecGit
+        .mockRejectedValueOnce(new Error('error: gpg failed to sign the data'))
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // unsigned retry
+        .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' }) // rev-parse
+        .mockResolvedValueOnce({ stdout: showOutput, stderr: '' }); // show
+
+      const result = await executeCommit(
+        { message: 'signed commit', sign: true, forceUnsignedOnFailure: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit).toHaveBeenCalledTimes(4);
+      // Second call (retry) should not contain --gpg-sign
+      const [retryArgs] = mockExecGit.mock.calls[1]!;
+      expect(retryArgs).toContain('commit');
+      expect(retryArgs).not.toContain('--gpg-sign');
+      expect(result.success).toBe(true);
+    });
+
+    it('does not retry when forceUnsignedOnFailure is false and signing fails', async () => {
+      mockExecGit.mockRejectedValueOnce(
+        new Error('error: gpg failed to sign the data'),
+      );
+
+      await expect(
+        executeCommit(
+          {
+            message: 'signed commit',
+            sign: true,
+            forceUnsignedOnFailure: false,
+          },
+          mockContext,
+          mockExecGit,
+        ),
+      ).rejects.toThrow();
+
+      expect(mockExecGit).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry when signing is not enabled', async () => {
+      mockExecGit.mockRejectedValueOnce(
+        new Error('nothing to commit, working tree clean'),
+      );
+
+      await expect(
+        executeCommit(
+          {
+            message: 'unsigned commit',
+            sign: false,
+            forceUnsignedOnFailure: true,
+          },
+          mockContext,
+          mockExecGit,
+        ),
+      ).rejects.toThrow();
+
+      expect(mockExecGit).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('author option', () => {
     it('passes --author flag with formatted name and email', async () => {
       mockExecGit

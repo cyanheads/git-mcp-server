@@ -695,6 +695,8 @@ export interface GitTagOptions {
   annotated?: boolean;
   /** Sign tag with GPG/SSH (implies annotated) */
   sign?: boolean;
+  /** If signing fails, retry without signing instead of failing */
+  forceUnsignedOnFailure?: boolean;
   /** Force tag creation */
   force?: boolean;
 }

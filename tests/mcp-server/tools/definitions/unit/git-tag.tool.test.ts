@@ -102,6 +102,29 @@ describe('git_tag tool', () => {
       }
     });
 
+    it('accepts sign option', () => {
+      const input = {
+        path: '.',
+        mode: 'create',
+        tagName: 'v1.0.0',
+        sign: true,
+      };
+      const result = gitTagTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.sign).toBe(true);
+      }
+    });
+
+    it('defaults forceUnsignedOnFailure to false', () => {
+      const input = { path: '.' };
+      const result = gitTagTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.forceUnsignedOnFailure).toBe(false);
+      }
+    });
+
     it('rejects invalid mode', () => {
       const input = { path: '.', mode: 'invalid' };
       const result = gitTagTool.inputSchema.safeParse(input);
@@ -182,6 +205,29 @@ describe('git_tag tool', () => {
       expect(result.success).toBe(true);
       expect(result.mode).toBe('create');
       expect(result.created).toBe('v1.0.0');
+    });
+
+    it('passes sign option to provider when specified', async () => {
+      const mockResult: GitTagResult = {
+        mode: 'create',
+        created: 'v1.0.0',
+      };
+
+      mockProvider.tag.mockResolvedValue(mockResult);
+
+      const parsedInput = gitTagTool.inputSchema.parse({
+        path: '.',
+        mode: 'create',
+        tagName: 'v1.0.0',
+        sign: true,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await gitTagTool.logic(parsedInput, appContext, sdkContext);
+
+      const [tagOptions] = mockProvider.tag.mock.calls[0]!;
+      expect(tagOptions.sign).toBe(true);
     });
 
     it('passes annotated and message options to provider', async () => {
