@@ -62,6 +62,12 @@ export class SessionManager {
   private cleanupIntervalMs: number;
 
   /**
+   * Optional callback invoked when a session expires due to inactivity.
+   * Used by the HTTP transport to clean up per-session resources (transports, servers).
+   */
+  public onSessionExpired: ((sessionId: string) => void) | null = null;
+
+  /**
    * Private constructor - use getInstance() instead.
    *
    * @param staleTimeoutMs - Session expiry timeout in milliseconds (default: 30 minutes)
@@ -170,6 +176,7 @@ export class SessionManager {
         staleTimeoutMs: this.staleTimeoutMs,
       });
       this.sessions.delete(sessionId);
+      this.onSessionExpired?.(sessionId);
       return false;
     }
 
@@ -285,6 +292,7 @@ export class SessionManager {
       const age = now - metadata.lastActivityAt;
       if (age > this.staleTimeoutMs) {
         this.sessions.delete(sessionId);
+        this.onSessionExpired?.(sessionId);
         removedCount++;
       }
     }

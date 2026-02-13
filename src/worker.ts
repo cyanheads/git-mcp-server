@@ -185,12 +185,10 @@ function initializeApp(env: CloudflareBindings): Promise<Hono<WorkerEnv>> {
         storageProvider: env.STORAGE_PROVIDER_TYPE ?? 'in-memory',
       });
 
-      // Create the MCP Server instance.
-      const mcpServer = await createMcpServerInstance();
-
-      // Create the Hono application.
+      // Create the Hono application with the server factory.
+      // Each HTTP session creates its own McpServer instance.
       const app = createHttpApp(
-        mcpServer,
+        createMcpServerInstance,
         workerContext,
       ) as unknown as Hono<WorkerEnv>;
 

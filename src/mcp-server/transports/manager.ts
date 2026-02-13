@@ -43,11 +43,14 @@ export class TransportManager {
       context,
     );
 
-    const mcpServer = await this.createMcpServer();
-
     if (this.config.mcpTransportType === 'http') {
-      this.serverInstance = await startHttpTransport(mcpServer, context);
+      // HTTP transport creates per-session McpServer instances via the factory.
+      this.serverInstance = await startHttpTransport(
+        this.createMcpServer,
+        context,
+      );
     } else if (this.config.mcpTransportType === 'stdio') {
+      const mcpServer = await this.createMcpServer();
       this.serverInstance = await startStdioTransport(mcpServer, context);
     } else {
       // This case should ideally not be reached due to config validation,

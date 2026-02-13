@@ -3,6 +3,11 @@
  * This implementation uses the official @hono/mcp package for a fully
  * web-standard, platform-agnostic transport layer.
  *
+ * Architecture: Each MCP session gets its own McpServer + StreamableHTTPTransport
+ * pair. The StreamableHTTPTransport manages session IDs, protocol version
+ * validation, and SSE streams internally. A per-session server map ensures
+ * Protocol instances are never shared across connections.
+ *
  * Implements MCP Specification 2025-06-18 Streamable HTTP Transport.
  * @see {@link https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http | MCP Streamable HTTP Transport}
  * @module src/mcp-server/transports/http/httpTransport
@@ -30,20 +35,11 @@ import {
   logStartupBanner,
 } from '@/utils/index.js';
 
-/**
- * Extends the base StreamableHTTPTransport to include a session ID.
- */
-class McpSessionTransport extends StreamableHTTPTransport {
-  public sessionId: string;
-
-  constructor(sessionId: string) {
-    super();
-    this.sessionId = sessionId;
-  }
-}
+/** Factory function that creates a fully-configured McpServer instance. */
+export type McpServerFactory = () => Promise<McpServer>;
 
 export function createHttpApp(
-  mcpServer: McpServer,
+  createMcpServer: McpServerFactory,
   parentContext: RequestContext,
 ): Hono<{ Bindings: HonoNodeBindings }> {
   const app = new Hono<{ Bindings: HonoNodeBindings }>();
@@ -52,10 +48,27 @@ export function createHttpApp(
     component: 'HttpTransportSetup',
   };
 
-  // Initialize SessionManager with configurable timeout
+  // Per-session transport map. Each session gets its own McpServer + Transport pair
+  // because Protocol maintains a 1:1 relationship with its transport.
+  const transports = new Map<string, StreamableHTTPTransport>();
+
+  // Initialize SessionManager with configurable timeout and transport cleanup
   const sessionManager = SessionManager.getInstance(
     config.mcpStatefulSessionStaleTimeoutMs,
   );
+  sessionManager.onSessionExpired = (sessionId: string) => {
+    const transport = transports.get(sessionId);
+    if (transport) {
+      transport.close().catch((err) => {
+        logger.warning('Failed to close transport for expired session', {
+          ...transportContext,
+          sessionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+      transports.delete(sessionId);
+    }
+  };
   logger.info('Session manager initialized', {
     ...transportContext,
     staleTimeoutMs: config.mcpStatefulSessionStaleTimeoutMs,
@@ -93,7 +106,7 @@ export function createHttpApp(
   // Centralized error handling
   app.onError(httpErrorHandler);
 
-  // Health and GET /mcp status remain unprotected for convenience
+  // Health check — unprotected
   app.get('/healthz', (c) => c.json({ status: 'ok' }));
 
   // RFC 9728 Protected Resource Metadata endpoint (MCP 2025-06-18)
@@ -115,19 +128,6 @@ export function createHttpApp(
     });
   });
 
-  app.get(config.mcpHttpEndpointPath, (c) => {
-    return c.json({
-      status: 'ok',
-      server: {
-        name: config.mcpServerName,
-        version: config.mcpServerVersion,
-        description: config.mcpServerDescription,
-        transport: config.mcpTransportType,
-        sessionMode: config.mcpSessionMode,
-      },
-    });
-  });
-
   // Create auth strategy and middleware if auth is enabled
   const authStrategy = createAuthStrategy();
   if (authStrategy) {
@@ -144,10 +144,76 @@ export function createHttpApp(
     );
   }
 
-  // DELETE endpoint for explicit session termination (MCP Spec 2025-06-18)
-  // Per spec: Clients SHOULD send DELETE when leaving application
-  // Server MAY respond 405 if it doesn't allow client-initiated termination
-  app.delete(config.mcpHttpEndpointPath, (c) => {
+  // Helper: look up a transport for an existing session, returning a 404 JSON-RPC
+  // error response if not found or expired.
+  const getSessionTransport = (
+    sessionId: string,
+  ): StreamableHTTPTransport | Response => {
+    if (!sessionManager.isSessionValid(sessionId)) {
+      // Clean up stale transport if it exists
+      const stale = transports.get(sessionId);
+      if (stale) {
+        stale.close().catch(() => {});
+        transports.delete(sessionId);
+      }
+      return Response.json(
+        {
+          jsonrpc: '2.0',
+          error: {
+            code: -32001,
+            message: 'Session expired or invalid. Please reinitialize.',
+          },
+          id: null,
+        },
+        { status: 404 },
+      );
+    }
+    const transport = transports.get(sessionId);
+    if (!transport) {
+      return Response.json(
+        {
+          jsonrpc: '2.0',
+          error: {
+            code: -32001,
+            message: 'Session not found. Please reinitialize.',
+          },
+          id: null,
+        },
+        { status: 404 },
+      );
+    }
+    sessionManager.touchSession(sessionId);
+    return transport;
+  };
+
+  // GET /mcp — status page (no session) or SSE stream (with session)
+  app.get(config.mcpHttpEndpointPath, async (c) => {
+    const sessionId = c.req.header('mcp-session-id');
+
+    // No session ID = server info / status page
+    if (!sessionId) {
+      return c.json({
+        status: 'ok',
+        server: {
+          name: config.mcpServerName,
+          version: config.mcpServerVersion,
+          description: config.mcpServerDescription,
+          transport: config.mcpTransportType,
+          sessionMode: config.mcpSessionMode,
+        },
+      });
+    }
+
+    // With session ID = SSE stream request — delegate to transport
+    const transportOrError = getSessionTransport(sessionId);
+    if (transportOrError instanceof Response) return transportOrError;
+
+    const response = await transportOrError.handleRequest(c);
+    return response ?? c.body(null, 204);
+  });
+
+  // DELETE /mcp — session termination (MCP Spec 2025-06-18)
+  app.delete(config.mcpHttpEndpointPath, async (c) => {
     const sessionId = c.req.header('mcp-session-id');
 
     if (!sessionId) {
@@ -164,15 +230,13 @@ export function createHttpApp(
       );
     }
 
-    const terminated = sessionManager.terminateSession(sessionId);
-
-    if (!terminated) {
-      // Session not found - already expired or never existed
+    const transport = transports.get(sessionId);
+    if (!transport) {
       return c.json(
         {
           jsonrpc: '2.0',
           error: {
-            code: -32001, // Server error
+            code: -32001,
             message: 'Session not found or already expired',
           },
           id: null,
@@ -181,132 +245,83 @@ export function createHttpApp(
       );
     }
 
+    // Delegate to transport's internal DELETE handling (closes streams)
+    const response = await transport.handleRequest(c);
+
+    // Clean up our maps
+    transports.delete(sessionId);
+    sessionManager.terminateSession(sessionId);
+
     logger.info('Session terminated via DELETE', {
       ...transportContext,
       sessionId,
     });
 
-    return c.body(null, 204); // Success, no content
+    return response ?? c.body(null, 204);
   });
 
-  // JSON-RPC over HTTP (Streamable)
-  app.all(config.mcpHttpEndpointPath, async (c) => {
-    const protocolVersion =
-      c.req.header('mcp-protocol-version') ?? '2025-03-26';
-    logger.debug('Handling MCP request.', {
+  // POST /mcp — JSON-RPC over Streamable HTTP
+  // Protocol version validation is handled by StreamableHTTPTransport internally
+  // using the SDK's SUPPORTED_PROTOCOL_VERSIONS (includes 2025-11-25, 2025-06-18, etc.)
+  app.post(config.mcpHttpEndpointPath, async (c) => {
+    logger.debug('Handling MCP POST request.', {
       ...transportContext,
       path: c.req.path,
-      method: c.req.method,
-      protocolVersion,
     });
 
-    // Per MCP Spec 2025-06-18: MCP-Protocol-Version header should be validated
-    // We default to 2025-03-26 for backward compatibility if not provided
-    const supportedVersions = ['2025-03-26', '2025-06-18'];
-    if (!supportedVersions.includes(protocolVersion)) {
-      logger.warning('Unsupported MCP protocol version requested.', {
-        ...transportContext,
-        protocolVersion,
-        supportedVersions,
-      });
-      // Per MCP Spec: Server MUST respond with 400 Bad Request for unsupported versions
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          error: {
-            code: -32600, // Invalid Request
-            message: `Unsupported MCP protocol version: ${protocolVersion}`,
-            data: {
-              requested: protocolVersion,
-              supported: supportedVersions,
-            },
-          },
-          id: null,
+    const sessionId = c.req.header('mcp-session-id');
+
+    const handleRequest = async (): Promise<Response> => {
+      // Existing session — delegate to stored transport
+      if (sessionId) {
+        const transportOrError = getSessionTransport(sessionId);
+        if (transportOrError instanceof Response) return transportOrError;
+
+        const response = await transportOrError.handleRequest(c);
+        return response ?? c.body(null, 204);
+      }
+
+      // New session — create per-session McpServer + Transport pair.
+      // Each Protocol instance supports exactly one transport connection.
+      const server = await createMcpServer();
+      const transport = new StreamableHTTPTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sid: string) => {
+          transports.set(sid, transport);
+          const store = authContext.getStore();
+          sessionManager.createSession(
+            sid,
+            store?.authInfo.clientId,
+            store?.authInfo.tenantId,
+          );
+          logger.debug('New MCP session initialized', {
+            ...transportContext,
+            sessionId: sid,
+          });
         },
-        400,
-      );
-    }
-
-    const sessionId = c.req.header('mcp-session-id') ?? randomUUID();
-
-    // Per MCP Spec: Validate session exists and is not expired
-    // If session ID provided but invalid, return 404 to trigger reinit
-    if (
-      c.req.header('mcp-session-id') &&
-      !sessionManager.isSessionValid(sessionId)
-    ) {
-      logger.warning('Invalid or expired session ID', {
-        ...transportContext,
-        sessionId,
-      });
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          error: {
-            code: -32001,
-            message: 'Session expired or invalid. Please reinitialize.',
-          },
-          id: null,
+        onsessionclosed: (sid: string) => {
+          transports.delete(sid);
+          sessionManager.terminateSession(sid);
+          logger.debug('MCP session closed via transport', {
+            ...transportContext,
+            sessionId: sid,
+          });
         },
-        404,
-      );
-    }
-
-    // Create or update session
-    if (!c.req.header('mcp-session-id')) {
-      // New session - will be created on successful initialization
-      logger.debug('New session will be created', {
-        ...transportContext,
-        sessionId,
       });
-    } else {
-      // Existing session - update activity timestamp
-      sessionManager.touchSession(sessionId);
-    }
 
-    const transport = new McpSessionTransport(sessionId);
-
-    const handleRpc = async (): Promise<Response> => {
-      await mcpServer.connect(transport);
+      await server.connect(transport);
       const response = await transport.handleRequest(c);
-
-      // Create session after successful initialization if it's a new session
-      // We detect this by checking if session was just generated (no header provided)
-      if (response && !c.req.header('mcp-session-id')) {
-        // Get auth context if available
-        const store = authContext.getStore();
-        sessionManager.createSession(
-          sessionId,
-          store?.authInfo.clientId,
-          store?.authInfo.tenantId,
-        );
-      }
-
-      if (response) {
-        return response;
-      }
-      return c.body(null, 204);
+      return response ?? c.body(null, 204);
     };
 
-    // The auth logic is now handled by the middleware. We just need to
-    // run the core RPC logic within the async-local-storage context that
-    // the middleware has already populated.
     try {
+      // Preserve auth context through the async handler
       const store = authContext.getStore();
       if (store) {
-        return await authContext.run(store, handleRpc);
+        return await authContext.run(store, handleRequest);
       }
-      return await handleRpc();
+      return await handleRequest();
     } catch (err) {
-      // Only close transport on error - success path needs to keep it open
-      await transport.close?.().catch((closeErr) => {
-        logger.warning('Failed to close transport after error', {
-          ...transportContext,
-          sessionId,
-          error:
-            closeErr instanceof Error ? closeErr.message : String(closeErr),
-        });
-      });
       throw err instanceof Error ? err : new Error(String(err));
     }
   });
@@ -412,7 +427,7 @@ function startHttpServerWithRetry(
 }
 
 export async function startHttpTransport(
-  mcpServer: McpServer,
+  createMcpServer: McpServerFactory,
   parentContext: RequestContext,
 ): Promise<ServerType> {
   const transportContext = {
@@ -421,7 +436,7 @@ export async function startHttpTransport(
   };
   logger.info('Starting HTTP transport.', transportContext);
 
-  const app = createHttpApp(mcpServer, transportContext);
+  const app = createHttpApp(createMcpServer, transportContext);
 
   const server = await startHttpServerWithRetry(
     app,
