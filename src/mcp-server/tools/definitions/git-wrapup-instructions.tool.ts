@@ -128,7 +128,7 @@ function loadInstructions(filePath: string | undefined): string {
 }
 
 // Load instructions once at module initialization (optimization)
-const baseInstructions = loadInstructions(config.git.wrapupInstructionsPath);
+const baseInstructions = loadInstructions(config?.git?.wrapupInstructionsPath);
 
 async function gitWrapupInstructionsLogic(
   input: ToolInput,
