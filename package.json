@@ -52,7 +52,7 @@
     "format": "bunx prettier --write \"**/*.{ts,js,json,md,html,css}\"",
     "prepare": "bunx husky",
     "inspector": "bunx mcp-inspector --config mcp.json --server git-mcp-server",
-    "test": "bun test --config vitest.config.ts",
+    "test": "bun test",
     "test:coverage": "bun test --coverage",
     "audit": "bun audit",
     "audit:fix": "bun audit --fix",

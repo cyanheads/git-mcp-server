@@ -55,7 +55,7 @@ async function directoryExists(dirPath: string): Promise<boolean> {
  */
 const clean = async (): Promise<void> => {
   try {
-    let dirsToClean: string[] = ['dist', 'logs'];
+    let dirsToClean: string[] = ['dist', 'logs', 'coverage'];
     const args = process.argv.slice(2);
 
     if (args.length > 0) {

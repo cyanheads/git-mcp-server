@@ -7,13 +7,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
-    // Run integration tests sequentially to avoid logger singleton conflicts
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    // Run sequentially to avoid logger singleton conflicts across test files
+    maxWorkers: 1,
+    isolate: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

@@ -9,9 +9,8 @@ if (typeof process !== 'undefined' && process.env && !process.env.NODE_ENV) {
   process.env.NODE_ENV = 'test';
 }
 
-// Patch Vitest API gaps when running under Bun's test runner
-// - Alias vi.mock to vi.module
-// - Provide minimal timer shims if missing
+// Bun compatibility shims — Bun's test runner lacks some Vitest APIs.
+// TODO: Remove these once Bun's test runner natively supports vi.mock and fake timers.
 if (!(vi as any).mock && typeof (vi as any).module === 'function') {
   (vi as any).mock = (vi as any).module.bind(vi);
 }
@@ -24,7 +23,7 @@ let offset = 0;
     originalNow = Date.now;
     base = originalNow();
     offset = 0;
-    // @ts-ignore
+    // @ts-ignore -- intentional Date.now override for fake timers
     Date.now = () => base + offset;
   }
 };
@@ -37,7 +36,7 @@ let offset = 0;
 };
 (vi as any).useRealTimers = () => {
   if (originalNow) {
-    // @ts-ignore
+    // @ts-ignore -- restore original Date.now
     Date.now = originalNow;
     originalNow = null;
   }
@@ -77,11 +76,6 @@ if (!IS_INTEGRATION) {
 // Ensure global vi exists for any indirect references
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).vi = (globalThis as any).vi ?? vi;
-
-try {
-  // eslint-disable-next-line no-console
-  console.debug('setup vitest vi keys:', Object.keys(vi as any));
-} catch {}
 
 // Global test setup without MSW - tests use real APIs or isolated MSW servers
 beforeAll(() => {
