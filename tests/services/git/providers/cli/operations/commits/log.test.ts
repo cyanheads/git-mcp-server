@@ -5,11 +5,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { executeLog } from '@/services/git/providers/cli/operations/commits/log.js';
-import type {
-  GitLogOptions,
-  GitOperationContext,
-} from '@/services/git/types.js';
+import type { GitOperationContext } from '@/services/git/types.js';
 import type { RequestContext } from '@/utils/index.js';
+
+type ExecGitFn = (
+  args: string[],
+  cwd: string,
+  ctx: RequestContext,
+) => Promise<{ stdout: string; stderr: string }>;
 
 // The delimiters used in the log parsing (must match output-parser.ts)
 const FIELD_DELIMITER = '\x1F'; // ASCII Unit Separator (same as GIT_FIELD_DELIMITER)
@@ -69,10 +72,10 @@ describe('executeLog', () => {
     tenantId: 'test-tenant',
   };
 
-  let mockExecGit: ReturnType<typeof vi.fn>;
+  let mockExecGit: ReturnType<typeof vi.fn<ExecGitFn>>;
 
   beforeEach(() => {
-    mockExecGit = vi.fn();
+    mockExecGit = vi.fn<ExecGitFn>();
   });
 
   describe('basic log operations', () => {
@@ -186,7 +189,7 @@ describe('executeLog', () => {
 
       await executeLog({ maxCount: 10 }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-n10');
     });
 
@@ -195,7 +198,7 @@ describe('executeLog', () => {
 
       await executeLog({ maxCount: 1 }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-n1');
     });
   });
@@ -206,7 +209,7 @@ describe('executeLog', () => {
 
       await executeLog({ skip: 5 }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--skip=5');
     });
 
@@ -215,7 +218,7 @@ describe('executeLog', () => {
 
       await executeLog({ skip: 10, maxCount: 5 }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--skip=10');
       expect(args).toContain('-n5');
     });
@@ -227,7 +230,7 @@ describe('executeLog', () => {
 
       await executeLog({ since: '2024-01-01' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--since=2024-01-01');
     });
 
@@ -236,7 +239,7 @@ describe('executeLog', () => {
 
       await executeLog({ until: '2024-12-31' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--until=2024-12-31');
     });
 
@@ -249,7 +252,7 @@ describe('executeLog', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--since=2024-01-01');
       expect(args).toContain('--until=2024-06-30');
     });
@@ -261,7 +264,7 @@ describe('executeLog', () => {
 
       await executeLog({ author: 'John Doe' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--author=John Doe');
     });
 
@@ -270,7 +273,7 @@ describe('executeLog', () => {
 
       await executeLog({ author: '@example.com' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--author=@example.com');
     });
   });
@@ -281,7 +284,7 @@ describe('executeLog', () => {
 
       await executeLog({ grep: 'fix:' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--grep=fix:');
     });
   });
@@ -292,7 +295,7 @@ describe('executeLog', () => {
 
       await executeLog({ branch: 'develop' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('develop');
     });
   });
@@ -303,7 +306,7 @@ describe('executeLog', () => {
 
       await executeLog({ path: 'src/index.ts' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       const dashDashIdx = args.indexOf('--');
       expect(dashDashIdx).toBeGreaterThan(-1);
       expect(args[dashDashIdx + 1]).toBe('src/index.ts');
@@ -316,12 +319,13 @@ describe('executeLog', () => {
 
       await executeLog({ stat: true }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--stat');
     });
 
     it('includes stat content in commit result', async () => {
-      const statContent = 'file.txt | 10 +++++++---\n 1 file changed, 7 insertions(+), 3 deletions(-)';
+      const statContent =
+        'file.txt | 10 +++++++---\n 1 file changed, 7 insertions(+), 3 deletions(-)';
       const output = buildLogOutput([
         {
           hash: 'abc123',
@@ -367,7 +371,7 @@ describe('executeLog', () => {
 
       await executeLog({ patch: true }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-p');
     });
 
@@ -394,7 +398,11 @@ index abc123..def456 100644
 
       mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
 
-      const result = await executeLog({ patch: true }, mockContext, mockExecGit);
+      const result = await executeLog(
+        { patch: true },
+        mockContext,
+        mockExecGit,
+      );
 
       expect(result.commits[0]!.patch).toContain('diff --git');
       expect(result.commits[0]!.patch).toContain('+added line');
@@ -407,7 +415,7 @@ index abc123..def456 100644
 
       await executeLog({ stat: true, patch: true }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--stat');
       expect(args).toContain('-p');
     });

@@ -5,11 +5,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { executeCheckout } from '@/services/git/providers/cli/operations/branches/checkout.js';
-import type {
-  GitCheckoutOptions,
-  GitOperationContext,
-} from '@/services/git/types.js';
+import type { GitOperationContext } from '@/services/git/types.js';
 import type { RequestContext } from '@/utils/index.js';
+
+type ExecGitFn = (
+  args: string[],
+  cwd: string,
+  ctx: RequestContext,
+) => Promise<{ stdout: string; stderr: string }>;
 
 describe('executeCheckout', () => {
   const mockContext: GitOperationContext = {
@@ -20,10 +23,10 @@ describe('executeCheckout', () => {
     tenantId: 'test-tenant',
   };
 
-  let mockExecGit: ReturnType<typeof vi.fn>;
+  let mockExecGit: ReturnType<typeof vi.fn<ExecGitFn>>;
 
   beforeEach(() => {
-    mockExecGit = vi.fn();
+    mockExecGit = vi.fn<ExecGitFn>();
   });
 
   describe('basic checkout operations', () => {
@@ -39,7 +42,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('checkout');
       expect(args).toContain('main');
       expect(result.success).toBe(true);
@@ -59,7 +62,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('abc123def');
       expect(result.target).toBe('abc123def');
     });
@@ -76,7 +79,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('v1.0.0');
       expect(result.target).toBe('v1.0.0');
     });
@@ -95,7 +98,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-b');
       expect(args).toContain('feature-x');
       expect(result.branchCreated).toBe(true);
@@ -113,7 +116,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('-b');
     });
 
@@ -125,7 +128,7 @@ describe('executeCheckout', () => {
 
       await executeCheckout({ target: 'branch' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('-b');
     });
   });
@@ -143,7 +146,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-b');
       expect(args).toContain('--track');
       expect(args).toContain('feature');
@@ -161,7 +164,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('--track');
     });
 
@@ -177,7 +180,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-b');
       expect(args).not.toContain('--track');
     });
@@ -194,7 +197,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       const bIdx = args.indexOf('-b');
       const branchIdx = args.indexOf('new-branch');
       const trackIdx = args.indexOf('--track');
@@ -219,7 +222,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--force');
     });
 
@@ -235,7 +238,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('--force');
     });
   });
@@ -253,7 +256,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       const dashDashIdx = args.indexOf('--');
       expect(dashDashIdx).toBeGreaterThan(-1);
       expect(args).toContain('file1.txt');
@@ -272,7 +275,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('--');
     });
 
@@ -288,7 +291,7 @@ describe('executeCheckout', () => {
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('HEAD');
       expect(args).toContain('--');
       expect(args).toContain('src/modified.ts');
@@ -375,7 +378,7 @@ file2.txt`,
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-b');
       expect(args).toContain('--track');
       expect(args).toContain('--force');
@@ -394,7 +397,7 @@ file2.txt`,
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('HEAD~1');
       expect(args).toContain('--force');
       expect(args).toContain('--');

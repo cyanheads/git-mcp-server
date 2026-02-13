@@ -5,11 +5,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { executeDiff } from '@/services/git/providers/cli/operations/commits/diff.js';
-import type {
-  GitDiffOptions,
-  GitOperationContext,
-} from '@/services/git/types.js';
+import type { GitOperationContext } from '@/services/git/types.js';
 import type { RequestContext } from '@/utils/index.js';
+
+type ExecGitFn = (
+  args: string[],
+  cwd: string,
+  ctx: RequestContext,
+) => Promise<{ stdout: string; stderr: string }>;
 
 describe('executeDiff', () => {
   const mockContext: GitOperationContext = {
@@ -20,10 +23,10 @@ describe('executeDiff', () => {
     tenantId: 'test-tenant',
   };
 
-  let mockExecGit: ReturnType<typeof vi.fn>;
+  let mockExecGit: ReturnType<typeof vi.fn<ExecGitFn>>;
 
   beforeEach(() => {
-    mockExecGit = vi.fn();
+    mockExecGit = vi.fn<ExecGitFn>();
   });
 
   describe('basic diff operations', () => {
@@ -71,7 +74,7 @@ index abc123..def456 100644
 
       await executeDiff({ staged: true }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--cached');
     });
 
@@ -82,7 +85,7 @@ index abc123..def456 100644
 
       await executeDiff({ staged: false }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('--cached');
     });
   });
@@ -98,9 +101,13 @@ file3.txt`;
         stderr: '',
       });
 
-      const result = await executeDiff({ nameOnly: true }, mockContext, mockExecGit);
+      const result = await executeDiff(
+        { nameOnly: true },
+        mockContext,
+        mockExecGit,
+      );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--name-only');
       expect(result.diff).toBe(nameOnlyOutput);
       expect(result.filesChanged).toBe(3);
@@ -115,7 +122,11 @@ src/utils.ts`;
         stderr: '',
       });
 
-      const result = await executeDiff({ nameOnly: true }, mockContext, mockExecGit);
+      const result = await executeDiff(
+        { nameOnly: true },
+        mockContext,
+        mockExecGit,
+      );
 
       expect(result.filesChanged).toBe(2);
       expect(result.binary).toBe(false);
@@ -130,7 +141,7 @@ src/utils.ts`;
 
       await executeDiff({ unified: 5 }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--unified=5');
     });
 
@@ -141,7 +152,7 @@ src/utils.ts`;
 
       await executeDiff({ unified: 0 }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--unified=0');
     });
   });
@@ -158,7 +169,7 @@ src/utils.ts`;
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('abc123');
       expect(args).toContain('def456');
       // commit1 should come before commit2
@@ -174,7 +185,7 @@ src/utils.ts`;
 
       await executeDiff({ commit1: 'HEAD~1' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('HEAD~1');
     });
   });
@@ -187,7 +198,11 @@ src/utils.ts`;
 
       mockExecGit.mockResolvedValueOnce({ stdout: statOutput, stderr: '' });
 
-      const result = await executeDiff({ stat: true }, mockContext, mockExecGit);
+      const result = await executeDiff(
+        { stat: true },
+        mockContext,
+        mockExecGit,
+      );
 
       expect(result.diff).toBe(statOutput);
       expect(result.filesChanged).toBe(2);
@@ -201,7 +216,11 @@ src/utils.ts`;
 
       mockExecGit.mockResolvedValueOnce({ stdout: statOutput, stderr: '' });
 
-      const result = await executeDiff({ stat: true }, mockContext, mockExecGit);
+      const result = await executeDiff(
+        { stat: true },
+        mockContext,
+        mockExecGit,
+      );
 
       expect(result.binary).toBe(true);
     });
@@ -331,7 +350,7 @@ new file mode 100644
 
       await executeDiff({ path: 'src/index.ts' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       const dashDashIdx = args.indexOf('--');
       expect(dashDashIdx).toBeGreaterThan(-1);
       expect(args[dashDashIdx + 1]).toBe('src/index.ts');
@@ -378,7 +397,7 @@ Binary files a/image.png and b/image.png differ`;
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       const cachedIdx = args.indexOf('--cached');
       const unifiedIdx = args.findIndex((a: string) =>
         a.startsWith('--unified='),
@@ -400,7 +419,7 @@ Binary files a/image.png and b/image.png differ`;
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       const dashDashIdx = args.indexOf('--');
       expect(dashDashIdx).toBe(args.length - 2);
       expect(args[args.length - 1]).toBe('src/');
@@ -419,7 +438,7 @@ Binary files a/image.png and b/image.png differ`;
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0];
+      const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--cached');
       expect(args).toContain('--name-only');
       expect(result.filesChanged).toBe(2);
