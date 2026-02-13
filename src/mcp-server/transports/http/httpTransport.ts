@@ -61,12 +61,18 @@ export function createHttpApp(
     staleTimeoutMs: config.mcpStatefulSessionStaleTimeoutMs,
   });
 
-  // CORS (with permissive fallback)
-  const allowedOrigin =
-    Array.isArray(config.mcpAllowedOrigins) &&
-    config.mcpAllowedOrigins.length > 0
-      ? config.mcpAllowedOrigins
-      : '*';
+  // CORS configuration
+  const explicitOrigins = config.mcpAllowedOrigins;
+  const allowedOrigin: string | string[] =
+    explicitOrigins && explicitOrigins.length > 0 ? explicitOrigins : '*';
+
+  if (allowedOrigin === '*' && config.environment === 'production') {
+    logger.warning(
+      'MCP_ALLOWED_ORIGINS is not configured. CORS will allow all origins. ' +
+        'Set MCP_ALLOWED_ORIGINS to restrict cross-origin access in production.',
+      transportContext,
+    );
+  }
 
   app.use(
     '*',
@@ -116,7 +122,6 @@ export function createHttpApp(
         name: config.mcpServerName,
         version: config.mcpServerVersion,
         description: config.mcpServerDescription,
-        environment: config.environment,
         transport: config.mcpTransportType,
         sessionMode: config.mcpSessionMode,
       },

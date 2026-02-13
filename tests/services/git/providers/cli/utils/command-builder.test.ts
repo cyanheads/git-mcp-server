@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildGitCommand,
   buildGitEnv,
-  escapeShellArg,
   validateGitArgs,
 } from '../../../../../../src/services/git/providers/cli/utils/command-builder.js';
 
@@ -127,37 +126,6 @@ describe('Command Builder', () => {
 
       expect(result.GIT_TERMINAL_PROMPT).toBe('0');
       expect(result.PATH).toBe(process.env.PATH);
-    });
-  });
-
-  describe('escapeShellArg', () => {
-    it('should wrap simple strings in single quotes', () => {
-      expect(escapeShellArg('hello')).toBe("'hello'");
-    });
-
-    it('should escape single quotes within string', () => {
-      expect(escapeShellArg("it's")).toBe("'it'\\''s'");
-    });
-
-    it('should handle strings with spaces', () => {
-      expect(escapeShellArg('hello world')).toBe("'hello world'");
-    });
-
-    it('should handle empty strings', () => {
-      expect(escapeShellArg('')).toBe("''");
-    });
-
-    it('should handle strings with special shell characters', () => {
-      // These should be safe within single quotes
-      expect(escapeShellArg('$VAR')).toBe("'$VAR'");
-      expect(escapeShellArg('`cmd`')).toBe("'`cmd`'");
-      expect(escapeShellArg('$(cmd)')).toBe("'$(cmd)'");
-      expect(escapeShellArg('a;b')).toBe("'a;b'");
-      expect(escapeShellArg('a|b')).toBe("'a|b'");
-    });
-
-    it('should handle multiple single quotes', () => {
-      expect(escapeShellArg("a'b'c")).toBe("'a'\\''b'\\''c'");
     });
   });
 

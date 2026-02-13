@@ -48,17 +48,6 @@ export function buildGitCommand(config: GitCommandConfig): string[] {
 }
 
 /**
- * Escape a string for safe use in shell commands.
- *
- * @param str - String to escape
- * @returns Escaped string
- */
-export function escapeShellArg(str: string): string {
-  // Replace single quotes with '\'' and wrap in single quotes
-  return `'${str.replace(/'/g, "'\\''")}'`;
-}
-
-/**
  * Helper to safely load config for git operations.
  * Uses dynamic import to avoid circular dependencies.
  *

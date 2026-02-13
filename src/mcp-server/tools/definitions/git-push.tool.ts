@@ -21,6 +21,7 @@ import {
   createJsonFormatter,
   type VerbosityLevel,
 } from '../utils/json-response-formatter.js';
+import { validateProtectedBranchOperation } from '../utils/git-validators.js';
 
 const TOOL_NAME = 'git_push';
 const TOOL_TITLE = 'Git Push';
@@ -55,6 +56,12 @@ const InputSchema = z.object({
   remoteBranch: BranchNameSchema.optional().describe(
     'Remote branch name to push to (if different from local branch name).',
   ),
+  confirmed: z
+    .boolean()
+    .default(false)
+    .describe(
+      'Explicit confirmation required for force push or branch deletion on protected branches (main, master, production, etc.).',
+    ),
 });
 
 const OutputSchema = z.object({
@@ -79,6 +86,30 @@ async function gitPushLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
+  // Enforce protected branch checks for destructive operations
+  if (input.force || input.delete) {
+    let branchToCheck = input.branch;
+    if (!branchToCheck) {
+      const status = await provider.status(
+        { includeUntracked: false },
+        {
+          workingDirectory: targetPath,
+          requestContext: appContext,
+          tenantId: appContext.tenantId || 'default-tenant',
+        },
+      );
+      branchToCheck = status?.currentBranch ?? undefined;
+    }
+    if (branchToCheck) {
+      const operation = input.force ? 'force push' : 'branch deletion';
+      validateProtectedBranchOperation(
+        branchToCheck,
+        operation,
+        input.confirmed,
+      );
+    }
+  }
+
   const pushOptions: {
     remote?: string;
     branch?: string;

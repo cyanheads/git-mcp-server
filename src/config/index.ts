@@ -235,9 +235,21 @@ const ConfigSchema = z.object({
       z.enum(['auto', 'cli', 'isomorphic']).default('auto'),
     ),
     signCommits: z.coerce.boolean().default(false),
-    authorName: z.string().optional(),
+    authorName: z
+      .string()
+      .regex(
+        /^[^\n\r\0]*$/,
+        'Git author name must not contain newlines or null bytes',
+      )
+      .optional(),
     authorEmail: z.string().email().optional(),
-    committerName: z.string().optional(),
+    committerName: z
+      .string()
+      .regex(
+        /^[^\n\r\0]*$/,
+        'Git committer name must not contain newlines or null bytes',
+      )
+      .optional(),
     committerEmail: z.string().email().optional(),
     wrapupInstructionsPath: z.preprocess(
       expandTildePath,

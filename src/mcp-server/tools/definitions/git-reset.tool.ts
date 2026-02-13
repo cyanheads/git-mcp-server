@@ -15,6 +15,7 @@ import {
   createJsonFormatter,
   type VerbosityLevel,
 } from '../utils/json-response-formatter.js';
+import { validateProtectedBranchOperation } from '../utils/git-validators.js';
 
 const TOOL_NAME = 'git_reset';
 const TOOL_TITLE = 'Git Reset';
@@ -36,6 +37,12 @@ const InputSchema = z.object({
     .array(z.string())
     .optional()
     .describe('Specific file paths to reset (leaves HEAD unchanged).'),
+  confirmed: z
+    .boolean()
+    .default(false)
+    .describe(
+      'Explicit confirmation required for hard reset on protected branches (main, master, production, etc.).',
+    ),
 });
 
 const OutputSchema = z.object({
@@ -54,6 +61,25 @@ async function gitResetLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
+  // Enforce protected branch checks for destructive reset modes
+  if (input.mode === 'hard') {
+    const status = await provider.status(
+      { includeUntracked: false },
+      {
+        workingDirectory: targetPath,
+        requestContext: appContext,
+        tenantId: appContext.tenantId || 'default-tenant',
+      },
+    );
+    if (status?.currentBranch) {
+      validateProtectedBranchOperation(
+        status.currentBranch,
+        'reset --hard',
+        input.confirmed,
+      );
+    }
+  }
+
   const resetOptions: {
     mode: 'soft' | 'mixed' | 'hard' | 'merge' | 'keep';
     commit?: string;
