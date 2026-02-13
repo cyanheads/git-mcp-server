@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.8.1 - 2026-02-12
+
+### Added
+
+- **`git_tag` sign option**: Exposed explicit `sign` parameter on the `git_tag` tool, allowing callers to request GPG/SSH-signed tags independent of the global `GIT_SIGN_COMMITS` config
+- **`forceUnsignedOnFailure` option**: Added to both `git_commit` and `git_tag` — when signing fails (e.g., missing GPG key, agent unavailable), automatically retries the operation unsigned instead of failing
+- **Signing resilience tests**: Comprehensive test coverage for `forceUnsignedOnFailure` retry behavior in commit and tag operations, plus `sign` option passthrough in the tag tool
+
+### Changed
+
+- **Tag create refactor**: Extracted `buildCreateArgs` helper in tag service to cleanly support signed/unsigned retry without duplicating argument construction logic
+
 ## v2.8.0 - 2026-02-12
 
 ### Added
