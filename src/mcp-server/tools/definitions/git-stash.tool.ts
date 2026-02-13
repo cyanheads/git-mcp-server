@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema } from '../schemas/common.js';
+import { PathSchema, normalizeMessage } from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -98,7 +98,7 @@ async function gitStashLogic(
   };
 
   if (input.message !== undefined) {
-    stashOptions.message = input.message;
+    stashOptions.message = normalizeMessage(input.message);
   }
   if (input.stashRef !== undefined) {
     stashOptions.stashRef = input.stashRef;

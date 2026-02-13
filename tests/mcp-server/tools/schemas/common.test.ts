@@ -15,6 +15,8 @@ import {
   LimitSchema,
   SkipSchema,
   DepthSchema,
+  CommitMessageSchema,
+  normalizeMessage,
 } from '@/mcp-server/tools/schemas/common.js';
 
 /**
@@ -144,6 +146,76 @@ describe('Common Schemas - JSON Schema Compatibility', () => {
       expect(SkipSchema.safeParse(-1).success).toBe(false); // negative
       expect(SkipSchema.safeParse(1.5).success).toBe(false); // not integer
     });
+  });
+});
+
+describe('normalizeMessage', () => {
+  it('should convert literal \\n to actual newlines', () => {
+    expect(normalizeMessage('line1\\nline2')).toBe('line1\nline2');
+  });
+
+  it('should convert literal \\n\\n to double newlines', () => {
+    expect(normalizeMessage('title\\n\\nbody')).toBe('title\n\nbody');
+  });
+
+  it('should convert literal \\t to tab', () => {
+    expect(normalizeMessage('col1\\tcol2')).toBe('col1\tcol2');
+  });
+
+  it('should convert literal \\r to carriage return', () => {
+    expect(normalizeMessage('line1\\rline2')).toBe('line1\rline2');
+  });
+
+  it('should convert literal \\r\\n to a single newline', () => {
+    expect(normalizeMessage('line1\\r\\nline2')).toBe('line1\nline2');
+  });
+
+  it('should preserve strings that already have real newlines', () => {
+    expect(normalizeMessage('line1\nline2')).toBe('line1\nline2');
+  });
+
+  it('should handle mixed literal and real newlines', () => {
+    expect(normalizeMessage('line1\nline2\\nline3')).toBe(
+      'line1\nline2\nline3',
+    );
+  });
+
+  it('should return empty string unchanged', () => {
+    expect(normalizeMessage('')).toBe('');
+  });
+
+  it('should return simple single-line messages unchanged', () => {
+    expect(normalizeMessage('fix: resolve bug')).toBe('fix: resolve bug');
+  });
+
+  it('should handle a realistic multi-line commit message with literal escapes', () => {
+    const input =
+      'feat: add user authentication\\n\\nImplemented OAuth2 flow with JWT tokens.\\nAdded tests for login and logout.';
+    const expected =
+      'feat: add user authentication\n\nImplemented OAuth2 flow with JWT tokens.\nAdded tests for login and logout.';
+    expect(normalizeMessage(input)).toBe(expected);
+  });
+});
+
+describe('CommitMessageSchema', () => {
+  it('should normalize literal \\n in parsed messages', () => {
+    const result = CommitMessageSchema.parse('title\\n\\nbody');
+    expect(result).toBe('title\n\nbody');
+  });
+
+  it('should pass through messages with real newlines', () => {
+    const result = CommitMessageSchema.parse('title\n\nbody');
+    expect(result).toBe('title\n\nbody');
+  });
+
+  it('should reject empty messages', () => {
+    expect(CommitMessageSchema.safeParse('').success).toBe(false);
+  });
+
+  it('should reject messages exceeding max length', () => {
+    expect(CommitMessageSchema.safeParse('x'.repeat(10001)).success).toBe(
+      false,
+    );
   });
 });
 

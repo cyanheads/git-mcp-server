@@ -11,6 +11,7 @@ import {
   TagNameSchema,
   CommitRefSchema,
   ForceSchema,
+  normalizeMessage,
 } from '../schemas/common.js';
 import {
   createToolHandler,
@@ -101,7 +102,7 @@ async function gitTagLogic(
     tagOptions.commit = input.commit;
   }
   if (input.message !== undefined) {
-    tagOptions.message = input.message;
+    tagOptions.message = normalizeMessage(input.message);
   }
   if (input.annotated !== undefined) {
     tagOptions.annotated = input.annotated;

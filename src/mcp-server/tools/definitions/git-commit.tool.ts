@@ -33,7 +33,7 @@ Pass commit messages as JSON string parameters. Multi-line messages are supporte
 - Single line: { "message": "feat: add user authentication" }
 - Multi-line: { "message": "feat: add user authentication\\n\\nImplemented OAuth2 flow with JWT tokens.\\nAdded tests for login and logout." }
 
-Note: Do not use bash heredoc syntax.`;
+Note: Do not use bash heredoc syntax. Literal escape sequences (\\n, \\t) in the message string are automatically normalized to their actual characters.`;
 
 const InputSchema = z.object({
   path: PathSchema,

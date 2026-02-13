@@ -144,14 +144,34 @@ export const TagNameSchema = z
   .describe('Tag name (must follow git naming conventions).');
 
 /**
+ * Normalize literal escape sequences in message strings.
+ *
+ * LLM clients frequently send literal two-character sequences like `\n`
+ * (backslash + n) instead of actual newline characters. This normalizes
+ * them so git records real newlines in commit/tag/merge messages.
+ *
+ * Only normalizes sequences that are unambiguously escape sequences —
+ * `\n`, `\r`, `\t` — and collapses `\r\n` to `\n` for consistency.
+ */
+export function normalizeMessage(message: string): string {
+  return message
+    .replace(/\\r\\n/g, '\n') // literal \r\n → newline
+    .replace(/\\n/g, '\n') // literal \n → newline
+    .replace(/\\r/g, '\r') // literal \r → carriage return
+    .replace(/\\t/g, '\t'); // literal \t → tab
+}
+
+/**
  * Commit message
  *
  * Must be non-empty and within reasonable length limits.
+ * Normalizes literal escape sequences from LLM clients.
  */
 export const CommitMessageSchema = z
   .string()
   .min(1, 'Commit message cannot be empty')
   .max(10000, 'Commit message too long')
+  .transform(normalizeMessage)
   .describe('Commit message.');
 
 /**
