@@ -5,6 +5,9 @@
  * @module src/mcp-server/tools/definitions
  */
 
+// Git tools - Analysis
+import { gitChangelogAnalyzeTool } from './git-changelog-analyze.tool.js';
+
 // Git tools - Core
 import { gitBlameTool } from './git-blame.tool.js';
 import { gitCleanTool } from './git-clean.tool.js';
@@ -50,6 +53,7 @@ export const allToolDefinitions = [
   gitAddTool,
   gitBlameTool,
   gitBranchTool,
+  gitChangelogAnalyzeTool,
   gitCheckoutTool,
   gitCherryPickTool,
   gitCleanTool,
