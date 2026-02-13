@@ -345,23 +345,24 @@ For strict rules when using this server with an AI agent, refer to the **`AGENTS
 
 ## 🧪 Testing
 
-This server uses [Vitest](https://vitest.dev/) for testing.
+Tests run via [Bun's test runner](https://bun.sh/docs/cli/test) with Vitest compatibility.
 
 - **Run all tests:**
 
   ```sh
-  npm test
+  bun test
   ```
 
 - **Run tests with coverage:**
 
   ```sh
-  npm run test:coverage
+  bun test --coverage
   ```
 
-- **Run tests in watch mode:**
+- **Run quality checks (lint, format, typecheck, audit):**
+
   ```sh
-  npm test -- --watch
+  bun run devcheck
   ```
 
 ## 🗺️ Roadmap
@@ -371,7 +372,7 @@ This server uses [Vitest](https://vitest.dev/) for testing.
 The server uses a **provider-based architecture** to support multiple git implementation backends:
 
 - **✅ CLI Provider** (Current): Full-featured git operations via native git CLI
-  - Complete coverage of all 27 git tools
+  - Implementation coverage for all 27 git tools
   - Executes git commands using Bun.spawn for optimal performance
   - Streaming I/O handling for large outputs (10MB buffer limit)
   - Configurable timeouts (60s default) and automatic process cleanup

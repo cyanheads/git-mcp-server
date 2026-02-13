@@ -4,19 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## v2.7.0 - 2026-02-12
 
+### Added
+
+- **CI workflow**: Added GitHub Actions CI pipeline with lint, typecheck, and test steps on push/PR to main
+- **Comprehensive unit test suite**: Added 41 new test files covering all tool definitions, service layer operations, prompts, resources, auth middleware, and shared utilities
+- **Bun test runner compatibility**: Added Vitest compatibility shims in test setup for `vi.mock`, fake timers, and pre-mocked modules
+
 ### Changed
 
 - **Removed roots, elicitation, and sampling capabilities** from MCP server registration; simplified server to logging, resources, tools, and prompts
 - **Removed `ElicitableContext`** and elicitation bridging logic from tool handler factory, simplifying `appContext` creation
 - **Deleted `roots-registration.ts`** module and its import/usage in server setup
-- **Rewrote CLAUDE.md** (v2.4.1 → v2.5.0): consolidated agent protocol docs, updated tool workflow to use `createToolHandler` pattern, removed redundant sections
+- **Modernized publish workflow**: Added Bun setup, upgraded Node.js 18→22, migrated install/build/test steps from npm to Bun, added lint and typecheck gates
+- **Rewrote CLAUDE.md** (v2.4.1 → v2.5.0): consolidated agent protocol docs, updated tool workflow to use `createToolHandler` pattern, reformatted tables
 - **Deleted `.clinerules/clinerules.md`**: obsolete hard-linked copy replaced by AGENTS.md symlink
 - **Updated `docs/tree.md`** to reflect removal of roots directory
+- **Updated server.json**: bumped schema to 2025-12-11, removed deprecated `mcpName` field
+
+### Fixed
+
+- **Wrapup tool module init**: Added defensive null check (`config?.git?.wrapupInstructionsPath`) to prevent crash when config is undefined during test or early initialization
+- **Logger integration tests**: Replaced brittle `setTimeout` waits with deterministic `waitForLogEntry`/`waitForFile` polling helpers
 
 ### Improved
 
 - **Test type safety**: Added explicit `ExecGitFn` type for mock functions and non-null assertions on mock call access in checkout, diff, and log tests
-- **Test formatting**: Minor formatting cleanups across test files
+- **Test runner config**: Added sequential execution (`maxWorkers: 1`) and fake timer configuration to vitest.config.ts
+- **Clean script**: Added `coverage` to default clean directories
 
 ### Dependencies
 

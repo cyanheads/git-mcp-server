@@ -46,20 +46,20 @@ This document defines the operational rules for contributing to this codebase. F
 
 ## II. Directory Structure
 
-| Directory | Purpose |
-| :--- | :--- |
-| `src/mcp-server/tools/definitions/` | MCP Tool definitions. Named `git-[operation].tool.ts`. |
-| `src/mcp-server/tools/utils/` | Shared tool utilities: `toolDefinition.ts`, `toolHandlerFactory.ts`, `git-validators.ts`, `json-response-formatter.ts`. |
-| `src/mcp-server/tools/schemas/` | Shared Zod schemas: `PathSchema`, `CommitRefSchema`, `BranchNameSchema`, etc. |
-| `src/mcp-server/resources/definitions/` | MCP Resource definitions. Primary: `git-working-directory.resource.ts`. |
-| `src/mcp-server/resources/utils/` | Shared resource utilities: `ResourceDefinition` and handler factory. |
-| `src/mcp-server/prompts/definitions/` | MCP Prompt definitions (e.g., `git-wrapup.prompt.ts`). |
-| `src/mcp-server/transports/` | Transport implementations: `http/` (Hono + Streamable HTTP), `stdio/`, `auth/` (JWT/OAuth strategies). |
-| `src/services/git/` | Git service: `core/` (interfaces, factory), `providers/cli/` (CLI implementation with domain-organized operations). |
-| `src/storage/` | Storage abstractions and providers (in-memory, filesystem, supabase, cloudflare). |
-| `src/container/` | Dependency injection (`tsyringe`). Service registration and tokens. |
-| `src/utils/` | Global utilities: `internal/` (logger, requestContext, ErrorHandler, performance), `security/` (sanitization), `parsing/`, `telemetry/`, `network/`, `scheduling/`. |
-| `tests/` | Unit/integration tests mirroring `src/` structure. |
+| Directory                               | Purpose                                                                                                                                                             |
+| :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/mcp-server/tools/definitions/`     | MCP Tool definitions. Named `git-[operation].tool.ts`.                                                                                                              |
+| `src/mcp-server/tools/utils/`           | Shared tool utilities: `toolDefinition.ts`, `toolHandlerFactory.ts`, `git-validators.ts`, `json-response-formatter.ts`.                                             |
+| `src/mcp-server/tools/schemas/`         | Shared Zod schemas: `PathSchema`, `CommitRefSchema`, `BranchNameSchema`, etc.                                                                                       |
+| `src/mcp-server/resources/definitions/` | MCP Resource definitions. Primary: `git-working-directory.resource.ts`.                                                                                             |
+| `src/mcp-server/resources/utils/`       | Shared resource utilities: `ResourceDefinition` and handler factory.                                                                                                |
+| `src/mcp-server/prompts/definitions/`   | MCP Prompt definitions (e.g., `git-wrapup.prompt.ts`).                                                                                                              |
+| `src/mcp-server/transports/`            | Transport implementations: `http/` (Hono + Streamable HTTP), `stdio/`, `auth/` (JWT/OAuth strategies).                                                              |
+| `src/services/git/`                     | Git service: `core/` (interfaces, factory), `providers/cli/` (CLI implementation with domain-organized operations).                                                 |
+| `src/storage/`                          | Storage abstractions and providers (in-memory, filesystem, supabase, cloudflare).                                                                                   |
+| `src/container/`                        | Dependency injection (`tsyringe`). Service registration and tokens.                                                                                                 |
+| `src/utils/`                            | Global utilities: `internal/` (logger, requestContext, ErrorHandler, performance), `security/` (sanitization), `parsing/`, `telemetry/`, `network/`, `scheduling/`. |
+| `tests/`                                | Unit/integration tests mirroring `src/` structure.                                                                                                                  |
 
 ---
 
@@ -95,11 +95,11 @@ Your logic function receives `(input, deps: ToolLogicDependencies)`:
 
 ```typescript
 interface ToolLogicDependencies {
-  provider: IGitProvider;      // Git provider, already resolved
-  storage: StorageService;     // Storage service, already resolved
-  appContext: RequestContext;   // Request context for logging/tracing
-  sdkContext: SdkContext;       // MCP SDK context (signal, sendNotification, etc.)
-  targetPath: string;           // Resolved working directory (from input.path)
+  provider: IGitProvider; // Git provider, already resolved
+  storage: StorageService; // Storage service, already resolved
+  appContext: RequestContext; // Request context for logging/tracing
+  sdkContext: SdkContext; // MCP SDK context (signal, sendNotification, etc.)
+  targetPath: string; // Resolved working directory (from input.path)
 }
 ```
 
@@ -163,15 +163,34 @@ const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
   currentBranch: z.string().nullable().describe('Current branch name.'),
   isClean: z.boolean().describe('True if working directory is clean.'),
-  stagedChanges: z.object({
-    added: z.array(z.string()).optional().describe('Files added to the index.'),
-    modified: z.array(z.string()).optional().describe('Files modified and staged.'),
-    deleted: z.array(z.string()).optional().describe('Files deleted and staged.'),
-  }).describe('Changes staged for the next commit.'),
-  unstagedChanges: z.object({
-    modified: z.array(z.string()).optional().describe('Files modified but not staged.'),
-    deleted: z.array(z.string()).optional().describe('Files deleted but not staged.'),
-  }).describe('Changes not yet staged.'),
+  stagedChanges: z
+    .object({
+      added: z
+        .array(z.string())
+        .optional()
+        .describe('Files added to the index.'),
+      modified: z
+        .array(z.string())
+        .optional()
+        .describe('Files modified and staged.'),
+      deleted: z
+        .array(z.string())
+        .optional()
+        .describe('Files deleted and staged.'),
+    })
+    .describe('Changes staged for the next commit.'),
+  unstagedChanges: z
+    .object({
+      modified: z
+        .array(z.string())
+        .optional()
+        .describe('Files modified but not staged.'),
+      deleted: z
+        .array(z.string())
+        .optional()
+        .describe('Files deleted but not staged.'),
+    })
+    .describe('Changes not yet staged.'),
   untrackedFiles: z.array(z.string()).describe('Untracked files.'),
   conflictedFiles: z.array(z.string()).describe('Files with merge conflicts.'),
 });
@@ -253,19 +272,27 @@ import {
   type VerbosityLevel,
 } from '../utils/json-response-formatter.js';
 
-function filterOutput(result: ToolOutput, level: VerbosityLevel): Partial<ToolOutput> {
+function filterOutput(
+  result: ToolOutput,
+  level: VerbosityLevel,
+): Partial<ToolOutput> {
   return {
     success: result.success,
     commitHash: result.commitHash,
     ...(shouldInclude(level, 'standard') && { files: result.files }),
-    ...(shouldInclude(level, 'full') && { detailedStatus: result.detailedStatus }),
+    ...(shouldInclude(level, 'full') && {
+      detailedStatus: result.detailedStatus,
+    }),
   };
 }
 
-const responseFormatter = createJsonFormatter<ToolOutput>({ filter: filterOutput });
+const responseFormatter = createJsonFormatter<ToolOutput>({
+  filter: filterOutput,
+});
 ```
 
 **Rules:**
+
 - Include or omit entire fields based on verbosity — never truncate arrays.
 - Return complete arrays when included (LLMs need full context).
 - For simple tools with minimal output, omit the filter entirely: `createJsonFormatter<ToolOutput>()`.
@@ -298,16 +325,16 @@ const responseFormatter = createJsonFormatter<ToolOutput>({ filter: filterOutput
 
 ### Validator Location Rules
 
-| Validator Type | Location | Reason |
-| --- | --- | --- |
-| Path sanitization | Tool layer (`git-validators.ts`) | Security, no git execution |
-| Session directory resolution | Tool layer (`git-validators.ts`) | Uses StorageService |
-| Protected branch checks | Tool layer (`git-validators.ts`) | Pure logic |
-| File path / commit message validation | Tool layer (`git-validators.ts`) | Pure validation |
-| Git repository validation | Service layer (`cli/utils/git-validators.ts`) | Executes `git rev-parse` |
-| Branch existence check | Service layer (`cli/utils/git-validators.ts`) | Executes `git rev-parse --verify` |
-| Clean working dir check | Service layer (`cli/utils/git-validators.ts`) | Executes `git status --porcelain` |
-| Remote existence check | Service layer (`cli/utils/git-validators.ts`) | Executes `git remote get-url` |
+| Validator Type                        | Location                                      | Reason                            |
+| ------------------------------------- | --------------------------------------------- | --------------------------------- |
+| Path sanitization                     | Tool layer (`git-validators.ts`)              | Security, no git execution        |
+| Session directory resolution          | Tool layer (`git-validators.ts`)              | Uses StorageService               |
+| Protected branch checks               | Tool layer (`git-validators.ts`)              | Pure logic                        |
+| File path / commit message validation | Tool layer (`git-validators.ts`)              | Pure validation                   |
+| Git repository validation             | Service layer (`cli/utils/git-validators.ts`) | Executes `git rev-parse`          |
+| Branch existence check                | Service layer (`cli/utils/git-validators.ts`) | Executes `git rev-parse --verify` |
+| Clean working dir check               | Service layer (`cli/utils/git-validators.ts`) | Executes `git status --porcelain` |
+| Remote existence check                | Service layer (`cli/utils/git-validators.ts`) | Executes `git remote get-url`     |
 
 ### Working Directory Resolution
 
@@ -381,15 +408,15 @@ Resources follow the same pattern as tools with a declarative `ResourceDefinitio
 
 ### DI-Managed Services (tokens in `src/container/tokens.ts`)
 
-| Token | Purpose |
-| --- | --- |
-| `StorageService` | Session state (working directory persistence) |
-| `GitProviderFactory` | Git provider selection and caching |
-| `Logger` | Pino-backed structured logging |
-| `AppConfig` | Validated environment configuration |
-| `RateLimiterService` | Optional rate limiting for HTTP transport |
-| `CreateMcpServerInstance` | Factory resolved by `TransportManager` |
-| `TransportManagerToken` | Manages stdio/HTTP transport lifecycle |
+| Token                     | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| `StorageService`          | Session state (working directory persistence) |
+| `GitProviderFactory`      | Git provider selection and caching            |
+| `Logger`                  | Pino-backed structured logging                |
+| `AppConfig`               | Validated environment configuration           |
+| `RateLimiterService`      | Optional rate limiting for HTTP transport     |
+| `CreateMcpServerInstance` | Factory resolved by `TransportManager`        |
+| `TransportManagerToken`   | Manages stdio/HTTP transport lifecycle        |
 
 ### Directly Imported Utilities
 
@@ -401,13 +428,13 @@ Resources follow the same pattern as tools with a declarative `ResourceDefinitio
 
 ### Key Utility Modules (`src/utils/`)
 
-| Module | Key Exports |
-| :--- | :--- |
-| `internal/` | `logger`, `requestContextService`, `ErrorHandler`, `performance` (measureToolExecution) |
-| `security/` | `sanitization` (path/input validation), `rateLimiter`, `idGenerator` |
-| `parsing/` | `jsonParser`, `yamlParser` |
-| `telemetry/` | OpenTelemetry instrumentation |
-| `network/` | `fetchWithTimeout` |
+| Module       | Key Exports                                                                             |
+| :----------- | :-------------------------------------------------------------------------------------- |
+| `internal/`  | `logger`, `requestContextService`, `ErrorHandler`, `performance` (measureToolExecution) |
+| `security/`  | `sanitization` (path/input validation), `rateLimiter`, `idGenerator`                    |
+| `parsing/`   | `jsonParser`, `yamlParser`                                                              |
+| `telemetry/` | OpenTelemetry instrumentation                                                           |
+| `network/`   | `fetchWithTimeout`                                                                      |
 
 ---
 
@@ -477,26 +504,26 @@ No HTTP-based auth. Authorization handled by the host application.
 
 All configuration validated via Zod in `src/config/index.ts`. Derives `serviceName` and `version` from `package.json` if not provided.
 
-| Category | Variables |
-| :--- | :--- |
-| **Transport** | `MCP_TRANSPORT_TYPE` (`stdio`/`http`), `MCP_HTTP_PORT`, `MCP_HTTP_HOST`, `MCP_HTTP_PATH` |
-| **Auth** | `MCP_AUTH_MODE` (`none`/`jwt`/`oauth`), `MCP_AUTH_SECRET_KEY`, `OAUTH_ISSUER_URL`, `OAUTH_AUDIENCE`, `OAUTH_JWKS_URI` |
-| **Storage** | `STORAGE_PROVIDER_TYPE` (`in-memory`/`filesystem`/`supabase`/`cloudflare-r2`/`cloudflare-kv`), `STORAGE_FILESYSTEM_PATH` |
-| **Git** | `GIT_PROVIDER` (`auto`/`cli`/`isomorphic`), `GIT_SIGN_COMMITS`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL`, `GIT_BASE_DIR`, `GIT_MAX_COMMAND_TIMEOUT_MS`, `GIT_MAX_BUFFER_SIZE_MB`, `GIT_WRAPUP_INSTRUCTIONS_PATH` |
-| **Telemetry** | `OTEL_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_SERVICE_VERSION`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` |
+| Category      | Variables                                                                                                                                                                                                                                                  |
+| :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Transport** | `MCP_TRANSPORT_TYPE` (`stdio`/`http`), `MCP_HTTP_PORT`, `MCP_HTTP_HOST`, `MCP_HTTP_PATH`                                                                                                                                                                   |
+| **Auth**      | `MCP_AUTH_MODE` (`none`/`jwt`/`oauth`), `MCP_AUTH_SECRET_KEY`, `OAUTH_ISSUER_URL`, `OAUTH_AUDIENCE`, `OAUTH_JWKS_URI`                                                                                                                                      |
+| **Storage**   | `STORAGE_PROVIDER_TYPE` (`in-memory`/`filesystem`/`supabase`/`cloudflare-r2`/`cloudflare-kv`), `STORAGE_FILESYSTEM_PATH`                                                                                                                                   |
+| **Git**       | `GIT_PROVIDER` (`auto`/`cli`/`isomorphic`), `GIT_SIGN_COMMITS`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL`, `GIT_BASE_DIR`, `GIT_MAX_COMMAND_TIMEOUT_MS`, `GIT_MAX_BUFFER_SIZE_MB`, `GIT_WRAPUP_INSTRUCTIONS_PATH` |
+| **Telemetry** | `OTEL_ENABLED`, `OTEL_SERVICE_NAME`, `OTEL_SERVICE_VERSION`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`                                                                                                                   |
 
 ---
 
 ## XII. Workflow Commands
 
-| Command | Purpose |
-| :--- | :--- |
-| `bun rebuild` | Clean and rebuild; clears logs. Run after dependency changes. |
-| `bun devcheck` | Lint, format, typecheck, security audit. Flags: `--no-fix`, `--no-lint`, `--no-audit`. |
-| `bun test` | Run unit/integration tests. |
-| `bun run dev:stdio` / `dev:http` | Development mode. |
-| `bun run start:stdio` / `start:http` | Production mode (after build). |
-| `bun run build:worker` | Build Cloudflare Worker bundle. |
+| Command                              | Purpose                                                                                |
+| :----------------------------------- | :------------------------------------------------------------------------------------- |
+| `bun rebuild`                        | Clean and rebuild; clears logs. Run after dependency changes.                          |
+| `bun devcheck`                       | Lint, format, typecheck, security audit. Flags: `--no-fix`, `--no-lint`, `--no-audit`. |
+| `bun test`                           | Run unit/integration tests.                                                            |
+| `bun run dev:stdio` / `dev:http`     | Development mode.                                                                      |
+| `bun run start:stdio` / `start:http` | Production mode (after build).                                                         |
+| `bun run build:worker`               | Build Cloudflare Worker bundle.                                                        |
 
 ---
 
