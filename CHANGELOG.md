@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.8.0 - 2026-02-12
+
+### Added
+
+- **`git_changelog_analyze` tool**: New read-only tool that gathers git history context (commits, tags) and structured review instructions for LLM-driven changelog analysis. Supports six review types: `security`, `features`, `storyline`, `gaps`, `breaking_changes`, and `quality`. Configurable commit window (`maxCommits`), tag-based range filtering (`sinceTag`), and branch selection
+- **`git_changelog_analyze` unit tests**: Comprehensive test suite covering input schema validation, tool logic (parallel fetching, sinceTag/branch precedence, empty states), review instruction generation, response formatting, and tool metadata
+
+### Changed
+
+- **Tool count**: Updated README and tool overview from 27 to 28 tools, added new "Analysis" category to the tools table
+
 ## v2.7.1 - 2026-02-12
 
 ### Fixed
