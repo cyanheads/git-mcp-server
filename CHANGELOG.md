@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.8.3 - 2026-02-12
+
+### Fixed
+
+- **Per-session McpServer isolation**: HTTP transport now creates a dedicated McpServer + StreamableHTTPTransport pair per session, fixing a correctness issue where the SDK's Protocol instance (which maintains a 1:1 relationship with its transport) was shared across concurrent connections
+- **Session expiry cleanup**: SessionManager now invokes an `onSessionExpired` callback when sessions expire due to inactivity, ensuring per-session transports are properly closed and cleaned up
+- **Protocol version validation**: Removed manual version checking from the HTTP handler — delegated to the SDK's `StreamableHTTPTransport` which already validates against `SUPPORTED_PROTOCOL_VERSIONS`
+
+### Changed
+
+- **HTTP transport API**: `createHttpApp` and `startHttpTransport` now accept a `McpServerFactory` (async factory function) instead of a pre-created `McpServer` instance; STDIO transport is unchanged (single server)
+- **GET /mcp routing**: Moved server info response from a standalone GET handler into the session-aware GET handler — requests without `Mcp-Session-Id` return server info, requests with a session ID delegate to the transport for SSE streaming
+- **DELETE /mcp handling**: Delegates to `StreamableHTTPTransport.handleRequest()` for internal stream cleanup before removing session state
+- **Worker adapter**: Updated `worker.ts` to pass the server factory to `createHttpApp`, aligning with the per-session architecture
+
 ## v2.8.2 - 2026-02-12
 
 ### Added
