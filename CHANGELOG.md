@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.8.4 - 2026-02-14
+
+### Fixed
+
+- **`git_clone` ENOENT on non-existent target path**: Clone operations failed with a misleading "Git command not found" error because the child process was spawned with `cwd` set to the clone destination — which doesn't exist yet. The service layer now resolves `localPath` to an absolute path and uses its parent directory as the working directory for the git process. The tool layer no longer passes the clone target as `workingDirectory`. (Reported via [#33](https://github.com/cyanheads/git-mcp-server/pull/33) by [@ABHIRAMSHIBU](https://github.com/ABHIRAMSHIBU) and [@cmdev007](https://github.com/cmdev007))
+
 ## v2.8.3 - 2026-02-12
 
 ### Fixed
