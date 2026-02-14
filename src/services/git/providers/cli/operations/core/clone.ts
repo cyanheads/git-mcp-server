@@ -3,6 +3,8 @@
  * @module services/git/providers/cli/operations/core/clone
  */
 
+import { dirname, resolve } from 'node:path';
+
 import type { RequestContext } from '@/utils/index.js';
 
 import type {
@@ -25,7 +27,16 @@ export async function executeClone(
   ) => Promise<{ stdout: string; stderr: string }>,
 ): Promise<GitCloneResult> {
   try {
-    const args: string[] = [options.remoteUrl, options.localPath];
+    // Resolve localPath to absolute so git receives an unambiguous target,
+    // then derive a cwd from its parent directory — the clone destination
+    // doesn't exist yet, so we can't use it as cwd (ENOENT).
+    const resolvedLocalPath = resolve(
+      context.workingDirectory,
+      options.localPath,
+    );
+    const cloneCwd = dirname(resolvedLocalPath);
+
+    const args: string[] = [options.remoteUrl, resolvedLocalPath];
 
     if (options.branch) {
       args.push('--branch', options.branch);
@@ -48,7 +59,7 @@ export async function executeClone(
     }
 
     const cmd = buildGitCommand({ command: 'clone', args });
-    await execGit(cmd, context.workingDirectory, context.requestContext);
+    await execGit(cmd, cloneCwd, context.requestContext);
 
     const result = {
       success: true,

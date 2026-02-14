@@ -80,7 +80,7 @@ async function gitCloneLogic(
   }
 
   const result = await provider.clone(cloneOptions, {
-    workingDirectory: input.localPath,
+    workingDirectory: process.cwd(),
     requestContext: appContext,
     tenantId: appContext.tenantId || 'default-tenant',
   });
