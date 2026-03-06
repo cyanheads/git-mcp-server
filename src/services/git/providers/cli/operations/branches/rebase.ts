@@ -60,18 +60,6 @@ export async function executeRebase(
         throw new Error('upstream is required for start mode');
       }
 
-      if (options.onto) {
-        args.push('--onto', options.onto, options.upstream);
-        if (options.branch) {
-          args.push(options.branch);
-        }
-      } else {
-        args.push(options.upstream);
-        if (options.branch) {
-          args.push(options.branch);
-        }
-      }
-
       if (options.interactive) {
         args.push('--interactive');
       }
@@ -85,6 +73,19 @@ export async function executeRebase(
 
       if (shouldSign) {
         args.push('--gpg-sign');
+      }
+
+      // Positional args must come after flags
+      if (options.onto) {
+        args.push('--onto', options.onto, options.upstream);
+        if (options.branch) {
+          args.push(options.branch);
+        }
+      } else {
+        args.push(options.upstream);
+        if (options.branch) {
+          args.push(options.branch);
+        }
       }
     }
 

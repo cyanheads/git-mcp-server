@@ -61,29 +61,37 @@ export async function executeClone(
     const cmd = buildGitCommand({ command: 'clone', args });
     await execGit(cmd, cloneCwd, context.requestContext);
 
-    // Retrieve HEAD commit hash from the cloned repo (bare repos use the same command)
+    // Retrieve HEAD commit hash and actual branch from the cloned repo
     let commitHash: string | undefined;
+    let actualBranch: string = options.branch || 'main';
     try {
-      const revParseCmd = buildGitCommand({
-        command: 'rev-parse',
-        args: ['HEAD'],
-      });
-      const revParseResult = await execGit(
-        revParseCmd,
-        resolvedLocalPath,
-        context.requestContext,
-      );
+      const [revParseResult, branchResult] = await Promise.all([
+        execGit(
+          buildGitCommand({ command: 'rev-parse', args: ['HEAD'] }),
+          resolvedLocalPath,
+          context.requestContext,
+        ),
+        execGit(
+          buildGitCommand({
+            command: 'rev-parse',
+            args: ['--abbrev-ref', 'HEAD'],
+          }),
+          resolvedLocalPath,
+          context.requestContext,
+        ),
+      ]);
       commitHash = revParseResult.stdout.trim() || undefined;
+      actualBranch = branchResult.stdout.trim() || actualBranch;
     } catch {
       // Non-critical — empty repos have no HEAD
     }
 
-    const result = {
+    const result: GitCloneResult = {
       success: true,
-      localPath: options.localPath,
+      localPath: resolvedLocalPath,
       remoteUrl: options.remoteUrl,
-      branch: options.branch || 'main',
-      commitHash,
+      branch: actualBranch,
+      ...(commitHash && { commitHash }),
     };
 
     return result;

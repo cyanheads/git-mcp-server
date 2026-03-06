@@ -40,7 +40,12 @@ export async function executeShow(
       args.push('--format=raw');
     }
 
-    args.push(options.object);
+    // If filePath is specified, use commit:path syntax to show a specific file
+    if (options.filePath) {
+      args.push(`${options.object}:${options.filePath}`);
+    } else {
+      args.push(options.object);
+    }
 
     // Determine object type reliably via cat-file
     const typeCmd = buildGitCommand({

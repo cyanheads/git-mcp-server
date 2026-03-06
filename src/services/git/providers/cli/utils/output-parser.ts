@@ -256,7 +256,7 @@ export function parseGitBranch(output: string): Array<{
 
   for (const line of lines) {
     const current = line.startsWith('*');
-    const branchLine = line.substring(current ? 2 : 2).trim();
+    const branchLine = line.substring(2).trim(); // Skip '* ' or '  '
 
     // Parse upstream tracking info if present
     const upstreamMatch = branchLine.match(/^(.+?)\s+->\s+(.+)$/);

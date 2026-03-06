@@ -34,6 +34,8 @@ export async function executeStash(
 
     switch (options.mode) {
       case 'list': {
+        // Use custom format to include unix timestamp
+        args.push('--format=%gd\t%ct\t%gs');
         const cmd = buildGitCommand({ command: 'stash', args });
         const result = await execGit(
           cmd,
@@ -41,26 +43,28 @@ export async function executeStash(
           context.requestContext,
         );
 
-        // Parse stash list output
+        // Parse stash list output (format: refname\ttimestamp\tsubject)
         const stashes = result.stdout
           .split('\n')
           .filter((line) => line.trim())
           .map((line, index) => {
-            // Format: stash@{0}: WIP on branch: message  OR  stash@{0}: On branch: message
-            const match = line.match(/^(stash@\{(\d+)\}):\s+(.+)$/);
-            if (match) {
-              const stashIndex = parseInt(match[2]!, 10);
-              const rest = match[3]!;
+            // Format: 0\t1709747200\tWIP on branch: message
+            const parts = line.split('\t');
+            const [refPart, tsPart, ...subjectParts] = parts;
+            if (refPart && tsPart && subjectParts.length > 0) {
+              const stashIndex = parseInt(refPart, 10);
+              const timestamp = parseInt(tsPart, 10);
+              const subject = subjectParts.join('\t');
               // Extract branch from "WIP on <branch>:" or "On <branch>:"
-              const branchMatch = rest.match(
+              const branchMatch = subject.match(
                 /^(?:WIP on|On)\s+([^:]+):\s+(.*)$/,
               );
               return {
-                ref: match[1]!,
+                ref: `stash@{${stashIndex}}`,
                 index: stashIndex,
                 branch: branchMatch?.[1] ?? '',
-                description: branchMatch?.[2] ?? rest,
-                timestamp: 0,
+                description: branchMatch?.[2] ?? subject,
+                timestamp,
               };
             }
             return {

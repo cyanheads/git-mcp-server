@@ -72,7 +72,7 @@ export async function executeFetch(
         fetchedRefs.push(newRefMatch[1]);
       } else {
         const updatedRefMatch = line.match(
-          /[a-f0-9]+\.\.[a-f0-9]+\s+\S+\s+->\s+(\S+)/,
+          /\+?\s*[a-f0-9]+\.{2,3}[a-f0-9]+\s+\S+\s+->\s+(\S+)/,
         );
         if (updatedRefMatch?.[1]) {
           fetchedRefs.push(updatedRefMatch[1]);

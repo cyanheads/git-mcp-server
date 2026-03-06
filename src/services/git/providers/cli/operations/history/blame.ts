@@ -38,6 +38,8 @@ export async function executeBlame(
 
     if (options.startLine && options.endLine) {
       args.push(`-L${options.startLine},${options.endLine}`);
+    } else if (options.startLine) {
+      args.push(`-L${options.startLine},`);
     }
 
     args.push('--', options.file);

@@ -29,6 +29,11 @@ export async function executePush(
     const remote = options.remote || 'origin';
 
     if (options.delete) {
+      if (!options.branch && !options.remoteBranch) {
+        throw new Error(
+          'A branch or remote branch name is required for delete operations.',
+        );
+      }
       args.push('--delete');
     }
 

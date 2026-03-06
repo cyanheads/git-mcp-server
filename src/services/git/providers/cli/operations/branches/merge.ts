@@ -94,11 +94,11 @@ export async function executeMerge(
       })
       .filter((f) => f);
 
-    // Parse merged files from diffstat lines (e.g., " file.txt | 5 +++++")
+    // Parse merged files from diffstat lines (e.g., " file.txt | 5 +++++" or " img.png | Bin 0 -> 1234 bytes")
     const mergedFiles = result.stdout
       .split('\n')
       .map((line) => {
-        const statMatch = line.match(/^\s*(.+?)\s*\|\s*\d+/);
+        const statMatch = line.match(/^\s(.+?)\s*\|\s*(?:\d+\s*[+-]*|Bin\s)/);
         return statMatch?.[1]?.trim() || '';
       })
       .filter((f) => f);
