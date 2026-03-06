@@ -1,7 +1,7 @@
 /**
  * @fileoverview Registers core application services with the DI container.
  * This module encapsulates the registration of fundamental services such as
- * configuration, logging, storage, and the LLM provider.
+ * configuration, logging, storage, and git provider.
  * @module src/container/registrations/core
  */
 import { container, Lifecycle } from 'tsyringe';
@@ -13,18 +13,13 @@ import {
   AppConfig,
   GitProvider,
   GitProviderFactory as GitProviderFactoryToken,
-  LlmProvider,
   Logger,
   RateLimiterService,
-  SpeechService,
   StorageService,
   StorageProvider,
   SupabaseAdminClient,
 } from '@/container/tokens.js';
 import { GitProviderFactory } from '@/services/git/core/GitProviderFactory.js';
-import type { ILlmProvider } from '@/services/llm/core/ILlmProvider.js';
-import { OpenRouterProvider } from '@/services/llm/providers/openrouter.provider.js';
-import { SpeechService as SpeechServiceClass } from '@/services/speech/index.js';
 import { StorageService as StorageServiceClass } from '@/storage/core/StorageService.js';
 import { createStorageProvider } from '@/storage/core/storageFactory.js';
 import type { Database } from '@/storage/providers/supabase/supabase.types.js';
@@ -80,65 +75,12 @@ export const registerCoreServices = () => {
   );
   // --- End Refactor ---
 
-  // LLM Provider (register the class against the interface token)
-  container.register<ILlmProvider>(LlmProvider, {
-    useClass: OpenRouterProvider,
-  });
-
   // Register RateLimiter as a singleton service
   container.register<RateLimiter>(
     RateLimiterService,
     { useClass: RateLimiter },
     { lifecycle: Lifecycle.Singleton },
   );
-
-  // Register SpeechService with factory for configuration-based setup
-  container.register<SpeechServiceClass>(SpeechService, {
-    useFactory: (c) => {
-      const cfg = c.resolve<AppConfigType>(AppConfig);
-
-      // Build TTS config (ElevenLabs)
-      const ttsConfig =
-        cfg.speech?.tts?.enabled && cfg.speech.tts.apiKey
-          ? ({
-              provider: 'elevenlabs',
-              apiKey: cfg.speech.tts.apiKey,
-              ...(cfg.speech.tts.baseUrl && {
-                baseUrl: cfg.speech.tts.baseUrl,
-              }),
-              ...(cfg.speech.tts.defaultVoiceId && {
-                defaultVoiceId: cfg.speech.tts.defaultVoiceId,
-              }),
-              ...(cfg.speech.tts.defaultModelId && {
-                defaultModelId: cfg.speech.tts.defaultModelId,
-              }),
-              ...(cfg.speech.tts.timeout && {
-                timeout: cfg.speech.tts.timeout,
-              }),
-            } as const)
-          : undefined;
-
-      // Build STT config (Whisper)
-      const sttConfig =
-        cfg.speech?.stt?.enabled && cfg.speech.stt.apiKey
-          ? ({
-              provider: 'openai-whisper',
-              apiKey: cfg.speech.stt.apiKey,
-              ...(cfg.speech.stt.baseUrl && {
-                baseUrl: cfg.speech.stt.baseUrl,
-              }),
-              ...(cfg.speech.stt.defaultModelId && {
-                defaultModelId: cfg.speech.stt.defaultModelId,
-              }),
-              ...(cfg.speech.stt.timeout && {
-                timeout: cfg.speech.stt.timeout,
-              }),
-            } as const)
-          : undefined;
-
-      return new SpeechServiceClass(ttsConfig, sttConfig);
-    },
-  });
 
   // Git Provider Factory (singleton)
   container.register(GitProviderFactoryToken, {

@@ -5,7 +5,6 @@
  * The path sanitization utilities are only available in a Node.js environment.
  * @module src/utils/security/sanitization
  */
-import sanitizeHtml from 'sanitize-html';
 import validator from 'validator';
 
 import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
@@ -55,32 +54,6 @@ export interface SanitizedPathInfo {
 }
 
 /**
- * Defines options for context-specific string sanitization.
- */
-export interface SanitizeStringOptions {
-  /** The context in which the string will be used. 'javascript' is disallowed. */
-  context?: 'text' | 'html' | 'attribute' | 'url' | 'javascript';
-  /** Custom allowed HTML tags if `context` is 'html'. */
-  allowedTags?: string[];
-  /** Custom allowed HTML attributes if `context` is 'html'. */
-  allowedAttributes?: Record<string, string[]>;
-}
-
-/**
- * Configuration options for HTML sanitization, mirroring `sanitize-html` library options.
- */
-export interface HtmlSanitizeConfig {
-  /** An array of allowed HTML tag names. */
-  allowedTags?: string[];
-  /** Specifies allowed attributes, either globally or per tag. */
-  allowedAttributes?: sanitizeHtml.IOptions['allowedAttributes'];
-  /** If true, HTML comments are preserved. */
-  preserveComments?: boolean;
-  /** Custom functions to transform tags during sanitization. */
-  transformTags?: sanitizeHtml.IOptions['transformTags'];
-}
-
-/**
  * A singleton class providing various methods for input sanitization.
  * Aims to protect against common vulnerabilities like XSS and path traversal.
  */
@@ -109,69 +82,6 @@ export class Sanitization {
     'private_key',
     'privatekey',
   ];
-
-  /**
-   * Default configuration for HTML sanitization.
-   * @private
-   */
-  private defaultHtmlSanitizeConfig: HtmlSanitizeConfig = {
-    allowedTags: [
-      // === Structure & Sectioning ===
-      'div',
-      'span',
-      'p',
-      'br',
-      'hr',
-      'header',
-      'footer',
-      'nav',
-      'article',
-      'section',
-      'aside',
-      // === Headings & Text Content ===
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-      'strong',
-      'em',
-      'b',
-      'i',
-      'strike',
-      'blockquote',
-      // === Code ===
-      'code',
-      'pre',
-      // === Lists ===
-      'ul',
-      'ol',
-      'li',
-      // === Tables ===
-      'table',
-      'thead',
-      'tbody',
-      'tr',
-      'th',
-      'td',
-      // === Media & Links ===
-      'a',
-      'img',
-      'figure',
-      'figcaption',
-    ],
-    allowedAttributes: {
-      a: ['href', 'name', 'target', 'rel', 'title'],
-      img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
-      // Allow data attributes, class, id, and style on all tags
-      '*': ['class', 'id', 'style', 'data-*'],
-      // Table-specific attributes
-      th: ['scope'],
-      td: ['colspan', 'rowspan'],
-    },
-    preserveComments: true,
-  };
 
   /** @private */
   private constructor() {}
@@ -224,122 +134,6 @@ export class Sanitization {
    */
   public getSensitivePinoFields(): string[] {
     return this.sensitiveFields.map((field) => field.replace(/[-_]/g, ''));
-  }
-
-  /**
-   * Sanitizes an HTML string by removing potentially malicious tags and attributes.
-   * @param input - The HTML string to sanitize.
-   * @param config - Optional custom configuration for `sanitize-html`.
-   * @returns The sanitized HTML string. Returns an empty string if input is falsy.
-   */
-  public sanitizeHtml(input: string, config?: HtmlSanitizeConfig): string {
-    if (!input) return '';
-    const effectiveConfig = {
-      allowedTags:
-        config?.allowedTags ?? this.defaultHtmlSanitizeConfig.allowedTags,
-      allowedAttributes:
-        config?.allowedAttributes ??
-        this.defaultHtmlSanitizeConfig.allowedAttributes,
-      transformTags: config?.transformTags, // Can be undefined
-      preserveComments:
-        config?.preserveComments ??
-        this.defaultHtmlSanitizeConfig.preserveComments,
-    };
-
-    const options: sanitizeHtml.IOptions = {
-      allowedTags: effectiveConfig.allowedTags,
-      allowedAttributes: effectiveConfig.allowedAttributes,
-      transformTags: effectiveConfig.transformTags,
-    };
-
-    if (effectiveConfig.preserveComments) {
-      // Ensure allowedTags is an array before spreading
-      const baseTags = Array.isArray(options.allowedTags)
-        ? options.allowedTags
-        : [];
-      options.allowedTags = [...baseTags, '!--'];
-    }
-    return sanitizeHtml(input, options);
-  }
-
-  /**
-   * Sanitizes a string based on its intended context (e.g., HTML, URL, text).
-   * **Important:** `context: 'javascript'` is disallowed due to security risks.
-   *
-   * @param input - The string to sanitize.
-   * @param options - Options specifying the sanitization context.
-   * @returns The sanitized string. Returns an empty string if input is falsy.
-   * @throws {McpError} If `options.context` is 'javascript', or URL validation fails.
-   */
-  public sanitizeString(
-    input: string,
-    options: SanitizeStringOptions = {},
-  ): string {
-    if (!input) return '';
-
-    const context = options.context ?? 'text';
-
-    switch (context) {
-      case 'html': {
-        const config: HtmlSanitizeConfig = {};
-        if (options.allowedTags) {
-          config.allowedTags = options.allowedTags;
-        }
-        if (options.allowedAttributes) {
-          config.allowedAttributes = this.convertAttributesFormat(
-            options.allowedAttributes,
-          );
-        }
-        return this.sanitizeHtml(input, config);
-      }
-      case 'attribute':
-        return sanitizeHtml(input, { allowedTags: [], allowedAttributes: {} });
-      case 'url':
-        if (
-          !validator.isURL(input, {
-            protocols: ['http', 'https'],
-            require_protocol: true,
-            require_host: true,
-          })
-        ) {
-          logger.warning(
-            'Potentially invalid URL detected during string sanitization (context: url)',
-            requestContextService.createRequestContext({
-              operation: 'Sanitization.sanitizeString.urlWarning',
-              additionalContext: { invalidUrlAttempt: input },
-            }),
-          );
-          return '';
-        }
-        return validator.trim(input);
-      case 'javascript':
-        logger.error(
-          'Attempted JavaScript sanitization via sanitizeString, which is disallowed.',
-          requestContextService.createRequestContext({
-            operation: 'Sanitization.sanitizeString.jsAttempt',
-            additionalContext: { inputSnippet: input.substring(0, 50) },
-          }),
-        );
-        throw new McpError(
-          JsonRpcErrorCode.ValidationError,
-          'JavaScript sanitization is not supported through sanitizeString due to security risks.',
-        );
-      case 'text':
-      default:
-        return sanitizeHtml(input, { allowedTags: [], allowedAttributes: {} });
-    }
-  }
-
-  /**
-   * Converts attribute format for `sanitizeHtml`.
-   * @param attrs - Attributes in `{ tagName: ['attr1'] }` format.
-   * @returns Attributes in `sanitize-html` expected format.
-   * @private
-   */
-  private convertAttributesFormat(
-    attrs: Record<string, string[]>,
-  ): sanitizeHtml.IOptions['allowedAttributes'] {
-    return attrs;
   }
 
   /**

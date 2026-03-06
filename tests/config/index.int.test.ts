@@ -196,44 +196,4 @@ describe('Configuration Service', () => {
       serviceRoleKey: 'service-role-key',
     });
   });
-
-  it('should include speech configuration for enabled providers', async () => {
-    process.env.SPEECH_TTS_ENABLED = 'true';
-    process.env.SPEECH_TTS_PROVIDER = 'elevenlabs';
-    process.env.SPEECH_TTS_API_KEY = 'tts-key';
-    process.env.SPEECH_TTS_BASE_URL = 'https://tts.example.com';
-    process.env.SPEECH_TTS_DEFAULT_VOICE_ID = 'voice-1';
-    process.env.SPEECH_TTS_DEFAULT_MODEL_ID = 'model-1';
-    process.env.SPEECH_TTS_TIMEOUT = '2000';
-
-    process.env.SPEECH_STT_ENABLED = 'true';
-    process.env.SPEECH_STT_PROVIDER = 'openai-whisper';
-    process.env.SPEECH_STT_API_KEY = 'stt-key';
-    process.env.SPEECH_STT_BASE_URL = 'https://stt.example.com';
-    process.env.SPEECH_STT_DEFAULT_MODEL_ID = 'whisper-1';
-    process.env.SPEECH_STT_TIMEOUT = '4000';
-
-    const { parseConfig } = await import('../../src/config/index.js');
-    const config = parseConfig();
-
-    expect(config.speech).toEqual({
-      tts: {
-        enabled: true,
-        provider: 'elevenlabs',
-        apiKey: 'tts-key',
-        baseUrl: 'https://tts.example.com',
-        defaultVoiceId: 'voice-1',
-        defaultModelId: 'model-1',
-        timeout: 2000,
-      },
-      stt: {
-        enabled: true,
-        provider: 'openai-whisper',
-        apiKey: 'stt-key',
-        baseUrl: 'https://stt.example.com',
-        defaultModelId: 'whisper-1',
-        timeout: 4000,
-      },
-    });
-  });
 });

@@ -174,15 +174,6 @@ const ConfigSchema = z.object({
   mcpServerResourceIdentifier: z.string().url().optional(), // RFC 8707 resource indicator
   devMcpClientId: z.string().optional(),
   devMcpScopes: z.array(z.string()).optional(),
-  openrouterAppUrl: z.string().default('http://localhost:3000'),
-  openrouterAppName: z.string(),
-  openrouterApiKey: z.string().optional(),
-  llmDefaultModel: z.string().default('google/gemini-2.5-flash-preview-05-20'),
-  llmDefaultTemperature: z.coerce.number().optional(),
-  llmDefaultTopP: z.coerce.number().optional(),
-  llmDefaultMaxTokens: z.coerce.number().optional(),
-  llmDefaultTopK: z.coerce.number().optional(),
-  llmDefaultMinP: z.coerce.number().optional(),
   oauthProxy: z
     .object({
       authorizationUrl: z.string().url().optional(),
@@ -294,31 +285,6 @@ const ConfigSchema = z.object({
       )
       .default('INFO'),
   }),
-  speech: z
-    .object({
-      tts: z
-        .object({
-          enabled: z.coerce.boolean().default(false),
-          provider: z.enum(['elevenlabs']).default('elevenlabs'),
-          apiKey: z.string().optional(),
-          baseUrl: z.string().url().optional(),
-          defaultVoiceId: z.string().optional(),
-          defaultModelId: z.string().optional(),
-          timeout: z.coerce.number().optional(),
-        })
-        .optional(),
-      stt: z
-        .object({
-          enabled: z.coerce.boolean().default(false),
-          provider: z.enum(['openai-whisper']).default('openai-whisper'),
-          apiKey: z.string().optional(),
-          baseUrl: z.string().url().optional(),
-          defaultModelId: z.string().optional(),
-          timeout: z.coerce.number().optional(),
-        })
-        .optional(),
-    })
-    .optional(),
 });
 
 // --- Parsing Logic ---
@@ -357,15 +323,6 @@ const parseConfig = () => {
     mcpServerResourceIdentifier: env.MCP_SERVER_RESOURCE_IDENTIFIER,
     devMcpClientId: env.DEV_MCP_CLIENT_ID,
     devMcpScopes: env.DEV_MCP_SCOPES?.split(',').map((s) => s.trim()),
-    openrouterAppUrl: env.OPENROUTER_APP_URL,
-    openrouterAppName: env.OPENROUTER_APP_NAME,
-    openrouterApiKey: env.OPENROUTER_API_KEY,
-    llmDefaultModel: env.LLM_DEFAULT_MODEL,
-    llmDefaultTemperature: env.LLM_DEFAULT_TEMPERATURE,
-    llmDefaultTopP: env.LLM_DEFAULT_TOP_P,
-    llmDefaultMaxTokens: env.LLM_DEFAULT_MAX_TOKENS,
-    llmDefaultTopK: env.LLM_DEFAULT_TOP_K,
-    llmDefaultMinP: env.LLM_DEFAULT_MIN_P,
     oauthProxy:
       env.OAUTH_PROXY_AUTHORIZATION_URL || env.OAUTH_PROXY_TOKEN_URL
         ? {
@@ -425,32 +382,6 @@ const parseConfig = () => {
       samplingRatio: env.OTEL_TRACES_SAMPLER_ARG,
       logLevel: env.OTEL_LOG_LEVEL,
     },
-    speech:
-      env.SPEECH_TTS_ENABLED || env.SPEECH_STT_ENABLED
-        ? {
-            tts: env.SPEECH_TTS_ENABLED
-              ? {
-                  enabled: env.SPEECH_TTS_ENABLED,
-                  provider: env.SPEECH_TTS_PROVIDER,
-                  apiKey: env.SPEECH_TTS_API_KEY,
-                  baseUrl: env.SPEECH_TTS_BASE_URL,
-                  defaultVoiceId: env.SPEECH_TTS_DEFAULT_VOICE_ID,
-                  defaultModelId: env.SPEECH_TTS_DEFAULT_MODEL_ID,
-                  timeout: env.SPEECH_TTS_TIMEOUT,
-                }
-              : undefined,
-            stt: env.SPEECH_STT_ENABLED
-              ? {
-                  enabled: env.SPEECH_STT_ENABLED,
-                  provider: env.SPEECH_STT_PROVIDER,
-                  apiKey: env.SPEECH_STT_API_KEY,
-                  baseUrl: env.SPEECH_STT_BASE_URL,
-                  defaultModelId: env.SPEECH_STT_DEFAULT_MODEL_ID,
-                  timeout: env.SPEECH_STT_TIMEOUT,
-                }
-              : undefined,
-          }
-        : undefined,
     // The following fields will be derived and are not directly from env
     mcpServerName: env.MCP_SERVER_NAME,
     mcpServerVersion: env.MCP_SERVER_VERSION,
@@ -478,7 +409,6 @@ const parseConfig = () => {
       serviceName: env.OTEL_SERVICE_NAME ?? parsedPkg.name,
       serviceVersion: env.OTEL_SERVICE_VERSION ?? parsedPkg.version,
     },
-    openrouterAppName: env.OPENROUTER_APP_NAME ?? parsedPkg.name,
   };
 
   const parsedConfig = ConfigSchema.safeParse(finalRawConfig);
