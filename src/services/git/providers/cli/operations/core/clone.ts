@@ -61,11 +61,29 @@ export async function executeClone(
     const cmd = buildGitCommand({ command: 'clone', args });
     await execGit(cmd, cloneCwd, context.requestContext);
 
+    // Retrieve HEAD commit hash from the cloned repo (bare repos use the same command)
+    let commitHash: string | undefined;
+    try {
+      const revParseCmd = buildGitCommand({
+        command: 'rev-parse',
+        args: ['HEAD'],
+      });
+      const revParseResult = await execGit(
+        revParseCmd,
+        resolvedLocalPath,
+        context.requestContext,
+      );
+      commitHash = revParseResult.stdout.trim() || undefined;
+    } catch {
+      // Non-critical — empty repos have no HEAD
+    }
+
     const result = {
       success: true,
       localPath: options.localPath,
       remoteUrl: options.remoteUrl,
       branch: options.branch || 'main',
+      commitHash,
     };
 
     return result;

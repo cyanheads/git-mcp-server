@@ -46,14 +46,20 @@ export async function executeStash(
           .split('\n')
           .filter((line) => line.trim())
           .map((line, index) => {
-            // Format: stash@{0}: WIP on branch: description
-            const match = line.match(/^(stash@\{(\d+)\}): (.+)$/);
+            // Format: stash@{0}: WIP on branch: message  OR  stash@{0}: On branch: message
+            const match = line.match(/^(stash@\{(\d+)\}):\s+(.+)$/);
             if (match) {
+              const stashIndex = parseInt(match[2]!, 10);
+              const rest = match[3]!;
+              // Extract branch from "WIP on <branch>:" or "On <branch>:"
+              const branchMatch = rest.match(
+                /^(?:WIP on|On)\s+([^:]+):\s+(.*)$/,
+              );
               return {
                 ref: match[1]!,
-                index,
-                branch: '',
-                description: match[3]!,
+                index: stashIndex,
+                branch: branchMatch?.[1] ?? '',
+                description: branchMatch?.[2] ?? rest,
                 timestamp: 0,
               };
             }

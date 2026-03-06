@@ -131,6 +131,8 @@ export interface GitCloneResult {
   remoteUrl: string;
   /** Checked out branch */
   branch: string;
+  /** Current HEAD commit hash */
+  commitHash?: string;
 }
 
 export interface GitCleanOptions {

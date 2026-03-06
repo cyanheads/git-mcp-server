@@ -29,29 +29,35 @@ export async function executeMerge(
   ) => Promise<{ stdout: string; stderr: string }>,
 ): Promise<GitMergeResult> {
   try {
-    const args = [options.branch];
+    const args: string[] = [];
 
-    if (options.noFastForward) {
-      args.push('--no-ff');
-    }
+    if (options.abort) {
+      args.push('--abort');
+    } else {
+      if (options.noFastForward) {
+        args.push('--no-ff');
+      }
 
-    if (options.strategy) {
-      args.push(`--strategy=${options.strategy}`);
-    }
+      if (options.strategy) {
+        args.push(`--strategy=${options.strategy}`);
+      }
 
-    if (options.squash) {
-      args.push('--squash');
-    }
+      if (options.squash) {
+        args.push('--squash');
+      }
 
-    if (options.message) {
-      args.push('-m', options.message);
-    }
+      if (options.message) {
+        args.push('-m', options.message);
+      }
 
-    // Add signing support - use explicit option or fall back to config default
-    const shouldSign = options.sign ?? shouldSignCommits();
+      // Add signing support - use explicit option or fall back to config default
+      const shouldSign = options.sign ?? shouldSignCommits();
 
-    if (shouldSign) {
-      args.push('-S');
+      if (shouldSign) {
+        args.push('-S');
+      }
+
+      args.push(options.branch);
     }
 
     const cmd = buildGitCommand({ command: 'merge', args });
@@ -60,6 +66,18 @@ export async function executeMerge(
       context.workingDirectory,
       context.requestContext,
     );
+
+    if (options.abort) {
+      return {
+        success: true,
+        strategy: 'ort',
+        fastForward: false,
+        conflicts: false,
+        conflictedFiles: [],
+        mergedFiles: [],
+        message: 'Merge aborted.',
+      };
+    }
 
     // Check for conflicts and fast-forward
     const hasConflicts =

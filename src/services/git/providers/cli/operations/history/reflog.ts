@@ -72,7 +72,8 @@ export async function executeReflog(
         // Parse action verb from the %gs subject (e.g., "commit: fix bug" → "commit",
         // "checkout: moving from main to feature" → "checkout")
         const colonIndex = message.indexOf(':');
-        const action = colonIndex !== -1 ? message.substring(0, colonIndex).trim() : message;
+        const action =
+          colonIndex !== -1 ? message.substring(0, colonIndex).trim() : message;
 
         entries.push({
           hash,

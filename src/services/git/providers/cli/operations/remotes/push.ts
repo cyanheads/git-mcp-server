@@ -78,9 +78,12 @@ export async function executePush(
     const lines = gitOutput.stderr.split('\n'); // git push outputs to stderr
     for (const line of lines) {
       if (line.includes('->')) {
-        const match = line.match(/\*\s+\[new branch\]\s+(\S+)/);
-        if (match) {
-          pushedRefs.push(match[1]!);
+        // Match both new branch and normal push lines:
+        //   * [new branch]      main -> main
+        //   abc1234..def5678    main -> main
+        const refMatch = line.match(/\s+(\S+)\s+->\s+(\S+)/);
+        if (refMatch) {
+          pushedRefs.push(refMatch[2]!);
         }
       }
       if (line.includes('rejected')) {

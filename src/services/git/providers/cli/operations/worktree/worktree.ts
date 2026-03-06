@@ -147,11 +147,11 @@ export async function executeWorktree(
           throw new Error('Path is required for remove operation');
         }
 
-        args.push(options.path);
-
         if (options.force) {
           args.push('--force');
         }
+
+        args.push(options.path);
 
         const cmd = buildGitCommand({ command: 'worktree', args });
         await execGit(cmd, context.workingDirectory, context.requestContext);

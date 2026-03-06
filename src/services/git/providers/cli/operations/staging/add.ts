@@ -44,8 +44,7 @@ export async function executeAdd(
 
     // When --all or --update is used, we don't know the actual files staged.
     // Only report paths when explicit paths were provided.
-    const stagedFiles =
-      options.all || options.update ? [] : options.paths;
+    const stagedFiles = options.all || options.update ? [] : options.paths;
 
     const result = {
       success: true,

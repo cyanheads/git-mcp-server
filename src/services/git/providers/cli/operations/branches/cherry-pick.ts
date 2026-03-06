@@ -36,8 +36,6 @@ export async function executeCherryPick(
     } else if (options.continueOperation) {
       args.push('--continue');
     } else {
-      args.push(...options.commits);
-
       if (options.noCommit) {
         args.push('--no-commit');
       }
@@ -60,6 +58,8 @@ export async function executeCherryPick(
       if (shouldSign) {
         args.push('--gpg-sign');
       }
+
+      args.push(...options.commits);
     }
 
     const cmd = buildGitCommand({ command: 'cherry-pick', args });

@@ -80,9 +80,7 @@ export async function executeFetch(
       }
 
       // Match pruned/deleted refs
-      const deletedMatch = line.match(
-        /x\s+\[deleted\]\s+.*?->\s+(\S+)/,
-      );
+      const deletedMatch = line.match(/x\s+\[deleted\]\s+.*?->\s+(\S+)/);
       if (deletedMatch?.[1]) {
         prunedRefs.push(deletedMatch[1]);
       }

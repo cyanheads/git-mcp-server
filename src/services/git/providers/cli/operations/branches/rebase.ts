@@ -35,41 +35,20 @@ export async function executeRebase(
     const mode = options.mode || 'start';
 
     if (mode === 'continue') {
-      try {
-        const continueCmd = buildGitCommand({
-          command: 'rebase',
-          args: ['--continue', '--no-edit'],
-        });
-        await execGit(
-          continueCmd,
-          context.workingDirectory,
-          context.requestContext,
-        );
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message.includes("unknown option `no-edit'")
-        ) {
-          const continueCmd = buildGitCommand({
-            command: 'rebase',
-            args: ['--continue'],
-          });
-          await execGit(
-            continueCmd,
-            context.workingDirectory,
-            context.requestContext,
-          );
-        } else {
-          // Re-throw other errors
-          throw error;
-        }
-      }
-      // Since the rebase is now handled within this block, we can return early
+      const continueCmd = buildGitCommand({
+        command: 'rebase',
+        args: ['--continue'],
+      });
+      await execGit(
+        continueCmd,
+        context.workingDirectory,
+        context.requestContext,
+      );
       return {
         success: true,
         conflicts: false,
         conflictedFiles: [],
-        rebasedCommits: 1, // Assuming success
+        rebasedCommits: 0,
       };
     } else if (mode === 'abort') {
       args.push('--abort');

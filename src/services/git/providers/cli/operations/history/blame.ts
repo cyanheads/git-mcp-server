@@ -53,17 +53,16 @@ export async function executeBlame(
     const lines = gitOutput.stdout.split('\n');
     const blameLines: GitBlameResult['lines'] = [];
     let currentCommit: Partial<(typeof blameLines)[0]> = {};
-    let lineNumber = options.startLine || 1;
 
     for (const line of lines) {
       if (!line) continue;
 
-      // Commit hash line (40 hex characters)
+      // Commit hash line: <hash> <orig-line> <final-line> [<group-lines>]
       if (line.match(/^[0-9a-f]{40}/)) {
         const parts = line.split(' ');
         currentCommit = {
           commitHash: parts[0]!,
-          lineNumber,
+          lineNumber: parseInt(parts[2]!, 10),
         };
       }
       // Author line
@@ -85,7 +84,6 @@ export async function executeBlame(
           currentCommit.lineNumber !== undefined
         ) {
           blameLines.push(currentCommit as Required<(typeof blameLines)[0]>);
-          lineNumber++;
           currentCommit = {};
         }
       }

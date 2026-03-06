@@ -30,7 +30,7 @@ export async function executeShow(
   ) => Promise<{ stdout: string; stderr: string }>,
 ): Promise<GitShowResult> {
   try {
-    const args = [options.object];
+    const args: string[] = [];
 
     if (options.stat) {
       args.push('--stat');
@@ -39,6 +39,8 @@ export async function executeShow(
     if (options.format === 'raw') {
       args.push('--format=raw');
     }
+
+    args.push(options.object);
 
     // Determine object type reliably via cat-file
     const typeCmd = buildGitCommand({
