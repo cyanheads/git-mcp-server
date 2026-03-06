@@ -32,8 +32,8 @@ describe('executeStash', () => {
   describe('list mode', () => {
     it('lists stashes with stash list command', async () => {
       mockExecGit.mockResolvedValueOnce({
-        stdout: `stash@{0}: WIP on main: abc123 initial commit
-stash@{1}: On feature: work in progress\n`,
+        stdout: `0\t1709747200\tWIP on main: abc123 initial commit
+1\t1709747100\tOn feature: work in progress\n`,
         stderr: '',
       });
 

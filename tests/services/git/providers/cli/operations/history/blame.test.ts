@@ -140,7 +140,7 @@ filename src/index.ts
       expect(args).toContain('-L10,20');
     });
 
-    it('does not add -L flag when only startLine is provided', async () => {
+    it('adds -L flag with open end range when only startLine is provided', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',
         stderr: '',
@@ -153,8 +153,7 @@ filename src/index.ts
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
-      const hasLFlag = args.some((a: string) => a.startsWith('-L'));
-      expect(hasLFlag).toBe(false);
+      expect(args).toContain('-L10,');
     });
 
     it('starts line numbers from specified startLine', async () => {
