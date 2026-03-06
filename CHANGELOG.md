@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.9.2 - 2026-03-06
+
+### Fixed
+
+- **`git_add` tool**: Made `files` optional when `all` or `update` is true; added Zod refinement validation to enforce at least one staging method
+- **`git_remote` tool**: Corrected auth scope from `tool:git:write` to `tool:git:read` since remote operations include read-only actions (list, show, get-url)
+- **`git_reset` tool**: Updated confirmation description to cover `merge` and `keep` reset modes alongside `hard`
+- **`git_branch` tool**: Removed redundant type assertion on operation mode
+- **`git merge` diffstat parsing**: Handle binary file entries (`Bin 0 -> 1234 bytes`) in addition to numeric diffstat lines
+- **`git rebase` argument ordering**: Positional arguments (upstream, branch) now placed after flags (`--interactive`, `--gpg-sign`, etc.)
+- **`git clone` result accuracy**: Returns the resolved local path instead of raw input, detects actual checked-out branch name, and parallelizes post-clone metadata queries
+- **`git blame` open-end range**: Supports `-L<start>,` when only `startLine` is provided (shows from start to end of file)
+- **`git fetch` ref regex**: Fixed pattern to handle force-update prefixes (`+`) and triple-dot notation (`...`)
+- **`git push` delete validation**: Requires a branch or remote branch name for `--delete` operations instead of silently producing invalid commands
+- **`git stash` list timestamps**: Uses `--format=%gd\t%ct\t%gs` for structured output with real unix timestamps instead of hardcoded `0`
+- **`git show` file viewing**: Added `filePath` support via `commit:path` syntax to show specific file contents at a given revision
+- **Branch output parser**: Fixed misleading comment on line trimming logic
+
 ## v2.9.1 - 2026-03-06
 
 ### Fixed
