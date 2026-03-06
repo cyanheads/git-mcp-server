@@ -51,7 +51,7 @@ describe('git_reflog tool', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.ref).toBeUndefined();
-        expect(result.data.maxCount).toBeUndefined();
+        expect(result.data.maxCount).toBe(25);
       }
     });
 

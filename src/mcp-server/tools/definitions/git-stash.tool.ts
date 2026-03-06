@@ -25,8 +25,10 @@ const InputSchema = z.object({
   path: PathSchema,
   mode: z
     .enum(['list', 'push', 'pop', 'apply', 'drop', 'clear'])
-    .default('list')
-    .describe('The stash operation to perform.'),
+    .default('push')
+    .describe(
+      'The stash operation to perform. Defaults to push (save current changes).',
+    ),
   message: z
     .string()
     .optional()

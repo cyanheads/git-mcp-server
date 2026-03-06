@@ -57,6 +57,10 @@ const OutputSchema = z.object({
     .array(RemoteInfoSchema)
     .optional()
     .describe('List of remotes (for list mode).'),
+  url: z
+    .string()
+    .optional()
+    .describe('Remote URL (for get-url mode).'),
   added: z
     .object({
       name: z.string(),
@@ -117,6 +121,7 @@ async function gitRemoteLogic(
     success: true,
     mode: result.mode,
     remotes: result.remotes,
+    url: result.url,
     added: result.added,
     removed: result.removed,
     renamed: result.renamed,

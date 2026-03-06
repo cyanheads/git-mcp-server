@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
+import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
 import {
   PathSchema,
   TagNameSchema,
@@ -47,7 +48,9 @@ const InputSchema = z.object({
   annotated: z
     .boolean()
     .default(false)
-    .describe('Create annotated tag with message.'),
+    .describe(
+      'Create annotated tag. Automatically set to true when message is provided.',
+    ),
   sign: SignSchema,
   forceUnsignedOnFailure: z
     .boolean()
@@ -92,6 +95,14 @@ async function gitTagLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
+  // Validate tagName is present for create/delete modes
+  if ((input.mode === 'create' || input.mode === 'delete') && !input.tagName) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Tag name is required for ${input.mode} operation.`,
+    );
+  }
+
   const tagOptions: {
     mode: 'list' | 'create' | 'delete';
     tagName?: string;

@@ -50,7 +50,7 @@ describe('git_stash tool', () => {
       const result = gitStashTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.mode).toBe('list');
+        expect(result.data.mode).toBe('push');
         expect(result.data.includeUntracked).toBe(false);
         expect(result.data.keepIndex).toBe(false);
       }

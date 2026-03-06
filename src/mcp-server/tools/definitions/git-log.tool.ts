@@ -28,7 +28,7 @@ const TOOL_DESCRIPTION =
 
 const InputSchema = z.object({
   path: PathSchema,
-  maxCount: LimitSchema,
+  maxCount: LimitSchema.default(10),
   skip: SkipSchema,
   since: z
     .string()
@@ -58,7 +58,9 @@ const InputSchema = z.object({
   oneline: z
     .boolean()
     .default(false)
-    .describe('Show each commit on a single line (abbreviated output).'),
+    .describe(
+      'Abbreviated output: return only hash, shortHash, and subject per commit. Significantly reduces response size.',
+    ),
   stat: z
     .boolean()
     .default(false)
@@ -76,12 +78,16 @@ const InputSchema = z.object({
 const CommitSchema = z.object({
   hash: z.string().describe('Full commit SHA-1 hash.'),
   shortHash: z.string().describe('Abbreviated commit hash (7 characters).'),
-  author: z.string().describe('Commit author name.'),
-  authorEmail: z.string().describe('Commit author email.'),
-  timestamp: z.number().int().describe('Commit timestamp (Unix timestamp).'),
+  author: z.string().optional().describe('Commit author name.'),
+  authorEmail: z.string().optional().describe('Commit author email.'),
+  timestamp: z
+    .number()
+    .int()
+    .optional()
+    .describe('Commit timestamp (Unix timestamp).'),
   subject: z.string().describe('First line of the commit message.'),
   body: z.string().optional().describe('Commit message body (if present).'),
-  parents: z.array(z.string()).describe('Parent commit hashes.'),
+  parents: z.array(z.string()).optional().describe('Parent commit hashes.'),
   refs: z
     .array(z.string())
     .optional()
@@ -136,9 +142,17 @@ async function gitLogLogic(
     },
   );
 
+  const commits = input.oneline
+    ? result.commits.map(({ hash, shortHash, subject }) => ({
+        hash,
+        shortHash,
+        subject,
+      }))
+    : result.commits;
+
   return {
     success: true,
-    commits: result.commits,
+    commits,
     totalCount: result.totalCount,
   };
 }

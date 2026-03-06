@@ -102,8 +102,8 @@ async function gitShowLogic(
  *
  * Verbosity levels:
  * - minimal: Object reference and type only
- * - standard: Above + metadata (RECOMMENDED)
- * - full: Complete output including content (may be large for diffs)
+ * - standard: Above + content (primary output of git show) (RECOMMENDED)
+ * - full: Complete output including content and metadata
  */
 function filterGitShowOutput(
   result: ToolOutput,
@@ -118,17 +118,17 @@ function filterGitShowOutput(
     };
   }
 
-  // standard: Above + metadata
+  // standard: Above + content (primary output of git show)
   if (level === 'standard') {
     return {
       success: result.success,
       object: result.object,
       type: result.type,
-      metadata: result.metadata,
+      content: result.content,
     };
   }
 
-  // full: Complete output including content
+  // full: Complete output including content and metadata
   return result;
 }
 

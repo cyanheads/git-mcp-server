@@ -27,7 +27,7 @@ const InputSchema = z.object({
     .string()
     .optional()
     .describe('Show reflog for specific reference (default: HEAD).'),
-  maxCount: LimitSchema,
+  maxCount: LimitSchema.default(25),
 });
 
 const ReflogEntrySchema = z.object({

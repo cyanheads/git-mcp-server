@@ -155,7 +155,7 @@ describe('git_branch tool', () => {
       await gitBranchTool.logic(parsedInput, appContext, sdkContext);
 
       const [branchOptions] = mockProvider.branch.mock.calls[0]!;
-      expect(branchOptions.remote).toBe(true);
+      expect(branchOptions.all).toBe(true);
     });
   });
 

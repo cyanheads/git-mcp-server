@@ -132,6 +132,7 @@ async function gitBranchLogic(
     startPoint?: string;
     force?: boolean;
     remote?: boolean;
+    all?: boolean;
     merged?: boolean | string;
     noMerged?: boolean | string;
   } = {
@@ -150,8 +151,10 @@ async function gitBranchLogic(
   if (rest.force !== undefined) {
     branchOptions.force = rest.force;
   }
-  if (rest.all !== undefined || rest.remote !== undefined) {
-    branchOptions.remote = rest.remote || rest.all;
+  if (rest.all) {
+    branchOptions.all = true;
+  } else if (rest.remote) {
+    branchOptions.remote = true;
   }
   if (rest.merged !== undefined) {
     branchOptions.merged = rest.merged;

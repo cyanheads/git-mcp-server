@@ -156,13 +156,20 @@ async function gatherRepositoryContext(
 
   try {
     // Gather all context in parallel for efficiency
-    const [statusResult, branchesResult, remotesResult, logResult] =
-      await Promise.allSettled([
-        provider.status({ includeUntracked: true }, context),
-        provider.branch({ mode: 'list', remote: true }, context),
-        provider.remote({ mode: 'list' }, context),
-        provider.log({ maxCount: 5 }, context),
-      ]);
+    // Use separate local/remote branch queries for accurate counts
+    const [
+      statusResult,
+      localBranchesResult,
+      remoteBranchesResult,
+      remotesResult,
+      logResult,
+    ] = await Promise.allSettled([
+      provider.status({ includeUntracked: true }, context),
+      provider.branch({ mode: 'list' }, context),
+      provider.branch({ mode: 'list', remote: true }, context),
+      provider.remote({ mode: 'list' }, context),
+      provider.log({ maxCount: 5 }, context),
+    ]);
 
     // Process status
     const status =
@@ -192,34 +199,27 @@ async function gatherRepositoryContext(
             conflictsCount: 0,
           };
 
-    // Process branches
-    const branches: NonNullable<ToolOutput['repositoryContext']>['branches'] =
-      branchesResult.status === 'fulfilled' &&
-      branchesResult.value.mode === 'list'
-        ? (() => {
-            const branchList = branchesResult.value.branches;
-            const currentBranch = branchList.find((b) => b.current);
-            const localBranches = branchList.filter(
-              (b) => !b.name.startsWith('remotes/'),
-            );
-            const remoteBranches = branchList.filter((b) =>
-              b.name.startsWith('remotes/'),
-            );
+    // Process branches from separate local/remote queries
+    const localBranches =
+      localBranchesResult.status === 'fulfilled' &&
+      localBranchesResult.value.mode === 'list'
+        ? localBranchesResult.value.branches
+        : [];
+    const remoteBranchCount =
+      remoteBranchesResult.status === 'fulfilled' &&
+      remoteBranchesResult.value.mode === 'list'
+        ? remoteBranchesResult.value.branches.length
+        : 0;
+    const currentBranch = localBranches.find((b) => b.current);
 
-            return {
-              current: currentBranch?.name || null,
-              totalLocal: localBranches.length,
-              totalRemote: remoteBranches.length,
-              upstream: currentBranch?.upstream,
-              ahead: currentBranch?.ahead,
-              behind: currentBranch?.behind,
-            };
-          })()
-        : {
-            current: null,
-            totalLocal: 0,
-            totalRemote: 0,
-          };
+    const branches: NonNullable<ToolOutput['repositoryContext']>['branches'] = {
+      current: currentBranch?.name || null,
+      totalLocal: localBranches.length,
+      totalRemote: remoteBranchCount,
+      upstream: currentBranch?.upstream,
+      ahead: currentBranch?.ahead,
+      behind: currentBranch?.behind,
+    };
 
     // Process remotes
     const remotes: NonNullable<ToolOutput['repositoryContext']>['remotes'] =

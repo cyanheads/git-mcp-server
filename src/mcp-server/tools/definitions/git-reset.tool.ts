@@ -62,7 +62,11 @@ async function gitResetLogic(
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
   // Enforce protected branch checks for destructive reset modes
-  if (input.mode === 'hard') {
+  if (
+    input.mode === 'hard' ||
+    input.mode === 'merge' ||
+    input.mode === 'keep'
+  ) {
     const status = await provider.status(
       { includeUntracked: false },
       {
