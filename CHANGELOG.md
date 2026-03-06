@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.9.0 - 2026-03-06
+
+### Fixed
+
+- **`git_show` type detection**: Replaced heuristic output-based type detection with reliable `cat-file -t` pre-check, fixing misclassification when commit output contained "tree" or "tag" keywords in headers
+- **`git_reflog` action parsing**: Extracted action verb from message subject (e.g., "commit", "checkout") instead of parsing index from refName curly braces, which returned meaningless numeric values
+- **`git_branch` all option**: `all: true` now correctly queries both `refs/heads` and `refs/remotes` instead of incorrectly mapping to `remote: true`
+- **`git_set_working_dir` branch counts**: Separate local/remote branch queries produce accurate counts instead of filtering a single query by name prefix
+- **`git_merge` file parsing**: Parse merged files from diffstat format (`file.txt | 5 +++++`) instead of raw output lines that included CONFLICT markers
+- **`git_rebase` commit counting**: Count rebased commits from `Applying:` lines instead of unreliable `N commits applied` regex that never matched real git output
+- **`git_fetch` ref parsing**: Match all fetched ref types (new branches, tags, updated refs) and capture full remote ref names (e.g., `origin/main` instead of `main`)
+- **`git_worktree add` argument ordering**: Flags (`-b`, `--detach`, `--force`) now precede `<path> [commitish]` per git CLI spec
+- **`git_status` rename/copy parsing**: Properly handle porcelain v2 type-2 (renamed/copied) entries with separate staged/unstaged status tracking and correct copy detection
+- **`git_add` staged files reporting**: Return empty array when `--all` or `--update` is used since actual staged files are unknown
+
+### Added
+
+- **`git_push` delete and refspec support**: Added `--delete` flag for remote branch deletion and `remoteBranch` option for `local:remote` refspec mapping (e.g., push `feature` to `deploy`)
+- **`git_commit` filesToStage**: Atomic stage+commit in a single operation — runs `git add` for specified files before committing
+- **`git_cherry_pick` options**: Added `mainline`, `strategy`, and `signoff` parameters
+- **`git_worktree prune` flags**: Added `--dry-run` and `--verbose` support
+- **`git_reset` modes**: Added `merge` and `keep` reset modes with protected branch enforcement
+- **Command builder**: Expanded safe git options whitelist (reset, cherry-pick/merge, worktree flags)
+
+### Changed
+
+- **`git_log` defaults and output**: Default `maxCount` to 10; `oneline` mode strips response to `hash`, `shortHash`, and `subject` only, significantly reducing payload size; made `author`, `authorEmail`, `timestamp`, `parents` optional in output schema
+- **`git_reflog` default limit**: Default `maxCount` to 25
+- **`git_stash` default mode**: Changed from `list` to `push` (save current changes) — more intuitive default
+- **`git_show` verbosity levels**: Standard level now includes content (primary output of `git show`); full includes content + metadata
+- **`git_remote` get-url**: Returns `url` string directly instead of wrapping in a synthetic remotes array
+- **`git_reset` protected branch checks**: Extended to `merge` and `keep` modes in addition to `hard`
+- **`git_tag` listing**: Uses `for-each-ref` for richer output including commit hash, message, tagger, and timestamp
+- **`git_tag` annotated handling**: Automatically set when message is provided; added tagName validation for create/delete modes; annotated without message uses tag name as default
+- **`git_blame` description**: Enhanced to mention `startLine`/`endLine` for large file output control
+- **Dependency updates**: Updated OpenTelemetry (0.212→0.213, 2.5→2.6), Hono (4.12.3→4.12.5), jose (6.1→6.2), openai (6.25→6.27), fast-xml-parser (5.4.1→5.4.2), @cloudflare/workers-types, @types/bun, @types/node, globals
+
 ## v2.8.5 - 2026-02-28
 
 ### Fixed
