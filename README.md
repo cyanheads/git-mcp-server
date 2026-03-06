@@ -1,7 +1,7 @@
 <div align="center">
   <h1>@cyanheads/git-mcp-server</h1>
-  <p><b>A secure and scalable Git MCP server giving AI agents powerful version control for local and (soon) serverless environments. STDIO & Streamable HTTP</b>
-  <div>28 Tools • 1 Resource • 1 Prompt</div>
+  <p><b>A Git MCP server for AI agents. STDIO & Streamable HTTP.</b>
+  <div>28 Tools · 1 Resource · 1 Prompt</div>
   </p>
 </div>
 
@@ -13,56 +13,46 @@
 
 ---
 
-## 🛠️ Tools Overview
+## Tools
 
-This server provides 28 comprehensive Git operations organized into seven functional categories:
+28 git operations organized into seven categories:
 
-| Category                  | Tools                                                                                                                          | Description                                                                                                                                   |
-| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Repository Management** | `git_init`, `git_clone`, `git_status`, `git_clean`                                                                             | Initialize repos, clone from remotes, check status, and clean untracked files                                                                 |
-| **Staging & Commits**     | `git_add`, `git_commit`, `git_diff`                                                                                            | Stage changes, create commits, and compare changes                                                                                            |
-| **History & Inspection**  | `git_log`, `git_show`, `git_blame`, `git_reflog`                                                                               | View commit history, inspect objects, trace line-by-line authorship, and view ref logs                                                        |
-| **Analysis**              | `git_changelog_analyze`                                                                                                        | Gather git context and review instructions for LLM-driven changelog analysis (security, features, storyline, gaps, breaking changes, quality) |
-| **Branching & Merging**   | `git_branch`, `git_checkout`, `git_merge`, `git_rebase`, `git_cherry_pick`                                                     | Manage branches, switch contexts, integrate changes, and apply specific commits                                                               |
-| **Remote Operations**     | `git_remote`, `git_fetch`, `git_pull`, `git_push`                                                                              | Configure remotes, download updates, synchronize repositories, and publish changes                                                            |
-| **Advanced Workflows**    | `git_tag`, `git_stash`, `git_reset`, `git_worktree`, `git_set_working_dir`, `git_clear_working_dir`, `git_wrapup_instructions` | Tag releases, stash changes, reset state, manage worktrees, set/clear session directory, and access workflow guidance                         |
+| Category                  | Tools                                                                                                                          | Description                                                                              |
+| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------- |
+| **Repository Management** | `git_init`, `git_clone`, `git_status`, `git_clean`                                                                             | Initialize repos, clone from remotes, check status, clean untracked files                |
+| **Staging & Commits**     | `git_add`, `git_commit`, `git_diff`                                                                                            | Stage changes, create commits, compare changes                                           |
+| **History & Inspection**  | `git_log`, `git_show`, `git_blame`, `git_reflog`                                                                               | View commit history, inspect objects, trace authorship, view ref logs                    |
+| **Analysis**              | `git_changelog_analyze`                                                                                                        | Gather git context and instructions for LLM-driven changelog analysis                    |
+| **Branching & Merging**   | `git_branch`, `git_checkout`, `git_merge`, `git_rebase`, `git_cherry_pick`                                                     | Manage branches, switch contexts, integrate changes, apply specific commits              |
+| **Remote Operations**     | `git_remote`, `git_fetch`, `git_pull`, `git_push`                                                                              | Configure remotes, fetch updates, synchronize repositories, publish changes              |
+| **Advanced Workflows**    | `git_tag`, `git_stash`, `git_reset`, `git_worktree`, `git_set_working_dir`, `git_clear_working_dir`, `git_wrapup_instructions` | Tag releases, stash changes, reset state, manage worktrees, set/clear session directory  |
 
-## 📦 Resources Overview
+## Resources
 
-The server provides resources that offer contextual information about the Git environment:
+| Resource                  | URI                       | Description                                                                  |
+| :------------------------ | :------------------------ | :--------------------------------------------------------------------------- |
+| **Git Working Directory** | `git://working-directory` | The current session working directory, set via `git_set_working_dir`.        |
 
-| Resource                  | URI                       | Description                                                                                                                                     |
-| :------------------------ | :------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Git Working Directory** | `git://working-directory` | Provides the current session working directory for git operations. This is the directory set via `git_set_working_dir` and used as the default. |
+## Prompts
 
-## 🎯 Prompts Overview
+| Prompt          | Description                                                                                | Parameters                                                                 |
+| :-------------- | :----------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| **Git Wrap-up** | Workflow protocol for completing git sessions: review, document, commit, and tag changes.  | `changelogPath`, `skipDocumentation`, `createTag`, `updateAgentFiles`.     |
 
-The server provides structured prompt templates that guide AI agents through complex workflows:
+## Getting started
 
-| Prompt          | Description                                                                                                                                | Parameters                                                                 |
-| :-------------- | :----------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
-| **Git Wrap-up** | A systematic workflow protocol for completing git sessions. Guides agents through reviewing, documenting, committing, and tagging changes. | `changelogPath`, `skipDocumentation`, `createTag`, and `updateAgentFiles`. |
+### Runtime
 
-## 🚀 Getting Started
+Works with both Bun and Node.js. Runtime is auto-detected.
 
-### Runtime Compatibility
+| Runtime     | Command                                 | Minimum Version |
+| ----------- | --------------------------------------- | --------------- |
+| **Node.js** | `npx @cyanheads/git-mcp-server@latest`  | >= 20.0.0       |
+| **Bun**     | `bunx @cyanheads/git-mcp-server@latest` | >= 1.2.0        |
 
-This server works with **both Bun and Node.js runtimes**:
+### MCP client configuration
 
-| Runtime     | Command                                 | Minimum Version | Notes                      |
-| ----------- | --------------------------------------- | --------------- | -------------------------- |
-| **Node.js** | `npx @cyanheads/git-mcp-server@latest`  | ≥ 20.0.0        | Universal compatibility    |
-| **Bun**     | `bunx @cyanheads/git-mcp-server@latest` | ≥ 1.2.0         | Alternative runtime option |
-
-The server automatically detects the runtime and uses the appropriate process spawning method for git operations.
-
-### MCP Client Settings/Configuration
-
-Add the following to your MCP Client configuration file (e.g., `cline_mcp_settings.json`). Clients have different ways to configure servers, so refer to your client's documentation for specifics.
-
-**Be sure to update environment variables as needed (especially your Git information!)**
-
-#### Using npx (Node.js)
+Add the following to your MCP client config (e.g., `cline_mcp_settings.json`). Update the environment variables to match your setup — especially the git identity fields.
 
 ```json
 {
@@ -78,210 +68,134 @@ Add the following to your MCP Client configuration file (e.g., `cline_mcp_settin
         "LOGS_DIR": "~/Developer/logs/git-mcp-server/",
         "GIT_USERNAME": "cyanheads",
         "GIT_EMAIL": "casey@caseyjhand.com",
-        "GIT_SIGN_COMMITS": "false"
+        "GIT_SIGN_COMMITS": "true"
       }
     }
   }
 }
 ```
 
-#### Using bunx (Bun)
+Bun users: replace `"command": "npx"` with `"command": "bunx"`.
 
-```json
-{
-  "mcpServers": {
-    "git-mcp-server": {
-      "type": "stdio",
-      "command": "bunx",
-      "args": ["@cyanheads/git-mcp-server@latest"],
-      "env": {
-        "MCP_TRANSPORT_TYPE": "stdio",
-        "MCP_LOG_LEVEL": "info",
-        "GIT_BASE_DIR": "~/Developer/",
-        "LOGS_DIR": "~/Developer/logs/git-mcp-server/",
-        "GIT_USERNAME": "cyanheads",
-        "GIT_EMAIL": "casey@caseyjhand.com",
-        "GIT_SIGN_COMMITS": "false"
-      }
-    }
-  }
-}
-```
+For Streamable HTTP, set `MCP_TRANSPORT_TYPE=http` and `MCP_HTTP_PORT=3015`.
 
-#### Streamable HTTP Configuration
+## Features
 
-```bash
-MCP_TRANSPORT_TYPE=http
-MCP_HTTP_PORT=3015
-```
+Built on [`mcp-ts-template`](https://github.com/cyanheads/mcp-ts-template).
 
-## ✨ Server Features
+| Feature | Details |
+| :-- | :-- |
+| Declarative tools | Define capabilities in single, self-contained files. The framework handles registration, validation, and execution. |
+| Error handling | Unified `McpError` system for consistent, structured error responses. |
+| Authentication | Supports `none`, `jwt`, and `oauth` modes. |
+| Pluggable storage | Swap backends (`in-memory`, `filesystem`, `Supabase`, `Cloudflare KV/R2`) without changing business logic. |
+| Observability | Structured logging (Pino) and optional auto-instrumented OpenTelemetry for traces and metrics. |
+| Dependency injection | Built with `tsyringe` for decoupled, testable architecture. |
+| Cross-runtime | Auto-detects Bun or Node.js and uses the appropriate process spawning method. |
+| Provider architecture | Pluggable git provider system. Current: CLI. Planned: isomorphic-git for edge deployment. |
+| Working directory management | Session-specific directory context for multi-repo workflows. |
+| Configurable git identity | Override author/committer info via environment variables, with fallback to global git config. |
+| Commit signing | Optional GPG/SSH signing for commits, merges, rebases, cherry-picks, and tags. |
+| Safety | Destructive operations (`git clean`, `git reset --hard`) require explicit confirmation flags. |
 
-This server is built on the [`mcp-ts-template`](https://github.com/cyanheads/mcp-ts-template) and inherits its rich feature set:
+## Security
 
-- **Declarative Tools**: Define agent capabilities in single, self-contained files. The framework handles registration, validation, and execution.
-- **Robust Error Handling**: A unified `McpError` system ensures consistent, structured error responses.
-- **Pluggable Authentication**: Secure your server with zero-fuss support for `none`, `jwt`, or `oauth` modes.
-- **Abstracted Storage**: Swap storage backends (`in-memory`, `filesystem`, `Supabase`, `Cloudflare KV/R2`) without changing business logic.
-- **Full-Stack Observability**: Deep insights with structured logging (Pino) and optional, auto-instrumented OpenTelemetry for traces and metrics.
-- **Dependency Injection**: Built with `tsyringe` for a clean, decoupled, and testable architecture.
-- **Edge-Ready Architecture**: Built on an edge-compatible framework that runs seamlessly on local machines or Cloudflare Workers. _Note: Current git operations use the CLI provider which requires local git installation. Edge deployment support is planned through the isomorphic-git provider integration._
+- All file paths are validated and sanitized to prevent directory traversal.
+- Optional `GIT_BASE_DIR` restricts operations to a specific directory tree for multi-tenant sandboxing.
+- Git commands use validated arguments via process spawning — no shell interpolation.
+- JWT and OAuth support for authenticated deployments.
+- Optional rate limiting via the DI-managed `RateLimiter` service.
+- All operations are logged with request context for auditing.
 
-Plus, specialized features for **Git integration**:
+## Configuration
 
-- **Cross-Runtime Compatibility**: Works seamlessly with both Bun and Node.js runtimes. Automatically detects the runtime and uses optimal process spawning (Bun.spawn in Bun, child_process.spawn in Node.js).
-- **Provider-Based Architecture**: Pluggable git provider system with current CLI implementation and planned isomorphic-git provider for edge deployment.
-- **Optimized Git Execution**: Direct git CLI interaction with cross-runtime support for high-performance process management, streaming I/O, and timeout handling (current CLI provider).
-- **Comprehensive Coverage**: 28 tools covering all essential Git operations from init to push, plus changelog analysis.
-- **Working Directory Management**: Session-specific directory context for multi-repo workflows.
-- **Configurable Git Identity**: Override author/committer information via environment variables with automatic fallback to global git config.
-- **Safety Features**: Explicit confirmations for destructive operations like `git clean` and `git reset --hard`.
-- **Commit Signing**: Optional GPG/SSH signing support for all commit-creating operations (commits, merges, rebases, cherry-picks, and tags).
+All configuration is validated at startup in `src/config/index.ts`. Key environment variables:
 
-### Development Environment Setup
+| Variable                       | Description                                                                                                          | Default     |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------------------- | :---------- |
+| `MCP_TRANSPORT_TYPE`           | Transport: `stdio` or `http`.                                                                                        | `stdio`     |
+| `MCP_SESSION_MODE`             | HTTP session mode: `stateless`, `stateful`, or `auto`.                                                               | `auto`      |
+| `MCP_RESPONSE_FORMAT`          | Response format: `json` (LLM-optimized), `markdown` (human-readable), or `auto`.                                     | `json`      |
+| `MCP_RESPONSE_VERBOSITY`       | Detail level: `minimal`, `standard`, or `full`.                                                                      | `standard`  |
+| `MCP_HTTP_PORT`                | HTTP server port.                                                                                                    | `3015`      |
+| `MCP_HTTP_HOST`                | HTTP server hostname.                                                                                                | `127.0.0.1` |
+| `MCP_HTTP_ENDPOINT_PATH`       | MCP request endpoint path.                                                                                           | `/mcp`      |
+| `MCP_AUTH_MODE`                | Authentication mode: `none`, `jwt`, or `oauth`.                                                                      | `none`      |
+| `STORAGE_PROVIDER_TYPE`        | Storage backend: `in-memory`, `filesystem`, `supabase`, `cloudflare-kv`, `r2`.                                       | `in-memory` |
+| `OTEL_ENABLED`                 | Enable OpenTelemetry.                                                                                                | `false`     |
+| `MCP_LOG_LEVEL`                | Minimum log level: `debug`, `info`, `warn`, `error`.                                                                 | `info`      |
+| `GIT_SIGN_COMMITS`             | Enable GPG/SSH signing for commits, merges, rebases, cherry-picks, and tags.                                         | `false`     |
+| `GIT_AUTHOR_NAME`              | Git author name. Aliases: `GIT_USERNAME`, `GIT_USER`. Falls back to global git config.                               | `(none)`    |
+| `GIT_AUTHOR_EMAIL`             | Git author email. Aliases: `GIT_EMAIL`, `GIT_USER_EMAIL`. Falls back to global git config.                           | `(none)`    |
+| `GIT_BASE_DIR`                 | Absolute path to restrict all git operations to a specific directory tree.                                            | `(none)`    |
+| `GIT_WRAPUP_INSTRUCTIONS_PATH` | Path to custom markdown file with workflow instructions.                                                             | `(none)`    |
+| `MCP_AUTH_SECRET_KEY`          | Required for `jwt` auth. 32+ character secret key.                                                                   | `(none)`    |
+| `OAUTH_ISSUER_URL`             | Required for `oauth` auth. OIDC provider URL.                                                                        | `(none)`    |
 
-### Prerequisites
+## Running the server
 
-- [Node.js v20.0.0+](https://nodejs.org/) (or [Bun v1.2.0+](https://bun.sh/) as an alternative)
-- [Git](https://git-scm.com/) installed and accessible in your system PATH
-
-### Installation
-
-1. **Clone the repository:**
-
-```sh
-git clone https://github.com/cyanheads/git-mcp-server.git
-```
-
-2. **Navigate into the directory:**
-
-```sh
-cd git-mcp-server
-```
-
-3. **Install dependencies:**
-
-```sh
-npm install
-```
-
-## ⚙️ Configuration
-
-All configuration is centralized and validated at startup in `src/config/index.ts`. Key environment variables in your `.env` file include:
-
-| Variable                       | Description                                                                                                                                               | Default     |
-| :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------- |
-| `MCP_TRANSPORT_TYPE`           | The transport to use: `stdio` or `http`.                                                                                                                  | `stdio`     |
-| `MCP_SESSION_MODE`             | Session mode for HTTP transport: `stateless`, `stateful`, or `auto`.                                                                                      | `auto`      |
-| `MCP_RESPONSE_FORMAT`          | Response format: `json` (LLM-optimized), `markdown` (human-readable), or `auto`.                                                                          | `json`      |
-| `MCP_RESPONSE_VERBOSITY`       | Response detail level: `minimal`, `standard`, or `full`.                                                                                                  | `standard`  |
-| `MCP_HTTP_PORT`                | The port for the HTTP server.                                                                                                                             | `3015`      |
-| `MCP_HTTP_HOST`                | The hostname for the HTTP server.                                                                                                                         | `127.0.0.1` |
-| `MCP_HTTP_ENDPOINT_PATH`       | The endpoint path for MCP requests.                                                                                                                       | `/mcp`      |
-| `MCP_AUTH_MODE`                | Authentication mode: `none`, `jwt`, or `oauth`.                                                                                                           | `none`      |
-| `STORAGE_PROVIDER_TYPE`        | Storage backend: `in-memory`, `filesystem`, `supabase`, `cloudflare-kv`, `r2`.                                                                            | `in-memory` |
-| `OTEL_ENABLED`                 | Set to `true` to enable OpenTelemetry.                                                                                                                    | `false`     |
-| `MCP_LOG_LEVEL`                | The minimum level for logging (`debug`, `info`, `warn`, `error`).                                                                                         | `info`      |
-| `GIT_SIGN_COMMITS`             | Set to `"true"` to enable GPG/SSH signing for all commits, merges, rebases, cherry-picks, and tags. Requires GPG/SSH configuration.                       | `false`     |
-| `GIT_AUTHOR_NAME`              | Git author name. Aliases: `GIT_USERNAME`, `GIT_USER`. Falls back to global git config if not set.                                                         | `(none)`    |
-| `GIT_AUTHOR_EMAIL`             | Git author email. Aliases: `GIT_EMAIL`, `GIT_USER_EMAIL`. Falls back to global git config if not set.                                                     | `(none)`    |
-| `GIT_BASE_DIR`                 | Optional absolute path to restrict all git operations to a specific directory tree. Provides security sandboxing for multi-tenant or shared environments. | `(none)`    |
-| `GIT_WRAPUP_INSTRUCTIONS_PATH` | Optional path to custom markdown file with Git workflow instructions.                                                                                     | `(none)`    |
-| `MCP_AUTH_SECRET_KEY`          | **Required for `jwt` auth.** A 32+ character secret key.                                                                                                  | `(none)`    |
-| `OAUTH_ISSUER_URL`             | **Required for `oauth` auth.** URL of the OIDC provider.                                                                                                  | `(none)`    |
-
-## ▶️ Running the Server
-
-### For End Users (via Package Manager)
-
-The easiest way to use the server is via `npx` (no installation required):
+### Via package manager (no install)
 
 ```sh
 npx @cyanheads/git-mcp-server@latest
 ```
 
-Configured through environment variables or your MCP client configuration. Bun users can alternatively use `bunx @cyanheads/git-mcp-server@latest`.
+Configure through environment variables or your MCP client config.
 
-### Local Development
+### Local development
 
-- **Build and run the production version**:
+```sh
+# Build and run
+npm run rebuild
+npm run start:stdio   # or start:http
 
-  ```sh
-  # One-time build
-  npm run rebuild
+# Dev mode with hot reload
+npm run dev:stdio     # or dev:http
 
-  # Run the built server
-  npm run start:http
-  # or
-  npm run start:stdio
-  ```
-
-- **Development mode with hot reload**:
-
-  ```sh
-  npm run dev:http
-  # or
-  npm run dev:stdio
-  ```
-
-- **Run checks and tests**:
-  ```sh
-  npm run devcheck  # Lints, formats, type-checks, and more
-  npm test          # Runs the test suite
-  ```
+# Checks and tests
+npm run devcheck      # lint, format, typecheck
+npm test
+```
 
 ### Cloudflare Workers
 
-1. **Build the Worker bundle**:
-
 ```sh
-npm run build:worker
+npm run build:worker   # Build the worker bundle
+npm run deploy:dev     # Run locally with Wrangler
+npm run deploy:prod    # Deploy to Cloudflare
 ```
 
-2. **Run locally with Wrangler**:
+## Project structure
 
-```sh
-npm run deploy:dev
+| Directory                   | Purpose                                                          |
+| :-------------------------- | :--------------------------------------------------------------- |
+| `src/mcp-server/tools`      | Tool definitions (`*.tool.ts`). Git capabilities live here.      |
+| `src/mcp-server/resources`  | Resource definitions (`*.resource.ts`). Git context data sources. |
+| `src/mcp-server/transports` | HTTP and STDIO transport implementations, including auth.        |
+| `src/storage`               | `StorageService` abstraction and provider implementations.       |
+| `src/services`              | Git service provider (CLI-based git operations).                 |
+| `src/container`             | DI container registrations and tokens.                           |
+| `src/utils`                 | Logging, error handling, performance, security utilities.        |
+| `src/config`                | Environment variable parsing and validation (Zod).               |
+| `tests/`                    | Unit and integration tests, mirroring `src/` structure.          |
+
+## Response format
+
+Configure output format and verbosity via `MCP_RESPONSE_FORMAT` and `MCP_RESPONSE_VERBOSITY`.
+
+JSON format (default, optimized for LLM consumption):
+
+```json
+{
+  "success": true,
+  "branch": "main",
+  "staged": ["src/index.ts", "README.md"],
+  "unstaged": ["package.json"],
+  "untracked": []
+}
 ```
 
-3. **Deploy to Cloudflare**:
-
-```sh
-npm run deploy:prod
-```
-
-## 📂 Project Structure
-
-| Directory                   | Purpose & Contents                                                               |
-| :-------------------------- | :------------------------------------------------------------------------------- |
-| `src/mcp-server/tools`      | Your tool definitions (`*.tool.ts`). This is where Git capabilities are defined. |
-| `src/mcp-server/resources`  | Your resource definitions (`*.resource.ts`). Provides Git context data sources.  |
-| `src/mcp-server/transports` | Implementations for HTTP and STDIO transports, including auth middleware.        |
-| `src/storage`               | `StorageService` abstraction and all storage provider implementations.           |
-| `src/services`              | Git service provider (CLI-based git operations).                                 |
-| `src/container`             | Dependency injection container registrations and tokens.                         |
-| `src/utils`                 | Core utilities for logging, error handling, performance, and security.           |
-| `src/config`                | Environment variable parsing and validation with Zod.                            |
-| `tests/`                    | Unit and integration tests, mirroring the `src/` directory structure.            |
-
-## 📤 Understanding Tool Responses
-
-This server follows MCP's dual-output architecture for all tools ([MCP Tools Specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)):
-
-### Response Format Options
-
-Configure response format and verbosity via environment variables (see [Configuration](#️-configuration)):
-
-| Variable                 | Values                                  | Description                                                               |
-| :----------------------- | :-------------------------------------- | :------------------------------------------------------------------------ |
-| `MCP_RESPONSE_FORMAT`    | `json` (default), `markdown`, `auto`    | Output format: JSON for LLM parsing, Markdown for human UIs               |
-| `MCP_RESPONSE_VERBOSITY` | `minimal`, `standard` (default), `full` | Detail level: minimal (core only), standard (balanced), full (everything) |
-
-### What Users See (Human-Readable)
-
-When you invoke a tool through your MCP client, you see a **formatted summary** designed for human consumption. For example, `git_status` might show:
-
-**Markdown Format:**
+Markdown format (human-readable):
 
 ```
 # Git Status: main
@@ -294,135 +208,49 @@ When you invoke a tool through your MCP client, you see a **formatted summary** 
 - package.json
 ```
 
-**JSON Format (LLM-Optimized):**
+The LLM always receives the complete structured data via `responseFormatter` — full file lists, metadata, timestamps — regardless of what the client displays. Verbosity controls how much detail is included: `minimal` (core fields only), `standard` (balanced), or `full` (everything).
 
-```json
-{
-  "success": true,
-  "branch": "main",
-  "staged": ["src/index.ts", "README.md"],
-  "unstaged": ["package.json"],
-  "untracked": []
-}
+## Development guide
+
+See [`AGENTS.md`](AGENTS.md) for architecture, tool development patterns, and contribution rules.
+
+## Testing
+
+Tests use [Bun's test runner](https://bun.sh/docs/cli/test) with Vitest compatibility.
+
+```sh
+bun test              # Run all tests
+bun test --coverage   # With coverage
+bun run devcheck      # Lint, format, typecheck, audit
 ```
 
-### What the LLM Sees (Complete Structured Data)
+## Roadmap
 
-Behind the scenes, the LLM receives **complete structured data** as [content blocks](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-results) via the `responseFormatter` function. This includes:
+The server uses a provider-based architecture for git operations:
 
-- All metadata (commit hashes, timestamps, authors)
-- Full file lists and change details (never truncated - LLMs need complete context)
-- Structured JSON or formatted markdown based on configuration
-- Everything needed to answer follow-up questions
+- **CLI provider** (current) — Full 28-tool coverage via native git CLI. Requires local git installation.
+- **Isomorphic git provider** (planned) — Pure JS implementation for edge deployment (Cloudflare Workers, Vercel Edge, Deno Deploy). Uses [isomorphic-git](https://isomorphic-git.org/).
+- **GitHub API provider** (maybe) — Cloud-native operations via GitHub REST/GraphQL APIs, no local repo required.
 
-**Why This Matters**: The LLM can answer detailed questions like "Who made the last commit?" or "What files changed in commit abc123?" because it has access to the full dataset, even if you only saw a summary.
+## Contributing
 
-**Verbosity Levels**: Control the amount of detail returned:
-
-- **Minimal**: Core data only (success status, primary identifiers)
-- **Standard**: Balanced output with essential context (recommended)
-- **Full**: Complete data including all metadata and statistics
-
-**For Developers**: When creating custom tools, always include complete data in your `responseFormatter`. Balance human-readable summaries with comprehensive structured information. See [`AGENTS.md`](AGENTS.md) for response formatter best practices and the [MCP specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) for technical details.
-
-## 🧑‍💻 Agent Development Guide
-
-For strict rules when using this server with an AI agent, refer to the **`AGENTS.md`** file in this repository. Key principles include:
-
-- **Logic Throws, Handlers Catch**: Never use `try/catch` in your tool `logic`. Throw an `McpError` instead.
-- **Pass the Context**: Always pass the `RequestContext` object through your call stack for logging and tracing.
-- **Use the Barrel Exports**: Register new tools and resources only in the `index.ts` barrel files within their respective `definitions` directories.
-- **Declarative Tool Pattern**: Each tool is defined in a single `*.tool.ts` file with schema, logic, and response formatting.
-
-## 🔒 Security Features
-
-- **Path Sanitization**: All file paths are validated and sanitized to prevent directory traversal attacks.
-- **Base Directory Restriction**: Optional `GIT_BASE_DIR` configuration to restrict all git operations to a specific directory tree, providing security sandboxing for multi-tenant or shared hosting environments.
-- **Command Injection Prevention**: Git commands are executed with carefully validated arguments via Bun.spawn.
-- **Destructive Operation Protection**: Dangerous operations require explicit confirmation flags.
-- **Authentication Support**: Built-in JWT and OAuth support for secure deployments.
-- **Rate Limiting**: Optional rate limiting via the DI-managed `RateLimiter` service.
-- **Audit Logging**: All Git operations are logged with full context for security auditing.
-
-## 🧪 Testing
-
-Tests run via [Bun's test runner](https://bun.sh/docs/cli/test) with Vitest compatibility.
-
-- **Run all tests:**
-
-  ```sh
-  bun test
-  ```
-
-- **Run tests with coverage:**
-
-  ```sh
-  bun test --coverage
-  ```
-
-- **Run quality checks (lint, format, typecheck, audit):**
-
-  ```sh
-  bun run devcheck
-  ```
-
-## 🗺️ Roadmap
-
-### Planned Git Provider Integrations
-
-The server uses a **provider-based architecture** to support multiple git implementation backends:
-
-- **✅ CLI Provider** (Current): Full-featured git operations via native git CLI
-  - Implementation coverage for all 28 git tools
-  - Executes git commands using Bun.spawn for optimal performance
-  - Streaming I/O handling for large outputs (10MB buffer limit)
-  - Configurable timeouts (60s default) and automatic process cleanup
-  - Requires local git installation
-  - Best for local development and server deployments
-
-- **🚧 Isomorphic Git Provider** (Planned): Pure JavaScript git implementation
-  - Edge deployment compatibility (Cloudflare Workers, Vercel Edge, Deno Deploy)
-  - No system dependencies required
-  - Enables true serverless git operations
-  - Core operations: clone, status, add, commit, push, pull, branch, checkout
-  - Implementation: [isomorphic-git](https://isomorphic-git.org/)
-
-- **💡 GitHub API Provider** (Maybe): Cloud-native git operations via GitHub REST/GraphQL APIs
-  - No local repository required
-  - Direct integration with GitHub-hosted repositories
-  - Ideal for GitHub-centric workflows
-
-The provider system allows seamless switching between implementations based on deployment environment and requirements. See [`AGENTS.md`](AGENTS.md#git-service-architecture-git-mcp-server-specific) for architectural details.
-
-## 🤝 Contributing
-
-Issues and pull requests are welcome! If you plan to contribute, please run the local checks and tests before submitting your PR.
+Issues and pull requests are welcome. Run checks before submitting:
 
 ```sh
 npm run devcheck
 npm test
 ```
 
-### Development Workflow
+## License
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes following the existing patterns
-4. Run `npm run devcheck` to ensure code quality
-5. Run `npm test` to verify all tests pass
-6. Commit your changes with conventional commits
-7. Push to your fork and open a Pull Request
-
-## 📜 License
-
-This project is licensed under the Apache 2.0 License. See the [LICENSE](./LICENSE) file for details.
+Apache 2.0. See [LICENSE](./LICENSE).
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ using the <a href="https://github.com/cyanheads/mcp-ts-template">mcp-ts-template</a></p>
+  <p>Built with the <a href="https://github.com/cyanheads/mcp-ts-template">mcp-ts-template</a></p>
   <p>
-    <a href="https://github.com/sponsors/cyanheads">Sponsor this project</a> •
+    <a href="https://github.com/sponsors/cyanheads">Sponsor this project</a> ·
     <a href="https://www.buymeacoffee.com/cyanheads">Buy me a coffee</a>
   </p>
 </div>
