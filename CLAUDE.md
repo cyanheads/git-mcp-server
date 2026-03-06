@@ -1,8 +1,8 @@
 # Agent Protocol & Architectural Mandate
 
-**Version:** 2.5.0
+**Version:** 2.9.0
 **Target Project:** git-mcp-server
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-03-06
 
 This document defines the operational rules for contributing to this codebase. Follow it exactly.
 
@@ -496,7 +496,7 @@ No HTTP-based auth. Authorization handled by the host application.
 
 - **Path Sanitization:** All paths MUST use `sanitization` utilities to prevent directory traversal.
 - **Command Injection:** Git command arguments must be validated — never from unsanitized input.
-- **Destructive Operations:** `git reset --hard`, `git clean -fd` require explicit confirmation flags.
+- **Destructive Operations:** `git reset --hard/--merge/--keep`, `git clean -fd` require explicit confirmation flags.
 
 ---
 
