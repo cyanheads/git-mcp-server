@@ -108,18 +108,19 @@ async function gitBranchLogic(
       },
     );
 
-    if (result.mode === 'list') {
-      const current = result.branches.find((b) => b.current);
-      return {
-        success: true,
-        operation: 'show-current',
-        branches: undefined,
-        currentBranch: current?.name,
-        message: current
-          ? `Current branch: ${current.name}`
-          : 'Not on any branch (detached HEAD)',
-      };
-    }
+    const current =
+      result.mode === 'list'
+        ? result.branches.find((b) => b.current)
+        : undefined;
+    return {
+      success: true,
+      operation: 'show-current',
+      branches: undefined,
+      currentBranch: current?.name,
+      message: current
+        ? `Current branch: ${current.name}`
+        : 'Not on any branch (detached HEAD)',
+    };
   }
 
   // Build options object with only defined properties

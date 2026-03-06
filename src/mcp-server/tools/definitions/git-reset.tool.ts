@@ -78,7 +78,7 @@ async function gitResetLogic(
     if (status?.currentBranch) {
       validateProtectedBranchOperation(
         status.currentBranch,
-        'reset --hard',
+        `reset --${input.mode}`,
         input.confirmed,
       );
     }

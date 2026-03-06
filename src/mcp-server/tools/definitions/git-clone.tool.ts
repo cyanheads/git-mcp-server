@@ -90,6 +90,7 @@ async function gitCloneLogic(
     remoteUrl: result.remoteUrl,
     localPath: result.localPath,
     branch: result.branch,
+    commitHash: result.commitHash,
   };
 }
 
