@@ -141,7 +141,7 @@ describe('executeRebase', () => {
   });
 
   describe('continue mode', () => {
-    it('continues a rebase with --continue --no-edit', async () => {
+    it('continues a rebase with --continue', async () => {
       mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await executeRebase(
@@ -153,28 +153,11 @@ describe('executeRebase', () => {
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('rebase');
       expect(args).toContain('--continue');
-      expect(args).toContain('--no-edit');
+      expect(args).not.toContain('--no-edit');
+      expect(mockExecGit).toHaveBeenCalledTimes(1);
       expect(result.success).toBe(true);
       expect(result.conflicts).toBe(false);
-      expect(result.rebasedCommits).toBe(1);
-    });
-
-    it('falls back to --continue without --no-edit on older git', async () => {
-      mockExecGit
-        .mockRejectedValueOnce(new Error("unknown option `no-edit'"))
-        .mockResolvedValueOnce({ stdout: '', stderr: '' });
-
-      const result = await executeRebase(
-        { mode: 'continue' },
-        mockContext,
-        mockExecGit,
-      );
-
-      expect(mockExecGit).toHaveBeenCalledTimes(2);
-      const [secondArgs] = mockExecGit.mock.calls[1]!;
-      expect(secondArgs).toContain('--continue');
-      expect(secondArgs).not.toContain('--no-edit');
-      expect(result.success).toBe(true);
+      expect(result.rebasedCommits).toBe(0);
     });
   });
 

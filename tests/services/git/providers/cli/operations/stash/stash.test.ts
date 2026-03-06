@@ -49,10 +49,13 @@ stash@{1}: On feature: work in progress\n`,
       expect(result.mode).toBe('list');
       expect(result.stashes).toHaveLength(2);
       expect(result.stashes![0]!.ref).toBe('stash@{0}');
-      expect(result.stashes![0]!.description).toBe(
-        'WIP on main: abc123 initial commit',
-      );
+      expect(result.stashes![0]!.index).toBe(0);
+      expect(result.stashes![0]!.branch).toBe('main');
+      expect(result.stashes![0]!.description).toBe('abc123 initial commit');
       expect(result.stashes![1]!.ref).toBe('stash@{1}');
+      expect(result.stashes![1]!.index).toBe(1);
+      expect(result.stashes![1]!.branch).toBe('feature');
+      expect(result.stashes![1]!.description).toBe('work in progress');
     });
 
     it('returns empty stashes for empty list', async () => {

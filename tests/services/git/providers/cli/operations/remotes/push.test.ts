@@ -153,11 +153,7 @@ describe('executePush', () => {
         stderr: '',
       });
 
-      await executePush(
-        { remoteBranch: 'deploy' },
-        mockContext,
-        mockExecGit,
-      );
+      await executePush({ remoteBranch: 'deploy' }, mockContext, mockExecGit);
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('HEAD:deploy');

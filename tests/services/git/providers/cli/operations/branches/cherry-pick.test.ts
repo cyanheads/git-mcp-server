@@ -101,6 +101,35 @@ describe('executeCherryPick', () => {
     });
   });
 
+  describe('argument ordering', () => {
+    it('places flags before commit refs', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeCherryPick(
+        {
+          commits: ['abc123', 'def456'],
+          noCommit: true,
+          mainline: 1,
+          strategy: 'ort',
+          signoff: true,
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const firstCommitIdx = args.indexOf('abc123');
+      expect(firstCommitIdx).toBeGreaterThan(-1);
+      // All flags must appear before the first commit ref
+      expect(args.indexOf('--no-commit')).toBeLessThan(firstCommitIdx);
+      expect(args.indexOf('--mainline')).toBeLessThan(firstCommitIdx);
+      expect(args.indexOf('--strategy')).toBeLessThan(firstCommitIdx);
+      expect(args.indexOf('--signoff')).toBeLessThan(firstCommitIdx);
+      // Second commit ref should follow the first
+      expect(args.indexOf('def456')).toBeGreaterThan(firstCommitIdx);
+    });
+  });
+
   describe('abort operation', () => {
     it('aborts cherry-pick with --abort', async () => {
       mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });

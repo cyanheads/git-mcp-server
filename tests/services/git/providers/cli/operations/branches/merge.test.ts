@@ -268,6 +268,64 @@ Automatic merge failed; fix conflicts and then commit the result.`;
     });
   });
 
+  describe('abort option', () => {
+    it('emits --abort with no branch arg', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeMerge(
+        { branch: 'feature', abort: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('--abort');
+      expect(args).not.toContain('feature');
+    });
+
+    it('returns abort-specific result', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeMerge(
+        { branch: 'feature', abort: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.conflicts).toBe(false);
+      expect(result.conflictedFiles).toEqual([]);
+      expect(result.mergedFiles).toEqual([]);
+      expect(result.message).toBe('Merge aborted.');
+    });
+  });
+
+  describe('argument ordering', () => {
+    it('places branch name after flags', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeMerge(
+        {
+          branch: 'feature',
+          noFastForward: true,
+          strategy: 'ours',
+          squash: true,
+          message: 'Merge it',
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const branchIdx = args.indexOf('feature');
+      expect(branchIdx).toBeGreaterThan(-1);
+      expect(args.indexOf('--no-ff')).toBeLessThan(branchIdx);
+      expect(args.indexOf('--strategy=ours')).toBeLessThan(branchIdx);
+      expect(args.indexOf('--squash')).toBeLessThan(branchIdx);
+      expect(args.indexOf('-m')).toBeLessThan(branchIdx);
+    });
+  });
+
   describe('merged files parsing', () => {
     it('parses merged files from non-conflict lines', async () => {
       const output = `Updating abc123..def456

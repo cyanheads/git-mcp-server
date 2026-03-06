@@ -143,11 +143,7 @@ describe('executeCommit', () => {
           stderr: '',
         }); // show
 
-      await executeCommit(
-        { message: 'test' },
-        mockContext,
-        mockExecGit,
-      );
+      await executeCommit({ message: 'test' }, mockContext, mockExecGit);
 
       expect(mockExecGit).toHaveBeenCalledTimes(3);
       const [commitArgs] = mockExecGit.mock.calls[0]!;

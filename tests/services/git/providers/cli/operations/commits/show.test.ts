@@ -246,6 +246,26 @@ Date:   Mon Jan 1 00:00:00 2024 +0000
     });
   });
 
+  describe('argument ordering', () => {
+    it('places flags before object ref', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
+
+      await executeShow(
+        { object: 'abc123', stat: true, format: 'raw' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      const objectIdx = showArgs.indexOf('abc123');
+      expect(objectIdx).toBeGreaterThan(-1);
+      expect(showArgs.indexOf('--stat')).toBeLessThan(objectIdx);
+      expect(showArgs.indexOf('--format=raw')).toBeLessThan(objectIdx);
+    });
+  });
+
   describe('error handling', () => {
     it('throws mapped error when git command fails', async () => {
       mockExecGit.mockRejectedValueOnce(new Error('fatal: bad object abc123'));

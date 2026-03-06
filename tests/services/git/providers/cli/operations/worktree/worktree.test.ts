@@ -330,6 +330,25 @@ locked
       expect(args).toContain('--force');
     });
 
+    it('places --force before path in args', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executeWorktree(
+        { mode: 'remove', path: '/tmp/worktree', force: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const forceIdx = args.indexOf('--force');
+      const pathIdx = args.indexOf('/tmp/worktree');
+      expect(forceIdx).toBeGreaterThan(-1);
+      expect(forceIdx).toBeLessThan(pathIdx);
+    });
+
     it('throws error when path is missing for remove', async () => {
       await expect(
         executeWorktree({ mode: 'remove' } as any, mockContext, mockExecGit),
