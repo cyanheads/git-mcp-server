@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.9.1 - 2026-03-06
+
+### Fixed
+
+- **Argument ordering**: Flags now precede positional arguments (commits, branches, paths, objects) in `cherry-pick`, `merge`, `show`, and `worktree remove`, matching git CLI conventions and preventing misinterpretation
+- **`git_merge` abort**: Added `--abort` support to cancel in-progress merges; abort path no longer passes the branch name to git
+- **`git_rebase` continue**: Removed unnecessary `--no-edit` fallback that added complexity for no benefit; `rebasedCommits` returns `0` on continue since the actual count is unknown
+- **`git_blame` line numbers**: Uses git's reported final line number from porcelain output instead of a manual counter, fixing incorrect line numbers when `startLine` offset was used
+- **`git_stash` list parsing**: Properly extracts branch name and description from stash entries (e.g., `WIP on main: abc123 msg` now returns `branch: "main"`, `description: "abc123 msg"`); uses parsed stash index instead of array position
+- **`git_push` ref parsing**: Matches both new branch and normal push output lines, capturing the remote ref name correctly
+- **`git_branch` show-current**: Fixed unreachable code path — result is now returned for all `show-current` cases, not just when `result.mode === 'list'`
+- **`git_reset` protected branch message**: Reports the actual reset mode (`--soft`, `--mixed`, etc.) instead of always saying `--hard`
+
+### Added
+
+- **`git_clone` commit hash**: Returns the HEAD commit hash of the cloned repository in the response
+- **`git_merge` abort option**: New `abort` parameter to cancel an in-progress merge
+
+### Changed
+
+- **`git_rebase` continue simplification**: Single `--continue` invocation instead of try/catch with `--no-edit` fallback
+
 ## v2.9.0 - 2026-03-06
 
 ### Fixed
