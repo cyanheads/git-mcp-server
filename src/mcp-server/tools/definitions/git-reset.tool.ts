@@ -41,7 +41,7 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe(
-      'Explicit confirmation required for hard reset on protected branches (main, master, production, etc.).',
+      'Explicit confirmation required for hard, merge, and keep reset modes on protected branches (main, master, production, etc.).',
     ),
 });
 

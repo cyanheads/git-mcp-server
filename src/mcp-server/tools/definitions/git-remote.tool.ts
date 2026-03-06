@@ -165,6 +165,6 @@ export const gitRemoteTool: ToolDefinition<
   inputSchema: InputSchema,
   outputSchema: OutputSchema,
   annotations: { readOnlyHint: false },
-  logic: withToolAuth(['tool:git:write'], createToolHandler(gitRemoteLogic)),
+  logic: withToolAuth(['tool:git:read'], createToolHandler(gitRemoteLogic)),
   responseFormatter,
 };

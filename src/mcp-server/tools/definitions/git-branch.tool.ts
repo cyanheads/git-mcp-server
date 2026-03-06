@@ -137,7 +137,7 @@ async function gitBranchLogic(
     merged?: boolean | string;
     noMerged?: boolean | string;
   } = {
-    mode: operation as 'list' | 'create' | 'delete' | 'rename',
+    mode: operation,
   };
 
   if (name !== undefined) {

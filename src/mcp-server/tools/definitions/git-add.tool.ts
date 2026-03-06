@@ -22,24 +22,31 @@ const TOOL_TITLE = 'Git Add';
 const TOOL_DESCRIPTION =
   'Stage files for commit. Add file contents to the staging area (index) to prepare for the next commit.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  files: z
-    .array(z.string())
-    .min(1)
-    .describe(
-      'Array of file paths to stage (relative to repository root). Use ["."] to stage all changes.',
-    ),
-  update: z
-    .boolean()
-    .default(false)
-    .describe('Stage only modified and deleted files (skip untracked files).'),
-  all: AllSchema,
-  force: z
-    .boolean()
-    .default(false)
-    .describe('Allow adding otherwise ignored files.'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    files: z
+      .array(z.string())
+      .default([])
+      .describe(
+        'Array of file paths to stage (relative to repository root). Use ["."] to stage all changes. Can be omitted when all or update is true.',
+      ),
+    update: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Stage only modified and deleted files (skip untracked files).',
+      ),
+    all: AllSchema,
+    force: z
+      .boolean()
+      .default(false)
+      .describe('Allow adding otherwise ignored files.'),
+  })
+  .refine((data) => data.all || data.update || data.files.length > 0, {
+    message: 'Either files must be provided, or all/update must be true.',
+    path: ['files'],
+  });
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
