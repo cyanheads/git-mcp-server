@@ -43,6 +43,12 @@ export async function executeReset(
       case 'hard':
         args.push('--hard');
         break;
+      case 'merge':
+        args.push('--merge');
+        break;
+      case 'keep':
+        args.push('--keep');
+        break;
     }
 
     // Add commit to reset to

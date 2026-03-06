@@ -28,10 +28,22 @@ export async function executePush(
     const args: string[] = [];
     const remote = options.remote || 'origin';
 
+    if (options.delete) {
+      args.push('--delete');
+    }
+
     args.push(remote);
 
     if (options.branch) {
-      args.push(options.branch);
+      // Build refspec: local:remote when remoteBranch differs from local
+      if (options.remoteBranch && options.remoteBranch !== options.branch) {
+        args.push(`${options.branch}:${options.remoteBranch}`);
+      } else {
+        args.push(options.branch);
+      }
+    } else if (options.remoteBranch) {
+      // remoteBranch without local branch — push HEAD to the remote branch
+      args.push(`HEAD:${options.remoteBranch}`);
     }
 
     if (options.force) {

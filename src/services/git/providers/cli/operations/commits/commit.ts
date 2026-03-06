@@ -31,6 +31,15 @@ export async function executeCommit(
   ) => Promise<{ stdout: string; stderr: string }>,
 ): Promise<GitCommitResult> {
   try {
+    // Stage specified files before committing (atomic stage+commit)
+    if (options.filesToStage?.length) {
+      const addCmd = buildGitCommand({
+        command: 'add',
+        args: ['--', ...options.filesToStage],
+      });
+      await execGit(addCmd, context.workingDirectory, context.requestContext);
+    }
+
     const args: string[] = ['-m', options.message];
 
     if (options.amend) {

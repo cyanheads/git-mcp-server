@@ -384,6 +384,8 @@ export interface GitBranchOptions {
   force?: boolean;
   /** Include remote branches in list */
   remote?: boolean;
+  /** Include both local and remote branches in list */
+  all?: boolean;
   /** Filter to show only branches merged into specified commit (defaults to HEAD) */
   merged?: boolean | string;
   /** Filter to show only branches NOT merged into specified commit (defaults to HEAD) */
@@ -584,8 +586,10 @@ export interface GitRemoteInfo {
 export interface GitRemoteResult {
   /** Operation mode */
   mode: string;
-  /** List of remotes (for list mode) */
+  /** List of remotes (for list and get-url modes) */
   remotes?: GitRemoteInfo[];
+  /** Remote URL (for get-url mode) */
+  url?: string;
   /** Added remote (for add mode) */
   added?: { name: string; url: string };
   /** Removed remote name (for remove mode) */

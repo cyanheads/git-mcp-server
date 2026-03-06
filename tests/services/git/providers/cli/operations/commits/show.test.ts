@@ -44,7 +44,9 @@ new file mode 100644
 @@ -0,0 +1 @@
 +hello`;
 
-      mockExecGit.mockResolvedValueOnce({ stdout: commitOutput, stderr: '' });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: commitOutput, stderr: '' }); // show
 
       const result = await executeShow(
         { object: 'abc123' },
@@ -59,25 +61,24 @@ new file mode 100644
     });
 
     it('passes the object to git show args', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123',
-        stderr: '',
-      });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
 
       await executeShow({ object: 'HEAD~3' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('show');
-      expect(args).toContain('HEAD~3');
+      // Second call is the show command
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      expect(showArgs).toContain('show');
+      expect(showArgs).toContain('HEAD~3');
     });
   });
 
   describe('stat option', () => {
     it('adds --stat flag when stat is true', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123',
-        stderr: '',
-      });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
 
       await executeShow(
         { object: 'abc123', stat: true },
@@ -85,29 +86,27 @@ new file mode 100644
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('--stat');
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      expect(showArgs).toContain('--stat');
     });
 
     it('does not add --stat flag when stat is falsy', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123',
-        stderr: '',
-      });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
 
       await executeShow({ object: 'abc123' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).not.toContain('--stat');
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      expect(showArgs).not.toContain('--stat');
     });
   });
 
   describe('format option', () => {
     it('adds --format=raw when format is raw', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123',
-        stderr: '',
-      });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
 
       await executeShow(
         { object: 'abc123', format: 'raw' },
@@ -115,30 +114,39 @@ new file mode 100644
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('--format=raw');
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      expect(showArgs).toContain('--format=raw');
     });
 
     it('does not add --format flag when format is not raw', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123',
-        stderr: '',
-      });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
 
       await executeShow({ object: 'abc123' }, mockContext, mockExecGit);
 
-      const [args] = mockExecGit.mock.calls[0]!;
-      const formatArgs = args.filter((a: string) => a.startsWith('--format'));
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      const formatArgs = showArgs.filter((a: string) =>
+        a.startsWith('--format'),
+      );
       expect(formatArgs).toHaveLength(0);
     });
   });
 
   describe('type detection', () => {
-    it('detects commit type from output', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123def456\nAuthor: Test\nDate: now\n\n    msg',
-        stderr: '',
-      });
+    it('detects commit type via cat-file -t', async () => {
+      // Realistic commit output — contains "tree <hash>" in the header,
+      // which previously caused misclassification as 'tree'.
+      const commitOutput = `commit abc123def456
+tree 9876543210abcdef9876543210abcdef98765432
+Author: Test User <test@example.com>
+Date:   Mon Jan 1 00:00:00 2024 +0000
+
+    Initial commit`;
+
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: commitOutput, stderr: '' }); // show
 
       const result = await executeShow(
         { object: 'abc123' },
@@ -147,13 +155,20 @@ new file mode 100644
       );
 
       expect(result.type).toBe('commit');
+      // Verify cat-file -t was called
+      const [catFileArgs] = mockExecGit.mock.calls[0]!;
+      expect(catFileArgs).toContain('cat-file');
+      expect(catFileArgs).toContain('-t');
+      expect(catFileArgs).toContain('abc123');
     });
 
-    it('detects tree type from output', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'tree abc123\n100644 blob def456\tfile.txt',
-        stderr: '',
-      });
+    it('detects tree type via cat-file -t', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'tree\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({
+          stdout: '100644 blob def456\tfile.txt',
+          stderr: '',
+        }); // show
 
       const result = await executeShow(
         { object: 'abc123:' },
@@ -164,11 +179,13 @@ new file mode 100644
       expect(result.type).toBe('tree');
     });
 
-    it('detects tag type from output', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'tag v1.0.0\nTagger: John Doe\nDate: now\n\nRelease 1.0',
-        stderr: '',
-      });
+    it('detects tag type via cat-file -t', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'tag\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({
+          stdout: 'tag v1.0.0\nTagger: John Doe\nDate: now\n\nRelease 1.0',
+          stderr: '',
+        }); // show
 
       const result = await executeShow(
         { object: 'v1.0.0' },
@@ -179,11 +196,13 @@ new file mode 100644
       expect(result.type).toBe('tag');
     });
 
-    it('detects blob type when output has no commit/tree/tag markers', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'hello world\nthis is file content',
-        stderr: '',
-      });
+    it('detects blob type via cat-file -t', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'blob\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({
+          stdout: 'hello world\nthis is file content',
+          stderr: '',
+        }); // show
 
       const result = await executeShow(
         { object: 'abc123:file.txt' },
@@ -193,14 +212,27 @@ new file mode 100644
 
       expect(result.type).toBe('blob');
     });
+
+    it('defaults to commit for unrecognized cat-file output', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'unknown\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'some content', stderr: '' }); // show
+
+      const result = await executeShow(
+        { object: 'abc123' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.type).toBe('commit');
+    });
   });
 
   describe('combined options', () => {
     it('handles stat + format=raw together', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'commit abc123',
-        stderr: '',
-      });
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }); // show
 
       await executeShow(
         { object: 'abc123', stat: true, format: 'raw' },
@@ -208,9 +240,9 @@ new file mode 100644
         mockExecGit,
       );
 
-      const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('--stat');
-      expect(args).toContain('--format=raw');
+      const [showArgs] = mockExecGit.mock.calls[1]!;
+      expect(showArgs).toContain('--stat');
+      expect(showArgs).toContain('--format=raw');
     });
   });
 

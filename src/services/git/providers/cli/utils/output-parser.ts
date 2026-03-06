@@ -96,11 +96,35 @@ export function parseGitStatus(output: string): GitStatusResult {
           (result.unstagedChanges.deleted ??= []).push(path);
       }
     } else if (statusType === '2') {
-      // Renamed or copied entry
-      const pathInfo = line.substring(line.indexOf('\t') + 1);
-      const [newPath, oldPath] = pathInfo.split('\t');
-      if (!result.stagedChanges.renamed) result.stagedChanges.renamed = [];
-      result.stagedChanges.renamed.push(`${oldPath} -> ${newPath}`);
+      // Renamed or copied entry: 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>\t<origPath>
+      const xy = parts[1];
+      const stagedStatus = xy?.[0];
+      const unstagedStatus = xy?.[1];
+      const tabIdx = line.indexOf('\t');
+      const pathSection = tabIdx !== -1 ? line.substring(tabIdx + 1) : '';
+      const [newPath, oldPath] = pathSection.split('\t');
+      const formatted = `${oldPath} -> ${newPath}`;
+
+      if (stagedStatus && stagedStatus !== '.') {
+        if (stagedStatus === 'R') {
+          if (!result.stagedChanges.renamed) result.stagedChanges.renamed = [];
+          result.stagedChanges.renamed.push(formatted);
+        } else if (stagedStatus === 'C') {
+          if (!result.stagedChanges.copied) result.stagedChanges.copied = [];
+          result.stagedChanges.copied.push(formatted);
+        }
+      }
+      if (unstagedStatus && unstagedStatus !== '.') {
+        if (unstagedStatus === 'R' || unstagedStatus === 'M') {
+          if (!result.unstagedChanges.modified)
+            result.unstagedChanges.modified = [];
+          result.unstagedChanges.modified.push(newPath || '');
+        } else if (unstagedStatus === 'D') {
+          if (!result.unstagedChanges.deleted)
+            result.unstagedChanges.deleted = [];
+          result.unstagedChanges.deleted.push(newPath || '');
+        }
+      }
     } else if (statusType === 'u') {
       // Unmerged (conflicted)
       const path = parts.slice(8).join(' ').trim();

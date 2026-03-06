@@ -167,6 +167,23 @@ const SAFE_GIT_OPTIONS = new Set([
   '--cached',
   '--staged',
   '--unified',
+  // Reset flags
+  '--soft',
+  '--mixed',
+  '--hard',
+  '--merge',
+  '--keep',
+  // Cherry-pick/merge flags
+  '--mainline',
+  '--strategy',
+  '--signoff',
+  '--gpg-sign',
+  '--no-commit',
+  '--abort',
+  '--continue',
+  // Worktree flags
+  '--dry-run',
+  '--detach',
   // Misc flags
   '--bare',
   '--tags',

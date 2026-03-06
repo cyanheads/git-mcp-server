@@ -150,13 +150,7 @@ export async function executeRemote(
 
         const getUrlResult = {
           mode: 'get-url' as const,
-          remotes: [
-            {
-              name: options.name,
-              fetchUrl: result.stdout.trim(),
-              pushUrl: result.stdout.trim(),
-            },
-          ],
+          url: result.stdout.trim(),
         };
 
         return getUrlResult;

@@ -85,6 +85,76 @@ describe('executeCommit', () => {
     });
   });
 
+  describe('filesToStage option', () => {
+    it('runs git add before commit when filesToStage is provided', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git add
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // commit
+        .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' }) // rev-parse
+        .mockResolvedValueOnce({
+          stdout: `Author${FIELD_DELIM}0${RECORD_DELIM}\nfile.ts\n`,
+          stderr: '',
+        }); // show
+
+      await executeCommit(
+        { message: 'test', filesToStage: ['src/a.ts', 'src/b.ts'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit).toHaveBeenCalledTimes(4);
+      // First call should be git add
+      const [addArgs] = mockExecGit.mock.calls[0]!;
+      expect(addArgs).toContain('add');
+      expect(addArgs).toContain('--');
+      expect(addArgs).toContain('src/a.ts');
+      expect(addArgs).toContain('src/b.ts');
+      // Second call should be git commit
+      const [commitArgs] = mockExecGit.mock.calls[1]!;
+      expect(commitArgs).toContain('commit');
+    });
+
+    it('skips git add when filesToStage is empty', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // commit
+        .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' }) // rev-parse
+        .mockResolvedValueOnce({
+          stdout: `Author${FIELD_DELIM}0${RECORD_DELIM}\n`,
+          stderr: '',
+        }); // show
+
+      await executeCommit(
+        { message: 'test', filesToStage: [] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit).toHaveBeenCalledTimes(3);
+      const [commitArgs] = mockExecGit.mock.calls[0]!;
+      expect(commitArgs).toContain('commit');
+    });
+
+    it('skips git add when filesToStage is not provided', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // commit
+        .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' }) // rev-parse
+        .mockResolvedValueOnce({
+          stdout: `Author${FIELD_DELIM}0${RECORD_DELIM}\n`,
+          stderr: '',
+        }); // show
+
+      await executeCommit(
+        { message: 'test' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit).toHaveBeenCalledTimes(3);
+      const [commitArgs] = mockExecGit.mock.calls[0]!;
+      expect(commitArgs).toContain('commit');
+    });
+  });
+
   describe('amend option', () => {
     it('passes --amend flag when amend is true', async () => {
       mockExecGit

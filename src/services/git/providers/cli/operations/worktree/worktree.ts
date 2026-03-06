@@ -111,12 +111,8 @@ export async function executeWorktree(
           throw new Error('Path is required for add operation');
         }
 
-        args.push(options.path);
-
-        if (options.commitish) {
-          args.push(options.commitish);
-        }
-
+        // Flags must precede <path> [commitish]:
+        //   git worktree add [-b <branch>] [--detach] [--force] <path> [commitish]
         if (options.branch) {
           args.push('-b', options.branch);
         }
@@ -127,6 +123,12 @@ export async function executeWorktree(
 
         if (options.force) {
           args.push('--force');
+        }
+
+        args.push(options.path);
+
+        if (options.commitish) {
+          args.push(options.commitish);
         }
 
         const cmd = buildGitCommand({ command: 'worktree', args });
@@ -181,6 +183,14 @@ export async function executeWorktree(
       }
 
       case 'prune': {
+        if (options.dryRun) {
+          args.push('--dry-run');
+        }
+
+        if (options.verbose) {
+          args.push('--verbose');
+        }
+
         const cmd = buildGitCommand({ command: 'worktree', args });
         await execGit(cmd, context.workingDirectory, context.requestContext);
 

@@ -76,11 +76,13 @@ export async function executeMerge(
       })
       .filter((f) => f);
 
-    // Parse merged files
+    // Parse merged files from diffstat lines (e.g., " file.txt | 5 +++++")
     const mergedFiles = result.stdout
       .split('\n')
-      .filter((line) => line.trim() && !line.includes('CONFLICT'))
-      .map((line) => line.trim())
+      .map((line) => {
+        const statMatch = line.match(/^\s*(.+?)\s*\|\s*\d+/);
+        return statMatch?.[1]?.trim() || '';
+      })
       .filter((f) => f);
 
     const mergeResult = {

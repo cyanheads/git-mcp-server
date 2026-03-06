@@ -12,8 +12,8 @@ import type {
 } from '../../../../types.js';
 import {
   buildGitCommand,
+  GIT_FIELD_DELIMITER,
   mapGitError,
-  parseGitTag,
   shouldSignCommits,
 } from '../../utils/index.js';
 
@@ -39,27 +39,50 @@ export async function executeTag(
 
     switch (options.mode) {
       case 'list': {
-        args.push('-l');
+        // Use for-each-ref to get tag names with their dereferenced commit hashes
+        const format = [
+          '%(refname:short)', // Tag name
+          '%(if)%(*objectname:short)%(then)%(*objectname:short)%(else)%(objectname:short)%(end)', // Dereferenced commit hash (resolves annotated tags to their target)
+          '%(if)%(contents:subject)%(then)%(contents:subject)%(end)', // Tag message subject (annotated tags only)
+          '%(if)%(taggername)%(then)%(taggername) <%(taggeremail)>%(end)', // Tagger (annotated tags only)
+          '%(if)%(creatordate:unix)%(then)%(creatordate:unix)%(end)', // Timestamp
+        ].join(GIT_FIELD_DELIMITER);
 
-        const cmd = buildGitCommand({ command: 'tag', args });
+        const refCmd = buildGitCommand({
+          command: 'for-each-ref',
+          args: [`--format=${format}`, '--sort=-creatordate', 'refs/tags'],
+        });
         const result = await execGit(
-          cmd,
+          refCmd,
           context.workingDirectory,
           context.requestContext,
         );
 
-        const tagNames = parseGitTag(result.stdout);
-        const tags = tagNames.map((name) => ({
-          name,
-          commit: '', // Would need separate call to get commit
-        }));
+        const tags: Array<{
+          name: string;
+          commit: string;
+          message?: string;
+          tagger?: string;
+          timestamp?: number;
+        }> = [];
 
-        const listResult = {
-          mode: 'list' as const,
-          tags,
-        };
+        for (const line of result.stdout.split('\n').filter((l) => l.trim())) {
+          const [name, commit, message, tagger, timestamp] =
+            line.split(GIT_FIELD_DELIMITER);
+          if (!name) continue;
 
-        return listResult;
+          const tag: (typeof tags)[number] = {
+            name,
+            commit: commit || '',
+          };
+          if (message) tag.message = message;
+          if (tagger) tag.tagger = tagger;
+          if (timestamp) tag.timestamp = parseInt(timestamp, 10);
+
+          tags.push(tag);
+        }
+
+        return { mode: 'list' as const, tags };
       }
 
       case 'create': {
@@ -77,8 +100,12 @@ export async function executeTag(
           if (sign) {
             const message = options.message || `Tag ${options.tagName}`;
             createArgs.push('-s', '-m', message);
-          } else if (options.message && options.annotated) {
+          } else if (options.message) {
             createArgs.push('-a', '-m', options.message);
+          } else if (options.annotated) {
+            // Annotated without message — git would open an editor,
+            // which doesn't work in MCP context. Use tag name as default message.
+            createArgs.push('-a', '-m', `Tag ${options.tagName}`);
           }
 
           if (options.commit) {

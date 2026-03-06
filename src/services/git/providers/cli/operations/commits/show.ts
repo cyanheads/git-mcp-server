@@ -40,22 +40,29 @@ export async function executeShow(
       args.push('--format=raw');
     }
 
+    // Determine object type reliably via cat-file
+    const typeCmd = buildGitCommand({
+      command: 'cat-file',
+      args: ['-t', options.object],
+    });
+    const typeResult = await execGit(
+      typeCmd,
+      context.workingDirectory,
+      context.requestContext,
+    );
+    const detectedType = typeResult.stdout.trim();
+    const objectType = (['commit', 'tree', 'blob', 'tag'] as const).includes(
+      detectedType as 'commit' | 'tree' | 'blob' | 'tag',
+    )
+      ? (detectedType as 'commit' | 'tree' | 'blob' | 'tag')
+      : 'commit';
+
     const cmd = buildGitCommand({ command: 'show', args });
     const result = await execGit(
       cmd,
       context.workingDirectory,
       context.requestContext,
     );
-
-    // Determine object type from output
-    let objectType: 'commit' | 'tree' | 'blob' | 'tag' = 'commit';
-    if (result.stdout.includes('tree ')) {
-      objectType = 'tree';
-    } else if (result.stdout.includes('tag ')) {
-      objectType = 'tag';
-    } else if (!result.stdout.includes('commit ')) {
-      objectType = 'blob';
-    }
 
     const showResult = {
       object: options.object,

@@ -230,10 +230,7 @@ origin\tgit@github.com:user/repo.git (push)`;
       expect(args).toContain('get-url');
       expect(args).toContain('origin');
       expect(result.mode).toBe('get-url');
-      expect(result.remotes).toHaveLength(1);
-      expect(result.remotes![0]!.fetchUrl).toBe(
-        'https://github.com/user/repo.git',
-      );
+      expect(result.url).toBe('https://github.com/user/repo.git');
     });
 
     it('adds --push flag when push option is true', async () => {

@@ -81,6 +81,89 @@ describe('executePush', () => {
     });
   });
 
+  describe('delete option', () => {
+    it('adds --delete flag when delete is true', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executePush(
+        { branch: 'old-branch', delete: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('--delete');
+      expect(args).toContain('old-branch');
+    });
+
+    it('does not add --delete flag when delete is falsy', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executePush({ branch: 'main' }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).not.toContain('--delete');
+    });
+  });
+
+  describe('remoteBranch option', () => {
+    it('builds local:remote refspec when remoteBranch differs from branch', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executePush(
+        { branch: 'local-feat', remoteBranch: 'remote-feat' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('local-feat:remote-feat');
+      expect(args).not.toContain('local-feat');
+    });
+
+    it('uses plain branch when remoteBranch matches branch', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executePush(
+        { branch: 'feat', remoteBranch: 'feat' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('feat');
+      expect(args).not.toContain('feat:feat');
+    });
+
+    it('pushes HEAD:remote when remoteBranch is set without branch', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executePush(
+        { remoteBranch: 'deploy' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('HEAD:deploy');
+    });
+  });
+
   describe('force push options', () => {
     it('adds --force flag when force is true', async () => {
       mockExecGit.mockResolvedValueOnce({

@@ -35,11 +35,15 @@ describe('executeTag', () => {
   });
 
   describe('list mode', () => {
-    it('lists tags with -l flag', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: 'v1.0.0\nv1.1.0\nv2.0.0\n',
-        stderr: '',
-      });
+    it('lists tags via for-each-ref', async () => {
+      // for-each-ref output with field delimiters (\x1F)
+      const stdout = [
+        `v2.0.0\x1Fabc1234\x1FRelease 2.0\x1FTagger <t@e.com>\x1F1700000000`,
+        `v1.1.0\x1Fdef5678\x1F\x1F\x1F`,
+        `v1.0.0\x1F9876543\x1FInitial\x1F\x1F1690000000`,
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout, stderr: '' });
 
       const result = await executeTag(
         { mode: 'list' },
@@ -48,13 +52,16 @@ describe('executeTag', () => {
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('tag');
-      expect(args).toContain('-l');
+      expect(args).toContain('for-each-ref');
+      expect(args).toContain('refs/tags');
       expect(result.mode).toBe('list');
       expect(result.tags).toHaveLength(3);
-      expect(result.tags![0]!.name).toBe('v1.0.0');
+      expect(result.tags![0]!.name).toBe('v2.0.0');
+      expect(result.tags![0]!.commit).toBe('abc1234');
+      expect(result.tags![0]!.message).toBe('Release 2.0');
       expect(result.tags![1]!.name).toBe('v1.1.0');
-      expect(result.tags![2]!.name).toBe('v2.0.0');
+      expect(result.tags![1]!.commit).toBe('def5678');
+      expect(result.tags![2]!.name).toBe('v1.0.0');
     });
 
     it('returns empty tags array for no tags', async () => {

@@ -208,6 +208,52 @@ locked
       expect(args).toContain('feature-x');
     });
 
+    it('places -b branch before path in args', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executeWorktree(
+        {
+          mode: 'add',
+          path: '/tmp/worktree',
+          branch: 'feature-x',
+          commitish: 'abc123',
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      // git worktree add -b <branch> <path> [commitish]
+      const [args] = mockExecGit.mock.calls[0]!;
+      const branchFlagIdx = args.indexOf('-b');
+      const pathIdx = args.indexOf('/tmp/worktree');
+      const commitishIdx = args.indexOf('abc123');
+      expect(branchFlagIdx).toBeLessThan(pathIdx);
+      expect(pathIdx).toBeLessThan(commitishIdx);
+    });
+
+    it('places --detach and --force before path in args', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executeWorktree(
+        { mode: 'add', path: '/tmp/worktree', detach: true, force: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const detachIdx = args.indexOf('--detach');
+      const forceIdx = args.indexOf('--force');
+      const pathIdx = args.indexOf('/tmp/worktree');
+      expect(detachIdx).toBeLessThan(pathIdx);
+      expect(forceIdx).toBeLessThan(pathIdx);
+    });
+
     it('adds a detached worktree', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',

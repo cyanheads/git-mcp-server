@@ -42,9 +42,14 @@ export async function executeAdd(
     const cmd = buildGitCommand({ command: 'add', args });
     await execGit(cmd, context.workingDirectory, context.requestContext);
 
+    // When --all or --update is used, we don't know the actual files staged.
+    // Only report paths when explicit paths were provided.
+    const stagedFiles =
+      options.all || options.update ? [] : options.paths;
+
     const result = {
       success: true,
-      stagedFiles: options.paths,
+      stagedFiles,
     };
 
     return result;

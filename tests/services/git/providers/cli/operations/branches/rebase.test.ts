@@ -33,7 +33,7 @@ describe('executeRebase', () => {
     it('starts a rebase onto upstream', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout:
-          'Successfully rebased and updated refs/heads/feature.\n3 commits applied',
+          'Applying: First commit\nApplying: Second commit\nApplying: Third commit',
         stderr: '',
       });
 
@@ -259,7 +259,7 @@ error: could not apply abc123`;
     it('parses number of rebased commits from output', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout:
-          'Successfully rebased and updated refs/heads/feature.\n5 commits applied',
+          'Applying: Commit one\nApplying: Commit two\nApplying: Commit three\nApplying: Commit four\nApplying: Commit five',
         stderr: '',
       });
 

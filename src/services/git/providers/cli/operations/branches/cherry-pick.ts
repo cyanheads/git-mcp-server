@@ -42,6 +42,18 @@ export async function executeCherryPick(
         args.push('--no-commit');
       }
 
+      if (options.mainline !== undefined) {
+        args.push('--mainline', String(options.mainline));
+      }
+
+      if (options.strategy) {
+        args.push('--strategy', options.strategy);
+      }
+
+      if (options.signoff) {
+        args.push('--signoff');
+      }
+
       // Add signing support for cherry-picked commits - use explicit option or fall back to config default
       const shouldSign = options.sign ?? shouldSignCommits();
 

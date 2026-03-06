@@ -106,7 +106,7 @@ describe('executeReflog', () => {
         'abc123def456789012345678901234567890abcd',
       );
       expect(result.entries[0]!.refName).toBe('HEAD@{0}');
-      expect(result.entries[0]!.action).toBe('0');
+      expect(result.entries[0]!.action).toBe('commit');
       expect(result.entries[0]!.message).toBe('commit: add new feature');
       expect(result.entries[0]!.timestamp).toBe(1609459200);
 
@@ -114,7 +114,7 @@ describe('executeReflog', () => {
         'def456789012345678901234567890abcdef0123',
       );
       expect(result.entries[1]!.refName).toBe('HEAD@{1}');
-      expect(result.entries[1]!.action).toBe('1');
+      expect(result.entries[1]!.action).toBe('checkout');
       expect(result.entries[1]!.message).toBe(
         'checkout: moving from main to feature',
       );
@@ -206,7 +206,7 @@ describe('executeReflog', () => {
   });
 
   describe('action parsing', () => {
-    it('extracts action from refName with curly braces', async () => {
+    it('extracts action verb from message subject', async () => {
       const output = buildReflogOutput([
         {
           hash: 'abc123def456789012345678901234567890abcd',
@@ -229,8 +229,28 @@ describe('executeReflog', () => {
 
       const result = await executeReflog({}, mockContext, mockExecGit);
 
-      expect(result.entries[0]!.action).toBe('0');
-      expect(result.entries[1]!.action).toBe('5');
+      expect(result.entries[0]!.action).toBe('commit');
+      expect(result.entries[1]!.action).toBe('reset');
+    });
+
+    it('uses full message as action when no colon is present', async () => {
+      const output = buildReflogOutput([
+        {
+          hash: 'abc123def456789012345678901234567890abcd',
+          refName: 'HEAD@{0}',
+          message: 'rebase (finish)',
+          timestamp: 1609459200,
+        },
+      ]);
+
+      mockExecGit.mockResolvedValueOnce({
+        stdout: output,
+        stderr: '',
+      });
+
+      const result = await executeReflog({}, mockContext, mockExecGit);
+
+      expect(result.entries[0]!.action).toBe('rebase (finish)');
     });
   });
 

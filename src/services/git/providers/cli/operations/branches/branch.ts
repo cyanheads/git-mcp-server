@@ -45,10 +45,12 @@ export async function executeBranch(
           '%(HEAD)', // '*' for current branch
         ].join(GIT_FIELD_DELIMITER);
 
-        // Choose the ref prefix based on whether we want remote or local branches
-        const refPrefix = options.remote ? 'refs/remotes' : 'refs/heads';
+        // Choose the ref prefix based on whether we want remote, local, or all branches
+        const refPrefixes: string[] = options.all
+          ? ['refs/heads', 'refs/remotes']
+          : [options.remote ? 'refs/remotes' : 'refs/heads'];
 
-        args.push(`--format=${format}`, refPrefix);
+        args.push(`--format=${format}`, ...refPrefixes);
 
         // Add merge filtering if specified
         if (options.merged !== undefined) {

@@ -55,17 +55,36 @@ export async function executeFetch(
 
     const lines = gitOutput.stderr.split('\n'); // git fetch outputs to stderr
     for (const line of lines) {
-      if (line.includes('->')) {
-        const match = line.match(/\*\s+\[new branch\]\s+(\S+)/);
-        if (match) {
-          fetchedRefs.push(match[1]!);
+      // Match all fetched refs: new branches, new tags, and updated refs
+      // Examples:
+      //   " * [new branch]      main       -> origin/main"
+      //   " * [new tag]         v1.0       -> v1.0"
+      //   "   abc1234..def5678  main       -> origin/main"
+      // Match all fetched refs: new branches, new tags, and updated refs
+      // Examples:
+      //   " * [new branch]      main       -> origin/main"
+      //   " * [new tag]         v1.0       -> v1.0"
+      //   "   abc1234..def5678  main       -> origin/main"
+      const newRefMatch = line.match(
+        /\*\s+\[new (?:branch|tag|ref)\]\s+\S+\s+->\s+(\S+)/,
+      );
+      if (newRefMatch?.[1]) {
+        fetchedRefs.push(newRefMatch[1]);
+      } else {
+        const updatedRefMatch = line.match(
+          /[a-f0-9]+\.\.[a-f0-9]+\s+\S+\s+->\s+(\S+)/,
+        );
+        if (updatedRefMatch?.[1]) {
+          fetchedRefs.push(updatedRefMatch[1]);
         }
       }
-      if (line.includes('pruned')) {
-        const match = line.match(/x\s+\[deleted\]\s+.*?\s+(\S+)/);
-        if (match) {
-          prunedRefs.push(match[1]!);
-        }
+
+      // Match pruned/deleted refs
+      const deletedMatch = line.match(
+        /x\s+\[deleted\]\s+.*?->\s+(\S+)/,
+      );
+      if (deletedMatch?.[1]) {
+        prunedRefs.push(deletedMatch[1]);
       }
     }
 

@@ -132,8 +132,8 @@ describe('executeFetch', () => {
 
       const result = await executeFetch({}, mockContext, mockExecGit);
 
-      expect(result.fetchedRefs).toContain('feature-a');
-      expect(result.fetchedRefs).toContain('feature-b');
+      expect(result.fetchedRefs).toContain('origin/feature-a');
+      expect(result.fetchedRefs).toContain('origin/feature-b');
     });
 
     it('returns empty fetchedRefs when no new branches', async () => {

@@ -129,9 +129,12 @@ export async function executeRebase(
       })
       .filter((f) => f);
 
-    // Count commits (simplified)
-    const commitsMatch = result.stdout.match(/(\d+) commits? applied/);
-    const rebasedCommits = commitsMatch ? parseInt(commitsMatch[1]!, 10) : 0;
+    // Count rebased commits from output
+    // Git outputs "Successfully rebased and updated ..." or individual "Applying: ..." lines
+    const applyingLines = result.stdout
+      .split('\n')
+      .filter((line) => line.startsWith('Applying:'));
+    const rebasedCommits = applyingLines.length;
 
     const rebaseResult = {
       success: !hasConflicts,
