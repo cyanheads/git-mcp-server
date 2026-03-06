@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.0 - 2026-03-06
+
+### Removed
+
+- **LLM service**: Removed `src/services/llm/` (OpenRouter provider, interfaces, types) — unused by git MCP tools
+- **Speech service**: Removed `src/services/speech/` (ElevenLabs TTS, OpenAI Whisper STT, SpeechService orchestrator) — unused by git MCP tools
+- **Parsing utilities**: Removed `src/utils/parsing/` (CSV, date, JSON, PDF, XML, YAML parsers) — unused by git MCP tools
+- **Network utilities**: Removed `src/utils/network/fetchWithTimeout` — unused by git MCP tools
+- **Scheduling utilities**: Removed `src/utils/scheduling/` (cron scheduler) — unused by git MCP tools
+- **HTML sanitization**: Removed `sanitizeHtml`, `sanitizeString`, and related types from `Sanitization` class — unused; git operations only need path and input sanitization
+- **DI tokens**: Removed `LlmProvider` and `SpeechService` container tokens and registrations
+- **Config fields**: Removed `openrouter*`, `llmDefault*`, and `speech.*` configuration schema and parsing
+- **17 dependencies**: Removed `ajv`, `ajv-formats`, `axios`, `chrono-node`, `clipboardy`, `fast-xml-parser`, `js-yaml`, `node-cron`, `openai`, `papaparse`, `partial-json`, `pdf-lib`, `sanitize-html`, and associated `@types/*` packages
+
+### Changed
+
+- **`.gitignore`**: Added `.vscode/` to ignored directories
+
 ## v2.9.2 - 2026-03-06
 
 ### Fixed

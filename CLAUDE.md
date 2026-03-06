@@ -1,6 +1,6 @@
 # Agent Protocol & Architectural Mandate
 
-**Version:** 2.9.2
+**Version:** 2.10.0
 **Target Project:** git-mcp-server
 **Last Updated:** 2026-03-06
 
@@ -58,7 +58,7 @@ This document defines the operational rules for contributing to this codebase. F
 | `src/services/git/`                     | Git service: `core/` (interfaces, factory), `providers/cli/` (CLI implementation with domain-organized operations).                                                 |
 | `src/storage/`                          | Storage abstractions and providers (in-memory, filesystem, supabase, cloudflare).                                                                                   |
 | `src/container/`                        | Dependency injection (`tsyringe`). Service registration and tokens.                                                                                                 |
-| `src/utils/`                            | Global utilities: `internal/` (logger, requestContext, ErrorHandler, performance), `security/` (sanitization), `parsing/`, `telemetry/`, `network/`, `scheduling/`. |
+| `src/utils/`                            | Global utilities: `internal/` (logger, requestContext, ErrorHandler, performance), `security/` (sanitization), `telemetry/`, `metrics/`.                             |
 | `tests/`                                | Unit/integration tests mirroring `src/` structure.                                                                                                                  |
 
 ---
@@ -432,9 +432,7 @@ Resources follow the same pattern as tools with a declarative `ResourceDefinitio
 | :----------- | :-------------------------------------------------------------------------------------- |
 | `internal/`  | `logger`, `requestContextService`, `ErrorHandler`, `performance` (measureToolExecution) |
 | `security/`  | `sanitization` (path/input validation), `rateLimiter`, `idGenerator`                    |
-| `parsing/`   | `jsonParser`, `yamlParser`                                                              |
 | `telemetry/` | OpenTelemetry instrumentation                                                           |
-| `network/`   | `fetchWithTimeout`                                                                      |
 
 ---
 
