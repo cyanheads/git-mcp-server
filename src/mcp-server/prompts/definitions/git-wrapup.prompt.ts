@@ -8,7 +8,7 @@ import type { PromptDefinition } from '../utils/promptDefinition.js';
 
 const PROMPT_NAME = 'git_wrapup';
 const PROMPT_DESCRIPTION =
-  'Generates a structured workflow prompt for wrapping up git sessions, including reviewing changes, updating documentation, and committing modifications.';
+  'Generates a structured workflow prompt for wrapping up git sessions, including reviewing changes, updating documentation, and committing modifications. Use when the user wants to git wrapup. Unlike git_wrapup_instructions, this tool specifically handles git wrapup.';
 
 const ArgumentsSchema = z.object({
   changelogPath: z

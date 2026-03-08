@@ -24,7 +24,7 @@ import {
 const TOOL_NAME = 'git_fetch';
 const TOOL_TITLE = 'Git Fetch';
 const TOOL_DESCRIPTION =
-  'Fetch updates from a remote repository. Downloads objects and refs without merging them.';
+  'Fetch updates from a remote repository. Downloads objects and refs without merging them. Use when the user wants to retrieve content from a URL or remote source.';
 
 const InputSchema = z.object({
   path: PathSchema,

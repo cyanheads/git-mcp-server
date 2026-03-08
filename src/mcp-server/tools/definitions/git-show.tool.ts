@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_show';
 const TOOL_TITLE = 'Git Show';
 const TOOL_DESCRIPTION =
-  'Show details of a git object (commit, tree, blob, or tag). Displays commit information and the diff of changes introduced.';
+  'Show details of a git object (commit, tree, blob, or tag). Displays commit information and the diff of changes introduced. Use when the user wants to git show.';
 
 const InputSchema = z.object({
   path: PathSchema,

@@ -23,7 +23,7 @@ import {
 const TOOL_NAME = 'git_cherry_pick';
 const TOOL_TITLE = 'Git Cherry-Pick';
 const TOOL_DESCRIPTION =
-  'Cherry-pick commits from other branches. Apply specific commits to the current branch without merging entire branches.';
+  'Cherry-pick commits from other branches. Apply specific commits to the current branch without merging entire branches. Use when the user wants to git cherry pick.';
 
 const InputSchema = z.object({
   path: PathSchema,

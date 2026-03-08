@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_blame';
 const TOOL_TITLE = 'Git Blame';
 const TOOL_DESCRIPTION =
-  'Show line-by-line authorship information for a file, displaying who last modified each line and when. For large files, use startLine/endLine to limit output.';
+  'Show line-by-line authorship information for a file, displaying who last modified each line and when. For large files, use startLine/endLine to limit output. Use when the user wants to git blame.';
 
 const InputSchema = z.object({
   path: PathSchema,

@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_diff';
 const TOOL_TITLE = 'Git Diff';
 const TOOL_DESCRIPTION =
-  'View differences between commits, branches, or working tree. Shows changes in unified diff format.';
+  'View differences between commits, branches, or working tree. Shows changes in unified diff format. Use when the user wants to see what changed between two versions.';
 
 const InputSchema = z.object({
   path: PathSchema,

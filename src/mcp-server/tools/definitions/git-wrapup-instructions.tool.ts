@@ -22,7 +22,7 @@ import {
 const TOOL_NAME = 'git_wrapup_instructions';
 const TOOL_TITLE = 'Git Wrap-up Instructions';
 const TOOL_DESCRIPTION =
-  "Provides the user's desired Git wrap-up workflow and instructions. Returns custom workflow steps (if configured) or default best practices for reviewing, documenting, and committing changes. Includes current repository status to guide next actions.";
+  "Provides the user's desired Git wrap-up workflow and instructions. Returns custom workflow steps (if configured) or default best practices for reviewing, documenting, and committing changes. Includes current repository status to guide next actions. Use when the user wants to git wrapup instructions. Unlike git_wrapup, this tool specifically handles git wrapup instructions.";
 
 const InputSchema = z.object({
   acknowledgement: z

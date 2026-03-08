@@ -24,7 +24,7 @@ import {
 const TOOL_NAME = 'git_merge';
 const TOOL_TITLE = 'Git Merge';
 const TOOL_DESCRIPTION =
-  'Merge branches together. Integrates changes from another branch into the current branch with optional merge strategies.';
+  'Merge branches together. Integrates changes from another branch into the current branch with optional merge strategies. Use when the user wants to git merge.';
 
 const InputSchema = z.object({
   path: PathSchema,

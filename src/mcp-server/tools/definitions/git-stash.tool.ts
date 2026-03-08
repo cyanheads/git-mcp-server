@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_stash';
 const TOOL_TITLE = 'Git Stash';
 const TOOL_DESCRIPTION =
-  'Manage stashes: list stashes, save current changes (push), restore changes (pop/apply), or remove stashes (drop/clear).';
+  'Manage stashes: list stashes, save current changes (push), restore changes (pop/apply), or remove stashes (drop/clear). Use when the user wants to git stash.';
 
 const InputSchema = z.object({
   path: PathSchema,

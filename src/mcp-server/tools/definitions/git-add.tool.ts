@@ -20,7 +20,7 @@ import { flattenChanges } from '../utils/git-formatters.js';
 const TOOL_NAME = 'git_add';
 const TOOL_TITLE = 'Git Add';
 const TOOL_DESCRIPTION =
-  'Stage files for commit. Add file contents to the staging area (index) to prepare for the next commit.';
+  'Stage files for commit. Add file contents to the staging area (index) to prepare for the next commit. Use when the user wants to stage changes or append to an existing collection.';
 
 const InputSchema = z
   .object({

@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_init';
 const TOOL_TITLE = 'Git Init';
 const TOOL_DESCRIPTION =
-  'Initialize a new Git repository at the specified path. Creates a .git directory and sets up the initial branch.';
+  'Initialize a new Git repository at the specified path. Creates a .git directory and sets up the initial branch. Use when the user wants to git init.';
 
 const InputSchema = z.object({
   path: PathSchema,

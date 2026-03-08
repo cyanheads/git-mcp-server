@@ -23,7 +23,7 @@ import {
 const TOOL_NAME = 'git_worktree';
 const TOOL_TITLE = 'Git Worktree';
 const TOOL_DESCRIPTION =
-  'Manage multiple working trees: list worktrees, add new worktrees for parallel work, remove worktrees, or move worktrees to new locations.';
+  'Manage multiple working trees: list worktrees, add new worktrees for parallel work, remove worktrees, or move worktrees to new locations. Use when the user wants to git worktree.';
 
 const InputSchema = z.object({
   path: PathSchema,

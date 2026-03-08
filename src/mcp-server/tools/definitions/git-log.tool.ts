@@ -24,7 +24,7 @@ import {
 const TOOL_NAME = 'git_log';
 const TOOL_TITLE = 'Git Log';
 const TOOL_DESCRIPTION =
-  'View commit history with optional filtering by author, date range, file path, or commit message pattern.';
+  'View commit history with optional filtering by author, date range, file path, or commit message pattern. Use when the user wants to review history or past activity.';
 
 const InputSchema = z.object({
   path: PathSchema,

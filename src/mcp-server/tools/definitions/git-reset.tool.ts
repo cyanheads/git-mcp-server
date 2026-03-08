@@ -20,7 +20,7 @@ import { validateProtectedBranchOperation } from '../utils/git-validators.js';
 const TOOL_NAME = 'git_reset';
 const TOOL_TITLE = 'Git Reset';
 const TOOL_DESCRIPTION =
-  'Reset current HEAD to specified state. Can be used to unstage files (soft), discard commits (mixed), or discard all changes (hard).';
+  'Reset current HEAD to specified state. Can be used to unstage files (soft), discard commits (mixed), or discard all changes (hard). Use when the user wants to undo staged changes or restore to a previous state.';
 
 const InputSchema = z.object({
   path: PathSchema,

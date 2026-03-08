@@ -18,7 +18,7 @@ import {
 const TOOL_NAME = 'git_clear_working_dir';
 const TOOL_TITLE = 'Git Clear Working Directory';
 const TOOL_DESCRIPTION =
-  'Clear the session working directory setting. This resets the context without restarting the server. Subsequent git operations will require an explicit path parameter unless git_set_working_dir is called again.';
+  'Clear the session working directory setting. This resets the context without restarting the server. Subsequent git operations will require an explicit path parameter unless git_set_working_dir is called again. Use when the user wants to git clear working dir. Unlike git_set_working_dir, git-working-directory, this tool specifically handles git clear working dir.';
 
 const InputSchema = z.object({
   confirm: z

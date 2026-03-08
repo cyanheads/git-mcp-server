@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_rebase';
 const TOOL_TITLE = 'Git Rebase';
 const TOOL_DESCRIPTION =
-  'Rebase commits onto another branch. Reapplies commits on top of another base tip for a cleaner history.';
+  'Rebase commits onto another branch. Reapplies commits on top of another base tip for a cleaner history. Use when the user wants to git rebase.';
 
 const InputSchema = z.object({
   path: PathSchema,

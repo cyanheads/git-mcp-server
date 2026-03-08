@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_remote';
 const TOOL_TITLE = 'Git Remote';
 const TOOL_DESCRIPTION =
-  'Manage remote repositories: list remotes, add new remotes, remove remotes, rename remotes, or get/set remote URLs.';
+  'Manage remote repositories: list remotes, add new remotes, remove remotes, rename remotes, or get/set remote URLs. Use when the user wants to git remote.';
 
 const InputSchema = z.object({
   path: PathSchema,

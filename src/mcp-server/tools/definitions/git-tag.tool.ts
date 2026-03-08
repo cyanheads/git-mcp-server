@@ -27,7 +27,7 @@ import {
 const TOOL_NAME = 'git_tag';
 const TOOL_TITLE = 'Git Tag';
 const TOOL_DESCRIPTION =
-  'Manage tags: list all tags, create a new tag, or delete a tag. Tags are used to mark specific points in history (releases, milestones).';
+  'Manage tags: list all tags, create a new tag, or delete a tag. Tags are used to mark specific points in history (releases, milestones). Use when the user wants to git tag.';
 
 const InputSchema = z.object({
   path: PathSchema,

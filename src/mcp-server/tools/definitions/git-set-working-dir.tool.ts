@@ -18,7 +18,7 @@ import {
 const TOOL_NAME = 'git_set_working_dir';
 const TOOL_TITLE = 'Git Set Working Directory';
 const TOOL_DESCRIPTION =
-  'Set the session working directory for all git operations. This allows subsequent git commands to omit the path parameter and use this directory as the default.';
+  'Set the session working directory for all git operations. This allows subsequent git commands to omit the path parameter and use this directory as the default. Use when the user wants to git set working dir. Unlike git_clear_working_dir, git-working-directory, this tool specifically handles git set working dir.';
 
 const InputSchema = z.object({
   path: z

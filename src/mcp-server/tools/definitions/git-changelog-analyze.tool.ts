@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_changelog_analyze';
 const TOOL_TITLE = 'Git Changelog Analyze';
 const TOOL_DESCRIPTION =
-  'Gather git history context (commits, tags) and structured review instructions to support LLM-driven changelog analysis. Changelog file should be read separately; this tool provides the supporting git data and analysis framework. Pass one or more review types to control what kind of analysis to perform.';
+  'Gather git history context (commits, tags) and structured review instructions to support LLM-driven changelog analysis. Changelog file should be read separately; this tool provides the supporting git data and analysis framework. Pass one or more review types to control what kind of analysis to perform. Use when the user wants to review history or past activity.';
 
 // ---------------------------------------------------------------------------
 // Review type definitions

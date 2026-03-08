@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_clone';
 const TOOL_TITLE = 'Git Clone';
 const TOOL_DESCRIPTION =
-  'Clone a repository from a remote URL to a local path. Supports HTTP/HTTPS and SSH URLs, with optional shallow cloning.';
+  'Clone a repository from a remote URL to a local path. Supports HTTP/HTTPS and SSH URLs, with optional shallow cloning. Use when the user wants to git clone.';
 
 const InputSchema = z.object({
   url: z.string().url().describe('Remote repository URL to clone from.'),

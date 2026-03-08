@@ -26,7 +26,7 @@ import { validateProtectedBranchOperation } from '../utils/git-validators.js';
 const TOOL_NAME = 'git_push';
 const TOOL_TITLE = 'Git Push';
 const TOOL_DESCRIPTION =
-  'Push changes to a remote repository. Uploads local commits to the remote branch.';
+  'Push changes to a remote repository. Uploads local commits to the remote branch. Use when the user wants to git push.';
 
 const InputSchema = z.object({
   path: PathSchema,

@@ -23,7 +23,7 @@ import {
 const TOOL_NAME = 'git_pull';
 const TOOL_TITLE = 'Git Pull';
 const TOOL_DESCRIPTION =
-  'Pull changes from a remote repository. Fetches and integrates changes into the current branch.';
+  'Pull changes from a remote repository. Fetches and integrates changes into the current branch. Use when the user wants to git pull.';
 
 const InputSchema = z.object({
   path: PathSchema,

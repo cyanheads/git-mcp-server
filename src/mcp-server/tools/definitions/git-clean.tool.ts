@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_clean';
 const TOOL_TITLE = 'Git Clean';
 const TOOL_DESCRIPTION =
-  'Remove untracked files from the working directory. Requires force flag for safety. Use dry-run to preview files that would be removed.';
+  'Remove untracked files from the working directory. Requires force flag for safety. Use dry-run to preview files that would be removed. Use when the user wants to git clean.';
 
 const InputSchema = z.object({
   path: PathSchema,

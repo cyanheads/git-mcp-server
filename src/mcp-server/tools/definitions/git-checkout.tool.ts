@@ -24,7 +24,7 @@ import {
 const TOOL_NAME = 'git_checkout';
 const TOOL_TITLE = 'Git Checkout';
 const TOOL_DESCRIPTION =
-  'Switch branches or restore working tree files. Can checkout an existing branch, create a new branch, or restore specific files.';
+  'Switch branches or restore working tree files. Can checkout an existing branch, create a new branch, or restore specific files. Use when the user wants to switch to a different branch or restore files.';
 
 const InputSchema = z.object({
   path: PathSchema,

@@ -25,7 +25,7 @@ import {
 const TOOL_NAME = 'git_branch';
 const TOOL_TITLE = 'Git Branch';
 const TOOL_DESCRIPTION =
-  'Manage branches: list all branches, show current branch, create a new branch, delete a branch, or rename a branch.';
+  'Manage branches: list all branches, show current branch, create a new branch, delete a branch, or rename a branch. Use when the user wants to git branch.';
 
 const InputSchema = z.object({
   path: PathSchema,

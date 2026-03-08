@@ -82,7 +82,7 @@ export const gitWorkingDirectoryResource: ResourceDefinition<
   name: 'git-working-directory',
   title: 'Git Working Directory',
   description:
-    'Provides the current session working directory for git operations. This is the directory set via git_set_working_dir and used as the default for all git commands.',
+    'Provides the current session working directory for git operations. This is the directory set via git_set_working_dir and used as the default for all git commands. Use when the user wants to git-working-directory. Unlike git_clear_working_dir, git_set_working_dir, this tool specifically handles git-working-directory.',
   uriTemplate: 'git://working-directory',
   paramsSchema: ParamsSchema,
   outputSchema: OutputSchema,

@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_status';
 const TOOL_TITLE = 'Git Status';
 const TOOL_DESCRIPTION =
-  'Show the working tree status including staged, unstaged, and untracked files.';
+  'Show the working tree status including staged, unstaged, and untracked files. Use when the user wants to check the current state of the working environment.';
 
 const InputSchema = z.object({
   path: PathSchema,

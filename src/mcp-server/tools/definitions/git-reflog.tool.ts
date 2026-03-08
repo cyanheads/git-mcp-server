@@ -19,7 +19,7 @@ import {
 const TOOL_NAME = 'git_reflog';
 const TOOL_TITLE = 'Git Reflog';
 const TOOL_DESCRIPTION =
-  'View the reference logs (reflog) to track when branch tips and other references were updated. Useful for recovering lost commits.';
+  'View the reference logs (reflog) to track when branch tips and other references were updated. Useful for recovering lost commits. Use when the user wants to review history or past activity.';
 
 const InputSchema = z.object({
   path: PathSchema,
