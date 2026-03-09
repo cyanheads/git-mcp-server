@@ -210,11 +210,6 @@ export function createMcpToolHandler<
       return {
         isError: true,
         content: [{ type: 'text', text: `Error: ${mcpError.message}` }],
-        structuredContent: {
-          code: mcpError.code,
-          message: mcpError.message,
-          data: mcpError.data,
-        },
       };
     }
   };
