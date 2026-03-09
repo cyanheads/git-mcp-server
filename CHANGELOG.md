@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **`git_diff` untracked file stats**: Untracked file insertions and deletions are now included in diff stat totals
-- **Config**: Removed runtime `hasFileSystemAccess` check that defaulted `LOGS_DIR` to `logs/`; file logging is now disabled unless `LOGS_DIR` is explicitly set
+- **Config**: Removed runtime `hasFileSystemAccess` check that defaulted `LOGS_DIR` to `logs/`; file logging is now disabled unless `LOGS_DIR` is explicitly set ([#38](https://github.com/cyanheads/git-mcp-server/issues/38))
 
 ### Changed
 
