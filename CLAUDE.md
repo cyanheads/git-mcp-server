@@ -1,8 +1,8 @@
 # Agent Protocol & Architectural Mandate
 
-**Version:** 2.10.0
+**Version:** 2.10.1
 **Target Project:** git-mcp-server
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-08
 
 This document defines the operational rules for contributing to this codebase. Follow it exactly.
 
@@ -46,20 +46,20 @@ This document defines the operational rules for contributing to this codebase. F
 
 ## II. Directory Structure
 
-| Directory                               | Purpose                                                                                                                                                             |
-| :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/mcp-server/tools/definitions/`     | MCP Tool definitions. Named `git-[operation].tool.ts`.                                                                                                              |
-| `src/mcp-server/tools/utils/`           | Shared tool utilities: `toolDefinition.ts`, `toolHandlerFactory.ts`, `git-validators.ts`, `json-response-formatter.ts`.                                             |
-| `src/mcp-server/tools/schemas/`         | Shared Zod schemas: `PathSchema`, `CommitRefSchema`, `BranchNameSchema`, etc.                                                                                       |
-| `src/mcp-server/resources/definitions/` | MCP Resource definitions. Primary: `git-working-directory.resource.ts`.                                                                                             |
-| `src/mcp-server/resources/utils/`       | Shared resource utilities: `ResourceDefinition` and handler factory.                                                                                                |
-| `src/mcp-server/prompts/definitions/`   | MCP Prompt definitions (e.g., `git-wrapup.prompt.ts`).                                                                                                              |
-| `src/mcp-server/transports/`            | Transport implementations: `http/` (Hono + Streamable HTTP), `stdio/`, `auth/` (JWT/OAuth strategies).                                                              |
-| `src/services/git/`                     | Git service: `core/` (interfaces, factory), `providers/cli/` (CLI implementation with domain-organized operations).                                                 |
-| `src/storage/`                          | Storage abstractions and providers (in-memory, filesystem, supabase, cloudflare).                                                                                   |
-| `src/container/`                        | Dependency injection (`tsyringe`). Service registration and tokens.                                                                                                 |
-| `src/utils/`                            | Global utilities: `internal/` (logger, requestContext, ErrorHandler, performance), `security/` (sanitization), `telemetry/`, `metrics/`.                             |
-| `tests/`                                | Unit/integration tests mirroring `src/` structure.                                                                                                                  |
+| Directory                               | Purpose                                                                                                                                  |
+| :-------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/mcp-server/tools/definitions/`     | MCP Tool definitions. Named `git-[operation].tool.ts`.                                                                                   |
+| `src/mcp-server/tools/utils/`           | Shared tool utilities: `toolDefinition.ts`, `toolHandlerFactory.ts`, `git-validators.ts`, `json-response-formatter.ts`.                  |
+| `src/mcp-server/tools/schemas/`         | Shared Zod schemas: `PathSchema`, `CommitRefSchema`, `BranchNameSchema`, etc.                                                            |
+| `src/mcp-server/resources/definitions/` | MCP Resource definitions. Primary: `git-working-directory.resource.ts`.                                                                  |
+| `src/mcp-server/resources/utils/`       | Shared resource utilities: `ResourceDefinition` and handler factory.                                                                     |
+| `src/mcp-server/prompts/definitions/`   | MCP Prompt definitions (e.g., `git-wrapup.prompt.ts`).                                                                                   |
+| `src/mcp-server/transports/`            | Transport implementations: `http/` (Hono + Streamable HTTP), `stdio/`, `auth/` (JWT/OAuth strategies).                                   |
+| `src/services/git/`                     | Git service: `core/` (interfaces, factory), `providers/cli/` (CLI implementation with domain-organized operations).                      |
+| `src/storage/`                          | Storage abstractions and providers (in-memory, filesystem, supabase, cloudflare).                                                        |
+| `src/container/`                        | Dependency injection (`tsyringe`). Service registration and tokens.                                                                      |
+| `src/utils/`                            | Global utilities: `internal/` (logger, requestContext, ErrorHandler, performance), `security/` (sanitization), `telemetry/`, `metrics/`. |
+| `tests/`                                | Unit/integration tests mirroring `src/` structure.                                                                                       |
 
 ---
 

@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.1 - 2026-03-08
+
+### Added
+
+- **`git_diff` auto-exclude**: Lock files and generated files (16 patterns across ecosystems) are now excluded from diff output by default, reducing context bloat for LLMs. New `autoExclude` input parameter (default: `true`) and `excludedFiles` output field showing which files were filtered
+
+### Fixed
+
+- **`git_diff` untracked file stats**: Untracked file insertions and deletions are now included in diff stat totals
+- **Config**: Removed runtime `hasFileSystemAccess` check that defaulted `LOGS_DIR` to `logs/`; file logging is now disabled unless `LOGS_DIR` is explicitly set
+
+### Changed
+
+- **Dependencies**: Bumped `@cloudflare/workers-types` to `4.20260307.1`, `eslint` to `10.0.3`
+
 ## v2.10.0 - 2026-03-06
 
 ### Removed
