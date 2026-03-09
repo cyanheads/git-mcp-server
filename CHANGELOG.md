@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.2 - 2026-03-08
+
+### Changed
+
+- **`git_tag` tool**: Improved `message` parameter description to encourage meaningful release notes on annotated tags
+
 ## v2.10.1 - 2026-03-08
 
 ### Added
