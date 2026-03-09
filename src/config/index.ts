@@ -23,12 +23,6 @@ type PackageManifest = {
 };
 
 const packageManifest = packageJson as PackageManifest;
-const hasFileSystemAccess =
-  typeof process !== 'undefined' &&
-  typeof process.versions === 'object' &&
-  process.versions !== null &&
-  typeof process.versions.node === 'string';
-
 // Suppress dotenv's noisy initial log message as suggested by its output.
 dotenv.config({ quiet: true });
 
@@ -400,7 +394,7 @@ const parseConfig = () => {
   const finalRawConfig = {
     ...rawConfig,
     pkg: parsedPkg,
-    logsPath: rawConfig.logsPath ?? (hasFileSystemAccess ? 'logs' : undefined),
+    logsPath: rawConfig.logsPath,
     mcpServerName: env.MCP_SERVER_NAME ?? parsedPkg.name,
     mcpServerVersion: env.MCP_SERVER_VERSION ?? parsedPkg.version,
     mcpServerDescription: env.MCP_SERVER_DESCRIPTION ?? parsedPkg.description,
