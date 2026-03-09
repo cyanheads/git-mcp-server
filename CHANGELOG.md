@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- **Tool error responses**: Removed invalid `structuredContent` from error results in `createMcpToolHandler` — structured content is only valid on successful responses
+- **Tool error responses**: Removed invalid `structuredContent` from error results in `createMcpToolHandler` — structured content is only valid on successful responses ([#40](https://github.com/cyanheads/git-mcp-server/issues/40))
 
 ## v2.10.2 - 2026-03-08
 
