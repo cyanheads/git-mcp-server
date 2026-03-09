@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.3 - 2026-03-09
+
+### Fixed
+
+- **Tool error responses**: Removed invalid `structuredContent` from error results in `createMcpToolHandler` — structured content is only valid on successful responses
+
 ## v2.10.2 - 2026-03-08
 
 ### Changed
