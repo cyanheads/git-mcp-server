@@ -21,6 +21,31 @@ const TOOL_TITLE = 'Git Diff';
 const TOOL_DESCRIPTION =
   'View differences between commits, branches, or working tree. Shows changes in unified diff format.';
 
+/**
+ * Files automatically excluded from diff output by default to prevent
+ * context bloat. These are generated/managed by package managers and
+ * rarely contain meaningful information for code review.
+ */
+const AUTO_EXCLUDE_PATTERNS = [
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lock',
+  'bun.lockb',
+  'poetry.lock',
+  'Pipfile.lock',
+  'uv.lock',
+  'composer.lock',
+  'Gemfile.lock',
+  'go.sum',
+  'Cargo.lock',
+  'flake.lock',
+  'pubspec.lock',
+  'mix.lock',
+  'Podfile.lock',
+  'packages.lock.json',
+] as const;
+
 const InputSchema = z.object({
   path: PathSchema,
   target: CommitRefSchema.optional().describe(
@@ -62,6 +87,12 @@ const InputSchema = z.object({
     .max(100)
     .default(3)
     .describe('Number of context lines to show around changes.'),
+  autoExclude: z
+    .boolean()
+    .default(true)
+    .describe(
+      'Automatically exclude lock files and other generated files (e.g., package-lock.json, yarn.lock, bun.lock, poetry.lock, go.sum) from diff output to reduce context bloat. Set to false if you need to inspect these files.',
+    ),
 });
 
 const OutputSchema = z.object({
@@ -78,6 +109,12 @@ const OutputSchema = z.object({
     .int()
     .optional()
     .describe('Total number of line deletions.'),
+  excludedFiles: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Files that were automatically excluded from the diff (e.g., lock files). Call again with autoExclude=false to include them.',
+    ),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -100,6 +137,9 @@ async function gitDiffLogic(
       nameOnly: input.nameOnly,
       stat: input.stat,
       unified: input.contextLines,
+      ...(input.autoExclude && {
+        excludePatterns: [...AUTO_EXCLUDE_PATTERNS],
+      }),
     },
     {
       workingDirectory: targetPath,
@@ -114,6 +154,9 @@ async function gitDiffLogic(
     filesChanged: result.filesChanged || 0,
     insertions: result.insertions,
     deletions: result.deletions,
+    ...(result.excludedFiles?.length && {
+      excludedFiles: result.excludedFiles,
+    }),
   };
 }
 
@@ -136,6 +179,7 @@ function filterGitDiffOutput(
       filesChanged: result.filesChanged,
       insertions: result.insertions,
       deletions: result.deletions,
+      excludedFiles: result.excludedFiles,
     };
   }
 

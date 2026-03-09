@@ -354,6 +354,8 @@ export interface GitDiffOptions {
   stat?: boolean;
   /** Show only names of changed files */
   nameOnly?: boolean;
+  /** Filename patterns to exclude from diff output (e.g., lock files) */
+  excludePatterns?: string[];
 }
 
 export interface GitDiffResult {
@@ -367,6 +369,8 @@ export interface GitDiffResult {
   deletions?: number;
   /** Whether diff contains binary files */
   binary?: boolean;
+  /** Files that were excluded from the diff by exclude patterns */
+  excludedFiles?: string[];
 }
 
 // ============================================================================

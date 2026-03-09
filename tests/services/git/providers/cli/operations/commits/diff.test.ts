@@ -270,11 +270,17 @@ new file mode 100644
         .mockResolvedValueOnce({ stdout: trackedDiff, stderr: '' })
         // ls-files for untracked
         .mockResolvedValueOnce({ stdout: 'untracked.txt\n', stderr: '' })
-        // diff --no-index for untracked file (throws with exit code 1)
+        // diff --no-index for untracked file full diff (throws with exit code 1)
         .mockRejectedValueOnce(
           new Error(`Exit Code: 1\nStderr: \nStdout: ${untrackedDiff}`),
         )
-        // stat
+        // diff --no-index for untracked file stat
+        .mockRejectedValueOnce(
+          new Error(
+            'Exit Code: 1\nStderr: \nStdout:  untracked.txt | 1 +\n 1 file changed, 1 insertion(+)',
+          ),
+        )
+        // stat for tracked files
         .mockResolvedValueOnce({
           stdout: ' tracked.txt | 1 +\n 1 file changed, 1 insertion(+)',
           stderr: '',
@@ -317,15 +323,24 @@ new file mode 100644
           stdout: 'file1.txt\nfile2.txt\nfile3.txt\n',
           stderr: '',
         })
-        // Three untracked file diffs
+        // Three untracked files: full diff + stat diff each
         .mockRejectedValueOnce(
           new Error('Exit Code: 1\nStderr: \nStdout: diff file1'),
+        )
+        .mockRejectedValueOnce(
+          new Error('Exit Code: 1\nStderr: \nStdout:  file1.txt | 1 +'),
         )
         .mockRejectedValueOnce(
           new Error('Exit Code: 1\nStderr: \nStdout: diff file2'),
         )
         .mockRejectedValueOnce(
+          new Error('Exit Code: 1\nStderr: \nStdout:  file2.txt | 1 +'),
+        )
+        .mockRejectedValueOnce(
           new Error('Exit Code: 1\nStderr: \nStdout: diff file3'),
+        )
+        .mockRejectedValueOnce(
+          new Error('Exit Code: 1\nStderr: \nStdout:  file3.txt | 1 +'),
         )
         .mockResolvedValueOnce({ stdout: '', stderr: '' }); // stat
 
@@ -386,7 +401,7 @@ Binary files a/image.png and b/image.png differ`;
   });
 
   describe('argument ordering', () => {
-    it('places flags before commit refs', async () => {
+    it('includes all flags and commit refs in the command', async () => {
       mockExecGit
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
         .mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -398,14 +413,9 @@ Binary files a/image.png and b/image.png differ`;
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
-      const cachedIdx = args.indexOf('--cached');
-      const unifiedIdx = args.findIndex((a: string) =>
-        a.startsWith('--unified='),
-      );
-      const commitIdx = args.indexOf('HEAD~1');
-
-      expect(cachedIdx).toBeLessThan(commitIdx);
-      expect(unifiedIdx).toBeLessThan(commitIdx);
+      expect(args).toContain('--cached');
+      expect(args).toContain('HEAD~1');
+      expect(args).toContain('--unified=3');
     });
 
     it('places path filter after -- separator at the end', async () => {
@@ -442,6 +452,145 @@ Binary files a/image.png and b/image.png differ`;
       expect(args).toContain('--cached');
       expect(args).toContain('--name-only');
       expect(result.filesChanged).toBe(2);
+    });
+  });
+
+  describe('excludePatterns option', () => {
+    it('adds :(exclude) pathspecs to git command', async () => {
+      mockExecGit
+        // exclude detection (--name-only for excluded patterns)
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        // main diff
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        // stat
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeDiff(
+        { excludePatterns: ['bun.lock', 'yarn.lock'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      // Main diff command should contain exclude pathspecs
+      const [diffArgs] = mockExecGit.mock.calls[1]!;
+      expect(diffArgs).toContain(':(exclude)bun.lock');
+      expect(diffArgs).toContain(':(exclude)yarn.lock');
+      expect(diffArgs).toContain('--');
+    });
+
+    it('reports files that were excluded from the diff', async () => {
+      mockExecGit
+        // exclude detection: bun.lock had changes
+        .mockResolvedValueOnce({ stdout: 'bun.lock\n', stderr: '' })
+        // main diff (without bun.lock)
+        .mockResolvedValueOnce({ stdout: 'diff output', stderr: '' })
+        // stat
+        .mockResolvedValueOnce({
+          stdout: ' src/index.ts | 1 +\n 1 file changed, 1 insertion(+)',
+          stderr: '',
+        });
+
+      const result = await executeDiff(
+        { excludePatterns: ['bun.lock', 'yarn.lock'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.excludedFiles).toEqual(['bun.lock']);
+    });
+
+    it('does not set excludedFiles when no excluded patterns match', async () => {
+      mockExecGit
+        // exclude detection: no matches
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        // main diff
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        // stat
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeDiff(
+        { excludePatterns: ['bun.lock'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.excludedFiles).toBeUndefined();
+    });
+
+    it('filters untracked files against exclude patterns', async () => {
+      mockExecGit
+        // exclude detection: no tracked matches
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        // main diff
+        .mockResolvedValueOnce({ stdout: '', stderr: '' })
+        // ls-files for untracked (includes a lock file)
+        .mockResolvedValueOnce({
+          stdout: 'new-file.txt\nbun.lock\n',
+          stderr: '',
+        })
+        // diff --no-index for new-file.txt (full)
+        .mockRejectedValueOnce(
+          new Error('Exit Code: 1\nStderr: \nStdout: diff new-file'),
+        )
+        // diff --no-index for new-file.txt (stat)
+        .mockRejectedValueOnce(
+          new Error(
+            'Exit Code: 1\nStderr: \nStdout:  new-file.txt | 1 +\n 1 file changed, 1 insertion(+)',
+          ),
+        )
+        // stat
+        .mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeDiff(
+        { includeUntracked: true, excludePatterns: ['bun.lock'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.excludedFiles).toEqual(['bun.lock']);
+      expect(result.diff).toContain('diff new-file');
+      expect(result.diff).not.toContain('bun.lock');
+      expect(result.filesChanged).toBe(1); // only new-file.txt
+    });
+
+    it('excludes pathspecs in stat mode', async () => {
+      mockExecGit
+        // exclude detection
+        .mockResolvedValueOnce({ stdout: 'bun.lock\n', stderr: '' })
+        // stat
+        .mockResolvedValueOnce({
+          stdout: ' src/index.ts | 1 +\n 1 file changed, 1 insertion(+)',
+          stderr: '',
+        });
+
+      const result = await executeDiff(
+        { stat: true, excludePatterns: ['bun.lock'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      // Stat command should have exclude pathspecs
+      const [statArgs] = mockExecGit.mock.calls[1]!;
+      expect(statArgs).toContain(':(exclude)bun.lock');
+      expect(result.excludedFiles).toEqual(['bun.lock']);
+    });
+
+    it('excludes in nameOnly mode', async () => {
+      mockExecGit
+        // exclude detection
+        .mockResolvedValueOnce({ stdout: 'yarn.lock\n', stderr: '' })
+        // main diff --name-only
+        .mockResolvedValueOnce({ stdout: 'src/app.ts\n', stderr: '' });
+
+      const result = await executeDiff(
+        { nameOnly: true, excludePatterns: ['yarn.lock'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.excludedFiles).toEqual(['yarn.lock']);
+      expect(result.diff).not.toContain('yarn.lock');
+      expect(result.filesChanged).toBe(1);
     });
   });
 });
