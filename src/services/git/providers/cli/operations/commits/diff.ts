@@ -68,9 +68,7 @@ export async function executeDiff(
         pathArgs.push(...options.paths);
       }
       if (options.excludePatterns?.length) {
-        pathArgs.push(
-          ...options.excludePatterns.map((p) => `:(exclude)${p}`),
-        );
+        pathArgs.push(...options.excludePatterns.map((p) => `:(exclude)${p}`));
       }
     }
 
@@ -86,9 +84,7 @@ export async function executeDiff(
         context.workingDirectory,
         context.requestContext,
       );
-      const matched = checkResult.stdout
-        .split('\n')
-        .filter((f) => f.trim());
+      const matched = checkResult.stdout.split('\n').filter((f) => f.trim());
       if (matched.length > 0) {
         excludedFiles = matched;
       }
@@ -113,12 +109,11 @@ export async function executeDiff(
       if (options.includeUntracked) {
         let untrackedFiles = await getUntrackedFiles(execGit, context);
         if (options.excludePatterns?.length) {
-          ({ files: untrackedFiles, excludedFiles } =
-            applyUntrackedExclusions(
-              untrackedFiles,
-              options.excludePatterns,
-              excludedFiles,
-            ));
+          ({ files: untrackedFiles, excludedFiles } = applyUntrackedExclusions(
+            untrackedFiles,
+            options.excludePatterns,
+            excludedFiles,
+          ));
         }
         for (const file of untrackedFiles) {
           const result = await execUntrackedDiff(execGit, context, file, true);
@@ -161,12 +156,11 @@ export async function executeDiff(
     if (options.includeUntracked) {
       let untrackedFiles = await getUntrackedFiles(execGit, context);
       if (options.excludePatterns?.length) {
-        ({ files: untrackedFiles, excludedFiles } =
-          applyUntrackedExclusions(
-            untrackedFiles,
-            options.excludePatterns,
-            excludedFiles,
-          ));
+        ({ files: untrackedFiles, excludedFiles } = applyUntrackedExclusions(
+          untrackedFiles,
+          options.excludePatterns,
+          excludedFiles,
+        ));
       }
       untrackedFileCount = untrackedFiles.length;
 

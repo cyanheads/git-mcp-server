@@ -57,10 +57,9 @@
     // Modern resolution features
     "resolveJsonModule": true,
     "allowJs": false,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "tests/*": ["tests/*"]
+      "@/*": ["./src/*"],
+      "tests/*": ["./tests/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],

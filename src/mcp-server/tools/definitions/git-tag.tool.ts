@@ -44,7 +44,9 @@ const InputSchema = z.object({
   message: z
     .string()
     .optional()
-    .describe('Tag message (creates annotated tag). For release tags, summarize the notable changes.'),
+    .describe(
+      'Tag message (creates annotated tag). For release tags, summarize the notable changes.',
+    ),
   annotated: z
     .boolean()
     .default(false)
