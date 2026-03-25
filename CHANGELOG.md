@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.4 - 2026-03-24
+
+### Changed
+
+- **TypeScript 6.0**: Upgraded from TypeScript 5.9.3 to 6.0.2; updated `tsconfig.json` path mappings to use `./` prefix (replaces `baseUrl`)
+- **Dependencies**: Bumped Hono 4.12.5→4.12.9, Vite 7.3.1→8.0.2, Rollup 4.59.0→4.60.0, ESLint 10.0.3→10.1.0, Vitest 4.0.18→4.1.1, and other dev dependencies to latest
+
+### Added
+
+- **`flatted` dependency**: Added `flatted` 3.4.2
+
 ## v2.10.3 - 2026-03-09
 
 ### Fixed
