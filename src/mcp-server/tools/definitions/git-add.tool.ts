@@ -107,10 +107,21 @@ async function gitAddLogic(
     },
   );
 
+  // When all/update flags are used, the service returns empty stagedFiles.
+  // Derive the list from the post-add status instead.
+  const stagedFiles =
+    result.stagedFiles.length > 0
+      ? result.stagedFiles
+      : [
+          ...(statusResult.stagedChanges.added || []),
+          ...(statusResult.stagedChanges.modified || []),
+          ...(statusResult.stagedChanges.deleted || []),
+        ];
+
   return {
     success: result.success,
-    stagedFiles: result.stagedFiles,
-    totalFiles: result.stagedFiles.length,
+    stagedFiles,
+    totalFiles: stagedFiles.length,
     status: {
       current_branch: statusResult.currentBranch,
       staged_changes: flattenChanges(statusResult.stagedChanges),

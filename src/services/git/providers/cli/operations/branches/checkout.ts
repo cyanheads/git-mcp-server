@@ -52,16 +52,19 @@ export async function executeCheckout(
       context.requestContext,
     );
 
-    // Parse modified files from output
+    // Parse modified files from output, filtering git informational messages
     const filesModified = result.stdout
       .split('\n')
+      .map((line) => line.trim())
       .filter(
         (line) =>
-          line.trim() &&
+          line &&
           !line.startsWith('Switched') &&
-          !line.startsWith('Already'),
-      )
-      .map((line) => line.trim());
+          !line.startsWith('Already') &&
+          !line.startsWith('Your branch') &&
+          !line.startsWith('(use ') &&
+          !line.startsWith('HEAD is now'),
+      );
 
     const checkoutResult = {
       success: true,

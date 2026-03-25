@@ -61,12 +61,22 @@ export async function executePull(
     const hasConflicts =
       result.stdout.includes('CONFLICT') || result.stderr.includes('CONFLICT');
 
-    // Parse changed files
+    // Parse changed files from stat output, filtering git informational messages
     const filesChanged = result.stdout
       .split('\n')
-      .filter((line) => line.trim() && !line.includes('CONFLICT'))
       .map((line) => line.trim())
-      .filter((f) => f);
+      .filter(
+        (line) =>
+          line &&
+          !line.includes('CONFLICT') &&
+          !line.startsWith('Already up to date') &&
+          !line.startsWith('From ') &&
+          !line.startsWith('Your branch') &&
+          !line.startsWith('(use ') &&
+          !line.startsWith('Updating ') &&
+          !line.startsWith('Fast-forward') &&
+          !line.match(/^\d+ files? changed/),
+      );
 
     const pullResult = {
       success: !hasConflicts,

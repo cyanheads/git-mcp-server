@@ -58,6 +58,31 @@ describe('executeStash', () => {
       expect(result.stashes![1]!.description).toBe('work in progress');
     });
 
+    it('parses stash@{N} format to extract correct index', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: [
+          'stash@{0}\t1709747200\tWIP on main: abc123 first',
+          'stash@{1}\t1709747100\tOn feature: second',
+          'stash@{3}\t1709747000\tWIP on main: skipped index',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await executeStash(
+        { mode: 'list' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.stashes).toHaveLength(3);
+      expect(result.stashes![0]!.index).toBe(0);
+      expect(result.stashes![0]!.ref).toBe('stash@{0}');
+      expect(result.stashes![1]!.index).toBe(1);
+      expect(result.stashes![1]!.ref).toBe('stash@{1}');
+      expect(result.stashes![2]!.index).toBe(3);
+      expect(result.stashes![2]!.ref).toBe('stash@{3}');
+    });
+
     it('returns empty stashes for empty list', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',

@@ -256,6 +256,30 @@ file.txt`,
       );
       expect(conflictLines).toHaveLength(0);
     });
+
+    it('filters out git informational messages from filesChanged', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: [
+          'From https://github.com/user/repo',
+          'Updating abc123..def456',
+          'Fast-forward',
+          ' src/index.ts | 5 ++---',
+          ' 1 file changed, 2 insertions(+), 3 deletions(-)',
+          "Your branch is up to date with 'origin/main'.",
+          '(use "git merge" to merge the remote branch into yours)',
+          'Already up to date.',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await executePull({}, mockContext, mockExecGit);
+
+      for (const file of result.filesChanged) {
+        expect(file).not.toMatch(
+          /^(From |Updating |Fast-forward|Already up to date|\d+ files? changed|Your branch|\(use )/,
+        );
+      }
+    });
   });
 
   describe('result structure', () => {

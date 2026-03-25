@@ -3,6 +3,8 @@
  * @module services/git/providers/cli/operations/core/init
  */
 
+import { mkdir } from 'node:fs/promises';
+
 import type { RequestContext } from '@/utils/index.js';
 
 import type {
@@ -35,10 +37,13 @@ export async function executeInit(
     const initialBranch = options.initialBranch || 'main';
     args.push(`--initial-branch=${initialBranch}`);
 
-    args.push(options.path);
+    // Ensure the target directory exists before spawning git
+    // (git init creates .git inside the dir, but posix_spawn fails if cwd doesn't exist)
+    // Errors here (EPERM, EROFS) are non-fatal — git init will report a clear error.
+    await mkdir(options.path, { recursive: true }).catch(() => {});
 
     const cmd = buildGitCommand({ command: 'init', args });
-    await execGit(cmd, context.workingDirectory, context.requestContext);
+    await execGit(cmd, options.path, context.requestContext);
 
     const result = {
       success: true,

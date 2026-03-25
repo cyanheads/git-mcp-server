@@ -21,18 +21,25 @@ const TOOL_TITLE = 'Git Clean';
 const TOOL_DESCRIPTION =
   'Remove untracked files from the working directory. Requires force flag for safety. Use dry-run to preview files that would be removed.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  force: ForceSchema.refine((val) => val === true, {
-    message: 'force flag must be set to true to clean untracked files',
-  }),
-  dryRun: DryRunSchema,
-  directories: z
-    .boolean()
-    .default(false)
-    .describe('Remove untracked directories in addition to files.'),
-  ignored: z.boolean().default(false).describe('Remove ignored files as well.'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    force: ForceSchema,
+    dryRun: DryRunSchema,
+    directories: z
+      .boolean()
+      .default(false)
+      .describe('Remove untracked directories in addition to files.'),
+    ignored: z
+      .boolean()
+      .default(false)
+      .describe('Remove ignored files as well.'),
+  })
+  .refine((data) => data.force === true || data.dryRun === true, {
+    message:
+      'force flag must be set to true to clean untracked files (or use dryRun to preview)',
+    path: ['force'],
+  });
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

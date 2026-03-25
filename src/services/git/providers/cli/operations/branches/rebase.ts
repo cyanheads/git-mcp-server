@@ -110,11 +110,25 @@ export async function executeRebase(
       .filter((f) => f);
 
     // Count rebased commits from output
-    // Git outputs "Successfully rebased and updated ..." or individual "Applying: ..." lines
-    const applyingLines = result.stdout
+    // Modern git (merge backend) doesn't output "Applying:" lines.
+    // Look for "Rebasing (N/M)" progress lines or "Successfully rebased" summary.
+    let rebasedCommits = 0;
+    const progressLines = result.stderr
       .split('\n')
-      .filter((line) => line.startsWith('Applying:'));
-    const rebasedCommits = applyingLines.length;
+      .filter((line) => /Rebasing \(\d+\/\d+\)/.test(line));
+    if (progressLines.length > 0) {
+      // Extract the total from the last progress line "Rebasing (N/M)"
+      const lastProgress = progressLines.at(-1)!;
+      const progressMatch = lastProgress.match(/Rebasing \((\d+)\/(\d+)\)/);
+      if (progressMatch) {
+        rebasedCommits = parseInt(progressMatch[2]!, 10);
+      }
+    } else {
+      // Fallback: legacy apply backend uses "Applying:" lines
+      rebasedCommits = result.stdout
+        .split('\n')
+        .filter((line) => line.startsWith('Applying:')).length;
+    }
 
     const rebaseResult = {
       success: !hasConflicts,

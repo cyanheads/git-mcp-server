@@ -68,6 +68,16 @@ describe('git_clean tool', () => {
       expect(result.success).toBe(false);
     });
 
+    it('accepts force=false when dryRun=true (preview mode)', () => {
+      const input = { path: '.', force: false, dryRun: true };
+      const result = gitCleanTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.force).toBe(false);
+        expect(result.data.dryRun).toBe(true);
+      }
+    });
+
     it('accepts all boolean options', () => {
       const input = {
         path: '.',

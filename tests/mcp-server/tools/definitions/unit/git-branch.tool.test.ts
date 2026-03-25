@@ -91,6 +91,60 @@ describe('git_branch tool', () => {
       const result = gitBranchTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
     });
+
+    it('coerces string "true" to boolean true for merged', () => {
+      const input = { path: '.', merged: 'true' as unknown as boolean };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.merged).toBe(true);
+      }
+    });
+
+    it('coerces string "false" to boolean false for merged', () => {
+      const input = { path: '.', merged: 'false' as unknown as boolean };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.merged).toBe(false);
+      }
+    });
+
+    it('coerces string "true" to boolean true for noMerged', () => {
+      const input = { path: '.', noMerged: 'true' as unknown as boolean };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.noMerged).toBe(true);
+      }
+    });
+
+    it('coerces string "false" to boolean false for noMerged', () => {
+      const input = { path: '.', noMerged: 'false' as unknown as boolean };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.noMerged).toBe(false);
+      }
+    });
+
+    it('preserves string ref values for merged', () => {
+      const input = { path: '.', merged: 'develop' };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.merged).toBe('develop');
+      }
+    });
+
+    it('preserves boolean values for merged', () => {
+      const input = { path: '.', merged: true };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.merged).toBe(true);
+      }
+    });
   });
 
   describe('Tool Logic - List Operation', () => {

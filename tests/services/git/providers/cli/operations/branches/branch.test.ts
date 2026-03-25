@@ -135,6 +135,32 @@ describe('executeBranch', () => {
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--no-merged=HEAD');
     });
+
+    it('does not add --merged when merged is false', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeBranch(
+        { mode: 'list', merged: false },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args.join(' ')).not.toContain('--merged');
+    });
+
+    it('does not add --no-merged when noMerged is false', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeBranch(
+        { mode: 'list', noMerged: false },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args.join(' ')).not.toContain('--no-merged');
+    });
   });
 
   describe('create mode', () => {

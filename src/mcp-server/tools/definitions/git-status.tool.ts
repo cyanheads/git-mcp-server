@@ -32,7 +32,11 @@ const InputSchema = z.object({
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
   currentBranch: z.string().nullable().describe('Current branch name.'),
-  isClean: z.boolean().describe('True if working directory is clean.'),
+  isClean: z
+    .boolean()
+    .describe(
+      'True if working directory is clean (no staged, unstaged, or untracked changes). When includeUntracked is false, untracked files are excluded from this check.',
+    ),
   stagedChanges: z
     .object({
       added: z

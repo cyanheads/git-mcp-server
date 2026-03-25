@@ -269,6 +269,38 @@ error: could not apply abc123`;
 
       expect(result.rebasedCommits).toBe(0);
     });
+
+    it('parses rebased commits from modern merge-backend progress lines', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'Successfully rebased and updated refs/heads/feature.',
+        stderr:
+          'Rebasing (1/3)\rRebasing (2/3)\rRebasing (3/3)\r                        \r',
+      });
+
+      const result = await executeRebase(
+        { mode: 'start', upstream: 'main' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.rebasedCommits).toBe(3);
+      expect(result.success).toBe(true);
+    });
+
+    it('falls back to Applying: lines when no progress lines in stderr', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'Applying: First commit\nApplying: Second commit',
+        stderr: '',
+      });
+
+      const result = await executeRebase(
+        { mode: 'start', upstream: 'main' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.rebasedCommits).toBe(2);
+    });
   });
 
   describe('error handling', () => {

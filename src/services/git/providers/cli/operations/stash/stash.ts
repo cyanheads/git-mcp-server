@@ -52,7 +52,11 @@ export async function executeStash(
             const parts = line.split('\t');
             const [refPart, tsPart, ...subjectParts] = parts;
             if (refPart && tsPart && subjectParts.length > 0) {
-              const stashIndex = parseInt(refPart, 10);
+              // %gd outputs "stash@{N}" — extract the index from inside braces
+              const indexMatch = refPart.match(/\{(\d+)\}/);
+              const stashIndex = indexMatch
+                ? parseInt(indexMatch[1]!, 10)
+                : index;
               const timestamp = parseInt(tsPart, 10);
               const subject = subjectParts.join('\t');
               // Extract branch from "WIP on <branch>:" or "On <branch>:"

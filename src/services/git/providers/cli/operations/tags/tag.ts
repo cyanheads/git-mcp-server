@@ -44,7 +44,7 @@ export async function executeTag(
           '%(refname:short)', // Tag name
           '%(if)%(*objectname:short)%(then)%(*objectname:short)%(else)%(objectname:short)%(end)', // Dereferenced commit hash (resolves annotated tags to their target)
           '%(if)%(contents:subject)%(then)%(contents:subject)%(end)', // Tag message subject (annotated tags only)
-          '%(if)%(taggername)%(then)%(taggername) <%(taggeremail)>%(end)', // Tagger (annotated tags only)
+          '%(if)%(taggername)%(then)%(taggername) %(taggeremail)%(end)', // Tagger (annotated tags only)
           '%(if)%(creatordate:unix)%(then)%(creatordate:unix)%(end)', // Timestamp
         ].join(GIT_FIELD_DELIMITER);
 
@@ -119,10 +119,16 @@ export async function executeTag(
           return createArgs;
         };
 
-        const createCmd = buildGitCommand({
-          command: 'tag',
-          args: buildCreateArgs(shouldSign),
-        });
+        // When not signing, override git config that might force signing/annotation
+        // (e.g., tag.gpgSign=true) which would open an editor in non-interactive MCP context
+        const configOverride = shouldSign ? [] : ['-c', 'tag.gpgSign=false'];
+        const createCmd = [
+          ...configOverride,
+          ...buildGitCommand({
+            command: 'tag',
+            args: buildCreateArgs(shouldSign),
+          }),
+        ];
 
         try {
           await execGit(

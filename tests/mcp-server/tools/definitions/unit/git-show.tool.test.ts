@@ -55,12 +55,18 @@ describe('git_show tool', () => {
     });
 
     it('accepts format option', () => {
-      const input = { path: '.', object: 'abc123', format: 'json' };
+      const input = { path: '.', object: 'abc123', format: 'raw' };
       const result = gitShowTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.format).toBe('json');
+        expect(result.data.format).toBe('raw');
       }
+    });
+
+    it('rejects invalid format option', () => {
+      const input = { path: '.', object: 'abc123', format: 'json' };
+      const result = gitShowTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(false);
     });
 
     it('accepts filePath option', () => {
@@ -167,7 +173,7 @@ describe('git_show tool', () => {
       const mockShowResult: GitShowResult = {
         object: 'abc123',
         type: 'commit',
-        content: '{}',
+        content: 'raw content',
       };
 
       mockProvider.show.mockResolvedValue(mockShowResult);
@@ -175,7 +181,7 @@ describe('git_show tool', () => {
       const parsedInput = gitShowTool.inputSchema.parse({
         path: '.',
         object: 'abc123',
-        format: 'json',
+        format: 'raw',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -183,7 +189,7 @@ describe('git_show tool', () => {
       await gitShowTool.logic(parsedInput, appContext, sdkContext);
 
       const [showOptions] = mockProvider.show.mock.calls[0]!;
-      expect(showOptions.format).toBe('json');
+      expect(showOptions.format).toBe('raw');
     });
 
     it('passes filePath option to provider', async () => {
@@ -284,7 +290,7 @@ describe('git_show tool', () => {
       });
     });
 
-    it('includes metadata in formatted output', () => {
+    it('preserves core fields in formatted output', () => {
       const result = {
         success: true,
         object: 'abc123',
@@ -295,11 +301,11 @@ describe('git_show tool', () => {
 
       const content = gitShowTool.responseFormatter!(result);
 
-      const parsed = parseJsonContent(content) as {
-        metadata?: Record<string, unknown>;
-      };
-      expect(parsed.metadata).toBeDefined();
-      expect(parsed.metadata?.author).toBe('Test');
+      const parsed = parseJsonContent(content) as Record<string, unknown>;
+      // Core fields are always present regardless of verbosity
+      expect(parsed.success).toBe(true);
+      expect(parsed.object).toBe('abc123');
+      expect(parsed.type).toBe('commit');
     });
   });
 

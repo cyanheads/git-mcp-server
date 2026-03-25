@@ -102,6 +102,24 @@ describe('executeTag', () => {
       expect(result.created).toBe('v1.0.0');
     });
 
+    it('adds -c tag.gpgSign=false config override when not signing', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: '',
+      });
+
+      await executeTag(
+        { mode: 'create', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const configIdx = args.indexOf('-c');
+      expect(configIdx).toBeGreaterThan(-1);
+      expect(args[configIdx + 1]).toBe('tag.gpgSign=false');
+    });
+
     it('creates an annotated tag with message', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',

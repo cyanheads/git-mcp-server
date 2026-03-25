@@ -27,9 +27,11 @@ const InputSchema = z.object({
     'Git object to show (commit hash, branch, tag, tree, or blob).',
   ),
   format: z
-    .enum(['raw', 'json'])
+    .enum(['raw'])
     .optional()
-    .describe('Output format for the git object.'),
+    .describe(
+      'Output format for the git object. Use "raw" for unprocessed git output.',
+    ),
   stat: z
     .boolean()
     .default(false)
@@ -65,7 +67,7 @@ async function gitShowLogic(
   // Build options object with only defined properties
   const showOptions: {
     object: string;
-    format?: 'raw' | 'json';
+    format?: 'raw';
     stat?: boolean;
     filePath?: string;
   } = {

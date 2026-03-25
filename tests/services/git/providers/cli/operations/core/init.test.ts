@@ -53,8 +53,8 @@ describe('executeInit', () => {
       const [args, cwd] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('init');
       expect(args).toContain('--initial-branch=main');
-      expect(args).toContain('/new/repo');
-      expect(cwd).toBe('/test/repo');
+      // cwd is the target path (not context.workingDirectory) since init creates the repo there
+      expect(cwd).toBe('/new/repo');
     });
   });
 

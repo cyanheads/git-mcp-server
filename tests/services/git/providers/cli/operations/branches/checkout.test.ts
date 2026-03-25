@@ -363,6 +363,26 @@ file2.txt`,
 
       expect(result.filesModified).toEqual([]);
     });
+
+    it('filters out "Your branch", "(use ", and "HEAD is now" messages', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: [
+          "Switched to branch 'main'",
+          "Your branch is up to date with 'origin/main'.",
+          '(use "git pull" to update your local branch)',
+          'HEAD is now at abc123 some commit',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await executeCheckout(
+        { target: 'main' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.filesModified).toEqual([]);
+    });
   });
 
   describe('combined options', () => {

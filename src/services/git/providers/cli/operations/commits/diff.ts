@@ -104,8 +104,10 @@ export async function executeDiff(
       const stats = parseGitDiffStat(statResult.stdout);
 
       // Include untracked files in stat output
-      let untrackedStatOutput = '';
       let untrackedFileCount = 0;
+      let untrackedAdditions = 0;
+      let untrackedDeletions = 0;
+      let untrackedStatOutput = '';
       if (options.includeUntracked) {
         let untrackedFiles = await getUntrackedFiles(execGit, context);
         if (options.excludePatterns?.length) {
@@ -118,21 +120,21 @@ export async function executeDiff(
         for (const file of untrackedFiles) {
           const result = await execUntrackedDiff(execGit, context, file, true);
           if (result) {
+            // Parse each file's stat individually to avoid summary-line overwrite
+            const fileStat = parseGitDiffStat(result);
+            untrackedAdditions += fileStat.totalAdditions;
+            untrackedDeletions += fileStat.totalDeletions;
             untrackedStatOutput += result;
             untrackedFileCount++;
           }
         }
       }
 
-      const untrackedStats = untrackedStatOutput
-        ? parseGitDiffStat(untrackedStatOutput)
-        : { totalAdditions: 0, totalDeletions: 0 };
-
       return {
         diff: statResult.stdout + untrackedStatOutput,
         filesChanged: stats.files.length + untrackedFileCount,
-        insertions: stats.totalAdditions + untrackedStats.totalAdditions,
-        deletions: stats.totalDeletions + untrackedStats.totalDeletions,
+        insertions: stats.totalAdditions + untrackedAdditions,
+        deletions: stats.totalDeletions + untrackedDeletions,
         binary:
           statResult.stdout.includes('Binary files') ||
           untrackedStatOutput.includes('Binary files'),
@@ -152,7 +154,8 @@ export async function executeDiff(
     // If includeUntracked, get untracked files and append their diff
     let untrackedDiff = '';
     let untrackedFileCount = 0;
-    let untrackedStatOutput = '';
+    let untrackedAdditions = 0;
+    let untrackedDeletions = 0;
     if (options.includeUntracked) {
       let untrackedFiles = await getUntrackedFiles(execGit, context);
       if (options.excludePatterns?.length) {
@@ -172,6 +175,7 @@ export async function executeDiff(
           if (result) {
             untrackedDiff += result;
           }
+          // Parse each file's stat individually to avoid summary-line overwrite
           const statResult = await execUntrackedDiff(
             execGit,
             context,
@@ -179,7 +183,9 @@ export async function executeDiff(
             true,
           );
           if (statResult) {
-            untrackedStatOutput += statResult;
+            const fileStat = parseGitDiffStat(statResult);
+            untrackedAdditions += fileStat.totalAdditions;
+            untrackedDeletions += fileStat.totalDeletions;
           }
         }
       }
@@ -211,16 +217,13 @@ export async function executeDiff(
     );
 
     const stats = parseGitDiffStat(statResult.stdout);
-    const untrackedStats = untrackedStatOutput
-      ? parseGitDiffStat(untrackedStatOutput)
-      : { totalAdditions: 0, totalDeletions: 0 };
     const hasBinary = combinedDiff.includes('Binary files');
 
     return {
       diff: combinedDiff,
       filesChanged: stats.files.length + untrackedFileCount,
-      insertions: stats.totalAdditions + untrackedStats.totalAdditions,
-      deletions: stats.totalDeletions + untrackedStats.totalDeletions,
+      insertions: stats.totalAdditions + untrackedAdditions,
+      deletions: stats.totalDeletions + untrackedDeletions,
       binary: hasBinary,
       ...(excludedFiles && { excludedFiles }),
     };

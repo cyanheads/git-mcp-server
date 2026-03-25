@@ -258,6 +258,50 @@ describe('git_add tool', () => {
       const [_options, addContext] = mockProvider.add.mock.calls[0]!;
       expect(addContext.workingDirectory).toBe('/absolute/path');
     });
+
+    it('derives staged files from status when provider returns empty array', async () => {
+      const mockResult: GitAddResult = {
+        success: true,
+        stagedFiles: [],
+      };
+
+      const mockStatusResult = {
+        currentBranch: 'main',
+        stagedChanges: {
+          added: ['new-file.txt'],
+          modified: ['changed.txt'],
+          deleted: ['removed.txt'],
+        },
+        unstagedChanges: {},
+        untrackedFiles: [],
+        conflictedFiles: [],
+        isClean: false,
+      };
+
+      mockProvider.add.mockResolvedValue(mockResult);
+      mockProvider.status.mockResolvedValue(mockStatusResult);
+
+      const parsedInput = gitAddTool.inputSchema.parse({
+        path: '.',
+        files: ['.'],
+        all: true,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitAddTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      expect(result.stagedFiles).toEqual([
+        'new-file.txt',
+        'changed.txt',
+        'removed.txt',
+      ]);
+      expect(result.totalFiles).toBe(3);
+    });
   });
 
   describe('Response Formatter', () => {

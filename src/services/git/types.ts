@@ -319,7 +319,7 @@ export interface GitShowOptions {
   /** Git object to show (commit, tree, blob, tag) */
   object: string;
   /** Output format */
-  format?: 'raw' | 'json';
+  format?: 'raw';
   /** Include diffstat */
   stat?: boolean;
   /** View specific file at a given commit reference */

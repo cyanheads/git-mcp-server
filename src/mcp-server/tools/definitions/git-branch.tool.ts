@@ -51,13 +51,19 @@ const InputSchema = z.object({
     .default(false)
     .describe('For list operation: show only remote branches.'),
   merged: z
-    .union([z.boolean(), CommitRefSchema])
+    .preprocess(
+      (val) => (val === 'true' ? true : val === 'false' ? false : val),
+      z.union([z.boolean(), CommitRefSchema]),
+    )
     .optional()
     .describe(
       'For list operation: show only branches merged into HEAD (true) or specified commit (string).',
     ),
   noMerged: z
-    .union([z.boolean(), CommitRefSchema])
+    .preprocess(
+      (val) => (val === 'true' ? true : val === 'false' ? false : val),
+      z.union([z.boolean(), CommitRefSchema]),
+    )
     .optional()
     .describe(
       'For list operation: show only branches not merged into HEAD (true) or specified commit (string).',

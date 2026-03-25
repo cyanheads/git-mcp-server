@@ -52,13 +52,13 @@ export async function executeBranch(
 
         args.push(`--format=${format}`, ...refPrefixes);
 
-        // Add merge filtering if specified
-        if (options.merged !== undefined) {
+        // Add merge filtering if specified (skip when explicitly false)
+        if (options.merged !== undefined && options.merged !== false) {
           const mergedRef =
             typeof options.merged === 'string' ? options.merged : 'HEAD';
           args.push(`--merged=${mergedRef}`);
         }
-        if (options.noMerged !== undefined) {
+        if (options.noMerged !== undefined && options.noMerged !== false) {
           const noMergedRef =
             typeof options.noMerged === 'string' ? options.noMerged : 'HEAD';
           args.push(`--no-merged=${noMergedRef}`);
