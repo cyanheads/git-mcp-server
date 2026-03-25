@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.5 - 2026-03-25
+
+### Fixed
+
+- **`git_add` tool**: Derived staged file list from post-add status when provider returns empty array (happens with `all`/`update` flags)
+- **`git_branch` tool**: Coerced string `"true"`/`"false"` to booleans for `merged`/`noMerged` params (LLM clients sometimes send strings); stopped emitting `--merged=HEAD` when `merged` is explicitly `false`
+- **`git_clean` tool**: Allowed `force=false` when `dryRun=true` so users can preview without the force requirement
+- **`git_show` tool**: Removed invalid `json` format option (not a real git format); only `raw` is supported
+- **`git_status` tool**: Clarified `isClean` description to explain behavior with `includeUntracked=false`
+- **`git checkout` operation**: Filtered additional git informational messages (`Your branch`, `HEAD is now`, `(use `) from `filesModified` output
+- **`git rebase` operation**: Fixed commit count parsing for modern git merge backend (`Rebasing (N/M)` progress in stderr) with fallback to legacy `Applying:` lines
+- **`git diff` operation**: Fixed untracked file stat counting — parsed per-file stats individually instead of batching (which caused `parseGitDiffStat` to overwrite with the last summary line)
+- **`git init` operation**: Created target directory before spawning `git init`; ran git in the target path instead of the context working directory
+- **`git pull` operation**: Filtered git informational messages (`From`, `Updating`, `Fast-forward`, `Already up to date`, summary lines) from `filesChanged` output
+- **`git stash` operation**: Parsed `stash@{N}` format correctly to extract stash index (was attempting `parseInt` on the full ref string)
+- **`git tag` operation**: Added `-c tag.gpgSign=false` config override when not signing to prevent git config from forcing signing/editor in non-interactive context; fixed tagger email format (removed redundant angle brackets since `%(taggeremail)` already includes them)
+
+### Added
+
+- Test coverage for all fixed behaviors across tool and service layers
+
 ## v2.10.4 - 2026-03-24
 
 ### Changed
