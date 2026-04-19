@@ -11,6 +11,7 @@ import type { RequestContext } from '@/utils/index.js';
 // Mock shouldSignCommits to always return false in tests
 vi.mock('@/services/git/providers/cli/utils/config-helper.js', () => ({
   shouldSignCommits: () => false,
+  loadConfig: () => null,
 }));
 
 type ExecGitFn = (

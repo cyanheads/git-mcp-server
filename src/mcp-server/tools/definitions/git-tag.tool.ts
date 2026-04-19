@@ -45,13 +45,13 @@ const InputSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Tag message (creates annotated tag). For release tags, summarize the notable changes.',
+      'Tag message. Providing a message always produces an annotated tag (git does not support messages on lightweight tags). For release tags, summarize notable changes.',
     ),
   annotated: z
     .boolean()
     .default(false)
     .describe(
-      'Create annotated tag. Automatically set to true when message is provided.',
+      'Create an annotated tag with a default "Tag <name>" message. Only effective when both message and sign are absent — otherwise the tag is always annotated.',
     ),
   sign: SignSchema,
   forceUnsignedOnFailure: z
@@ -61,7 +61,7 @@ const InputSchema = z.object({
       'If GPG/SSH signing fails, retry the tag creation without signing instead of failing.',
     ),
   force: ForceSchema.describe(
-    'Force tag creation/deletion (overwrite existing).',
+    'Overwrite an existing tag (create mode only; has no effect on list or delete).',
   ),
 });
 
@@ -97,7 +97,6 @@ async function gitTagLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Validate tagName is present for create/delete modes
   if ((input.mode === 'create' || input.mode === 'delete') && !input.tagName) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
@@ -110,12 +109,14 @@ async function gitTagLogic(
     tagName?: string;
     commit?: string;
     message?: string;
-    annotated?: boolean;
+    annotated: boolean;
     sign?: boolean;
-    forceUnsignedOnFailure?: boolean;
-    force?: boolean;
+    forceUnsignedOnFailure: boolean;
+    force: boolean;
   } = {
     mode: input.mode,
+    annotated: input.annotated,
+    force: input.force,
     forceUnsignedOnFailure: input.forceUnsignedOnFailure,
   };
 
@@ -128,14 +129,8 @@ async function gitTagLogic(
   if (input.message !== undefined) {
     tagOptions.message = normalizeMessage(input.message);
   }
-  if (input.annotated !== undefined) {
-    tagOptions.annotated = input.annotated;
-  }
   if (input.sign !== undefined) {
     tagOptions.sign = input.sign;
-  }
-  if (input.force !== undefined) {
-    tagOptions.force = input.force;
   }
 
   const result = await provider.tag(tagOptions, {

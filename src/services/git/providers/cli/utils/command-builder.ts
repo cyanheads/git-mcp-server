@@ -3,7 +3,7 @@
  * @module services/git/providers/cli/utils/command-builder
  */
 
-import type { AppConfig } from '@/config/index.js';
+import { loadConfig } from './config-helper.js';
 
 /**
  * Git command configuration.
@@ -45,24 +45,6 @@ export function buildGitCommand(config: GitCommandConfig): string[] {
   }
 
   return parts;
-}
-
-/**
- * Helper to safely load config for git operations.
- * Uses dynamic import to avoid circular dependencies.
- *
- * @returns AppConfig object or null if unavailable
- */
-function loadConfig(): AppConfig | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const configModule = require('@/config/index.js') as {
-      config: AppConfig;
-    };
-    return configModule.config;
-  } catch {
-    return null;
-  }
 }
 
 /**
