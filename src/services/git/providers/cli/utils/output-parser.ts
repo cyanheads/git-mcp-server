@@ -126,8 +126,9 @@ export function parseGitStatus(output: string): GitStatusResult {
         }
       }
     } else if (statusType === 'u') {
-      // Unmerged (conflicted)
-      const path = parts.slice(8).join(' ').trim();
+      // Unmerged (conflicted): u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+      // Path is at index 10; spaces in path are preserved by joining the remainder.
+      const path = parts.slice(10).join(' ').trim();
       result.conflictedFiles.push(path);
     } else if (statusType === '?') {
       // Untracked

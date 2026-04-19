@@ -178,11 +178,11 @@ describe('executeStatus', () => {
 
   describe('conflicted files', () => {
     it('parses unmerged (conflicted) entries', async () => {
-      // porcelain v2 unmerged: u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <path>
-      // parser uses parts.slice(8) for the path
+      // porcelain v2 unmerged: u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+      // 11 fields total; path is at index 10.
       const output = [
         '# branch.head main',
-        'u UU N... 100644 100644 100644 100644 abc123 conflict.txt',
+        'u UU N... 100644 100644 100644 100644 aaa111 bbb222 ccc333 conflict.txt',
       ].join('\n');
 
       mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
@@ -190,7 +190,35 @@ describe('executeStatus', () => {
       const result = await executeStatus({}, mockContext, mockExecGit);
 
       expect(result.isClean).toBe(false);
-      expect(result.conflictedFiles).toContain('conflict.txt');
+      expect(result.conflictedFiles).toEqual(['conflict.txt']);
+    });
+
+    it('does not leak blob hashes into the path', async () => {
+      // Regression: previous parser used slice(8), which prepended <h2> <h3>
+      // to the path string. Verify the entire array contains only the path.
+      const output = [
+        '# branch.head main',
+        'u UU N... 100644 100644 100644 100644 7fa74c3d 6408630d cccccccc CONFLICT.md',
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.conflictedFiles).toEqual(['CONFLICT.md']);
+    });
+
+    it('preserves spaces in conflicted file paths', async () => {
+      const output = [
+        '# branch.head main',
+        'u UU N... 100644 100644 100644 100644 aaa bbb ccc path with spaces.txt',
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.conflictedFiles).toEqual(['path with spaces.txt']);
     });
   });
 
