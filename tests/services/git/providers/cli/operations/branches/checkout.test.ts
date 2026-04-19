@@ -383,6 +383,26 @@ file2.txt`,
 
       expect(result.filesModified).toEqual([]);
     });
+
+    it('strips porcelain status prefix (M\\t<path>) from carried-over changes', async () => {
+      // Regression: previously returned ["M\tREADME.md"] with literal prefix.
+      mockExecGit.mockResolvedValueOnce({
+        stdout: [
+          "Switched to branch 'feature'",
+          'M\tREADME.md',
+          'A\tnew-file.ts',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await executeCheckout(
+        { target: 'feature' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.filesModified).toEqual(['README.md', 'new-file.ts']);
+    });
   });
 
   describe('combined options', () => {

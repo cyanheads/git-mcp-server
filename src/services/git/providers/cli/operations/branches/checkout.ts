@@ -52,19 +52,34 @@ export async function executeCheckout(
       context.requestContext,
     );
 
-    // Parse modified files from output, filtering git informational messages
+    /**
+     * Parse modified files from checkout output.
+     *
+     * When checkout carries uncommitted changes across branches, git emits
+     * porcelain-style lines: `<status>\t<path>` (e.g. `M\tREADME.md`).
+     * We strip the status prefix to return clean paths. Informational lines
+     * like "Switched to branch ..." are filtered out.
+     */
+    const PORCELAIN_LINE = /^([A-Z])\t(.+)$/;
+    const INFO_PREFIXES = [
+      'Switched',
+      'Already',
+      'Your branch',
+      '(use ',
+      'HEAD is now',
+      'Note: ',
+      'Updated ',
+    ];
+
     const filesModified = result.stdout
       .split('\n')
       .map((line) => line.trim())
-      .filter(
-        (line) =>
-          line &&
-          !line.startsWith('Switched') &&
-          !line.startsWith('Already') &&
-          !line.startsWith('Your branch') &&
-          !line.startsWith('(use ') &&
-          !line.startsWith('HEAD is now'),
-      );
+      .filter(Boolean)
+      .filter((line) => !INFO_PREFIXES.some((p) => line.startsWith(p)))
+      .map((line) => {
+        const match = line.match(PORCELAIN_LINE);
+        return match ? match[2]! : line;
+      });
 
     const checkoutResult = {
       success: true,
