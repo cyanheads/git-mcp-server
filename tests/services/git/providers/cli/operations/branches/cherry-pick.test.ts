@@ -12,7 +12,8 @@ type ExecGitFn = (
   args: string[],
   cwd: string,
   ctx: RequestContext,
-) => Promise<{ stdout: string; stderr: string }>;
+  options?: { allowNonZeroExit?: boolean },
+) => Promise<{ stdout: string; stderr: string; exitCode?: number }>;
 
 describe('executeCherryPick', () => {
   const mockContext: GitOperationContext = {
@@ -167,7 +168,7 @@ describe('executeCherryPick', () => {
   });
 
   describe('cherry-pick with conflicts', () => {
-    it('detects conflicts in stdout', async () => {
+    it('returns structured conflict state from stdout (exit 1)', async () => {
       const conflictOutput = `Auto-merging file1.txt
 CONFLICT (content): Merge conflict in file1.txt
 CONFLICT (content): Merge conflict in file2.txt
@@ -176,6 +177,7 @@ error: could not apply abc123... Fix bug`;
       mockExecGit.mockResolvedValueOnce({
         stdout: conflictOutput,
         stderr: '',
+        exitCode: 1,
       });
 
       const result = await executeCherryPick(
@@ -184,17 +186,16 @@ error: could not apply abc123... Fix bug`;
         mockExecGit,
       );
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
-      expect(result.conflictedFiles).toContain('file1.txt');
-      expect(result.conflictedFiles).toContain('file2.txt');
-      expect(result.conflictedFiles).toHaveLength(2);
+      expect(result.conflictedFiles).toEqual(['file1.txt', 'file2.txt']);
     });
 
     it('detects conflicts in stderr', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',
         stderr: 'CONFLICT (content): Merge conflict in app.ts',
+        exitCode: 1,
       });
 
       const result = await executeCherryPick(
@@ -203,8 +204,33 @@ error: could not apply abc123... Fix bug`;
         mockExecGit,
       );
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
+      expect(result.conflictedFiles).toEqual(['app.ts']);
+    });
+
+    it('passes allowNonZeroExit so cherry-pick can inspect output', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeCherryPick(
+        { commits: ['abc123'] },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit.mock.calls[0]![3]).toEqual({ allowNonZeroExit: true });
+    });
+
+    it('throws on non-zero exit when no CONFLICT marker present', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'fatal: bad object abc123',
+        exitCode: 128,
+      });
+
+      await expect(
+        executeCherryPick({ commits: ['abc123'] }, mockContext, mockExecGit),
+      ).rejects.toThrow();
     });
   });
 

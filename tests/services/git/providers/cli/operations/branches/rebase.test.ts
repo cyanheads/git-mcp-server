@@ -12,7 +12,8 @@ type ExecGitFn = (
   args: string[],
   cwd: string,
   ctx: RequestContext,
-) => Promise<{ stdout: string; stderr: string }>;
+  options?: { allowNonZeroExit?: boolean },
+) => Promise<{ stdout: string; stderr: string; exitCode?: number }>;
 
 describe('executeRebase', () => {
   const mockContext: GitOperationContext = {
@@ -197,7 +198,7 @@ describe('executeRebase', () => {
   });
 
   describe('rebase with conflicts', () => {
-    it('detects conflicts in stdout', async () => {
+    it('returns structured conflict state from stdout (exit 1)', async () => {
       const conflictOutput = `Applying: Add feature
 CONFLICT (content): Merge conflict in file1.txt
 CONFLICT (content): Merge conflict in file2.txt
@@ -206,6 +207,7 @@ error: could not apply abc123`;
       mockExecGit.mockResolvedValueOnce({
         stdout: conflictOutput,
         stderr: '',
+        exitCode: 1,
       });
 
       const result = await executeRebase(
@@ -214,17 +216,16 @@ error: could not apply abc123`;
         mockExecGit,
       );
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
-      expect(result.conflictedFiles).toContain('file1.txt');
-      expect(result.conflictedFiles).toContain('file2.txt');
-      expect(result.conflictedFiles).toHaveLength(2);
+      expect(result.conflictedFiles).toEqual(['file1.txt', 'file2.txt']);
     });
 
     it('detects conflicts in stderr', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',
         stderr: 'CONFLICT (content): Merge conflict in app.ts',
+        exitCode: 1,
       });
 
       const result = await executeRebase(
@@ -233,8 +234,55 @@ error: could not apply abc123`;
         mockExecGit,
       );
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
+      expect(result.conflictedFiles).toEqual(['app.ts']);
+    });
+
+    it('passes allowNonZeroExit on start', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeRebase(
+        { mode: 'start', upstream: 'main' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit.mock.calls[0]![3]).toEqual({ allowNonZeroExit: true });
+    });
+
+    it('detects conflicts after --continue', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'CONFLICT (content): Merge conflict in next.ts',
+        stderr: '',
+        exitCode: 1,
+      });
+
+      const result = await executeRebase(
+        { mode: 'continue' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.conflicts).toBe(true);
+      expect(result.conflictedFiles).toEqual(['next.ts']);
+    });
+
+    it('throws on non-zero exit when no CONFLICT marker present', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'fatal: invalid upstream main',
+        exitCode: 128,
+      });
+
+      await expect(
+        executeRebase(
+          { mode: 'start', upstream: 'main' },
+          mockContext,
+          mockExecGit,
+        ),
+      ).rejects.toThrow();
     });
   });
 

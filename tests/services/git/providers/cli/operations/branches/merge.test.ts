@@ -12,7 +12,8 @@ type ExecGitFn = (
   args: string[],
   cwd: string,
   ctx: RequestContext,
-) => Promise<{ stdout: string; stderr: string }>;
+  options?: { allowNonZeroExit?: boolean },
+) => Promise<{ stdout: string; stderr: string; exitCode?: number }>;
 
 describe('executeMerge', () => {
   const mockContext: GitOperationContext = {
@@ -83,7 +84,7 @@ Fast-forward
   });
 
   describe('merge with conflicts', () => {
-    it('detects conflicts in stdout', async () => {
+    it('returns structured conflict state when stdout has CONFLICT (exit 1)', async () => {
       const conflictOutput = `Auto-merging file1.txt
 CONFLICT (content): Merge conflict in file1.txt
 CONFLICT (content): Merge conflict in file2.txt
@@ -92,6 +93,7 @@ Automatic merge failed; fix conflicts and then commit the result.`;
       mockExecGit.mockResolvedValueOnce({
         stdout: conflictOutput,
         stderr: '',
+        exitCode: 1,
       });
 
       const result = await executeMerge(
@@ -100,17 +102,19 @@ Automatic merge failed; fix conflicts and then commit the result.`;
         mockExecGit,
       );
 
-      expect(result.success).toBe(false);
+      // success=true: the operation completed without crashing.
+      // conflicts=true carries the actionable signal; conflictedFiles lists targets.
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
-      expect(result.conflictedFiles).toContain('file1.txt');
-      expect(result.conflictedFiles).toContain('file2.txt');
-      expect(result.conflictedFiles).toHaveLength(2);
+      expect(result.conflictedFiles).toEqual(['file1.txt', 'file2.txt']);
+      expect(result.message).toMatch(/produced conflicts/);
     });
 
     it('detects conflicts in stderr', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',
         stderr: 'CONFLICT (content): Merge conflict in app.ts',
+        exitCode: 1,
       });
 
       const result = await executeMerge(
@@ -119,8 +123,46 @@ Automatic merge failed; fix conflicts and then commit the result.`;
         mockExecGit,
       );
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
+      expect(result.conflictedFiles).toEqual(['app.ts']);
+    });
+
+    it('passes allowNonZeroExit so merge can inspect conflict output', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeMerge({ branch: 'feature' }, mockContext, mockExecGit);
+
+      const callArgs = mockExecGit.mock.calls[0]!;
+      expect(callArgs[3]).toEqual({ allowNonZeroExit: true });
+    });
+
+    it('throws on non-zero exit when no CONFLICT marker is present', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'fatal: merge: refs/heads/missing - not something we can merge',
+        exitCode: 128,
+      });
+
+      await expect(
+        executeMerge({ branch: 'missing' }, mockContext, mockExecGit),
+      ).rejects.toThrow();
+    });
+
+    it('deduplicates the same conflicted file across stdout and stderr', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'CONFLICT (content): Merge conflict in shared.ts',
+        stderr: 'CONFLICT (content): Merge conflict in shared.ts',
+        exitCode: 1,
+      });
+
+      const result = await executeMerge(
+        { branch: 'feature' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.conflictedFiles).toEqual(['shared.ts']);
     });
   });
 

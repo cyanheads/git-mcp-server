@@ -18,6 +18,10 @@ import {
 
 /**
  * Execute git cherry-pick to apply commits.
+ *
+ * A cherry-pick that exits non-zero solely because of a CONFLICT is a
+ * documented success state with conflicted files to resolve, not a failure.
+ * We pass `allowNonZeroExit` so we can return the conflict info structurally.
  */
 export async function executeCherryPick(
   options: GitCherryPickOptions,
@@ -26,7 +30,8 @@ export async function executeCherryPick(
     args: string[],
     cwd: string,
     ctx: RequestContext,
-  ) => Promise<{ stdout: string; stderr: string }>,
+    options?: { allowNonZeroExit?: boolean },
+  ) => Promise<{ stdout: string; stderr: string; exitCode?: number }>,
 ): Promise<GitCherryPickResult> {
   try {
     const args: string[] = [];
@@ -67,23 +72,25 @@ export async function executeCherryPick(
       cmd,
       context.workingDirectory,
       context.requestContext,
+      { allowNonZeroExit: true },
     );
 
     const hasConflicts =
       result.stdout.includes('CONFLICT') || result.stderr.includes('CONFLICT');
+    const exitCode = result.exitCode ?? 0;
 
-    // Parse conflicted files
-    const conflictedFiles = result.stdout
-      .split('\n')
-      .filter((line) => line.includes('CONFLICT'))
-      .map((line) => {
-        const match = line.match(/CONFLICT.*?in (.+)$/);
-        return match?.[1] || '';
-      })
-      .filter((f) => f);
+    if (exitCode !== 0 && !hasConflicts) {
+      throw new Error(
+        `Exit Code: ${exitCode}\nStderr: ${result.stderr}\nStdout: ${result.stdout}`,
+      );
+    }
 
-    const cherryPickResult = {
-      success: !hasConflicts,
+    const conflictedFiles = parseConflictedFiles(
+      `${result.stdout}\n${result.stderr}`,
+    );
+
+    const cherryPickResult: GitCherryPickResult = {
+      success: true,
       pickedCommits:
         options.abort || options.continueOperation ? [] : options.commits,
       conflicts: hasConflicts,
@@ -94,4 +101,15 @@ export async function executeCherryPick(
   } catch (error) {
     throw mapGitError(error, 'cherry-pick');
   }
+}
+
+function parseConflictedFiles(combined: string): string[] {
+  const seen = new Set<string>();
+  for (const line of combined.split('\n')) {
+    const match = line.match(/CONFLICT.*?\sin\s(.+?)\s*$/);
+    if (match?.[1]) {
+      seen.add(match[1].trim());
+    }
+  }
+  return [...seen];
 }

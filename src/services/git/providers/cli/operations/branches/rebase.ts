@@ -18,6 +18,11 @@ import {
 
 /**
  * Execute git rebase to reapply commits.
+ *
+ * A rebase that exits non-zero solely because of a CONFLICT is a documented
+ * success state with conflicted files to resolve, not a failure. We pass
+ * `allowNonZeroExit` so the conflict info can be returned structurally and
+ * the agent can act on it (resolve + continue, or abort).
  */
 export async function executeRebase(
   options: GitRebaseOptions,
@@ -26,7 +31,8 @@ export async function executeRebase(
     args: string[],
     cwd: string,
     ctx: RequestContext,
-  ) => Promise<{ stdout: string; stderr: string }>,
+    options?: { allowNonZeroExit?: boolean },
+  ) => Promise<{ stdout: string; stderr: string; exitCode?: number }>,
 ): Promise<GitRebaseResult> {
   try {
     const args: string[] = [];
@@ -39,15 +45,27 @@ export async function executeRebase(
         command: 'rebase',
         args: ['--continue'],
       });
-      await execGit(
+      const continueResult = await execGit(
         continueCmd,
         context.workingDirectory,
         context.requestContext,
+        { allowNonZeroExit: true },
       );
+      const continueHasConflicts =
+        continueResult.stdout.includes('CONFLICT') ||
+        continueResult.stderr.includes('CONFLICT');
+      const continueExit = continueResult.exitCode ?? 0;
+      if (continueExit !== 0 && !continueHasConflicts) {
+        throw new Error(
+          `Exit Code: ${continueExit}\nStderr: ${continueResult.stderr}\nStdout: ${continueResult.stdout}`,
+        );
+      }
       return {
         success: true,
-        conflicts: false,
-        conflictedFiles: [],
+        conflicts: continueHasConflicts,
+        conflictedFiles: parseConflictedFiles(
+          `${continueResult.stdout}\n${continueResult.stderr}`,
+        ),
         rebasedCommits: 0,
       };
     } else if (mode === 'abort') {
@@ -94,44 +112,45 @@ export async function executeRebase(
       cmd,
       context.workingDirectory,
       context.requestContext,
+      { allowNonZeroExit: true },
     );
 
     const hasConflicts =
       result.stdout.includes('CONFLICT') || result.stderr.includes('CONFLICT');
+    const exitCode = result.exitCode ?? 0;
 
-    // Parse conflicted files
-    const conflictedFiles = result.stdout
-      .split('\n')
-      .filter((line) => line.includes('CONFLICT'))
-      .map((line) => {
-        const match = line.match(/CONFLICT.*?in (.+)$/);
-        return match?.[1] || '';
-      })
-      .filter((f) => f);
+    if (exitCode !== 0 && !hasConflicts) {
+      throw new Error(
+        `Exit Code: ${exitCode}\nStderr: ${result.stderr}\nStdout: ${result.stdout}`,
+      );
+    }
 
-    // Count rebased commits from output
-    // Modern git (merge backend) doesn't output "Applying:" lines.
-    // Look for "Rebasing (N/M)" progress lines or "Successfully rebased" summary.
+    const conflictedFiles = parseConflictedFiles(
+      `${result.stdout}\n${result.stderr}`,
+    );
+
+    // Count rebased commits from output.
+    // Modern git (merge backend) doesn't output "Applying:" lines —
+    // it emits "Rebasing (N/M)" progress lines instead.
     let rebasedCommits = 0;
     const progressLines = result.stderr
       .split('\n')
       .filter((line) => /Rebasing \(\d+\/\d+\)/.test(line));
     if (progressLines.length > 0) {
-      // Extract the total from the last progress line "Rebasing (N/M)"
       const lastProgress = progressLines.at(-1)!;
       const progressMatch = lastProgress.match(/Rebasing \((\d+)\/(\d+)\)/);
       if (progressMatch) {
         rebasedCommits = parseInt(progressMatch[2]!, 10);
       }
     } else {
-      // Fallback: legacy apply backend uses "Applying:" lines
+      // Legacy apply backend uses "Applying:" lines
       rebasedCommits = result.stdout
         .split('\n')
         .filter((line) => line.startsWith('Applying:')).length;
     }
 
-    const rebaseResult = {
-      success: !hasConflicts,
+    const rebaseResult: GitRebaseResult = {
+      success: true,
       conflicts: hasConflicts,
       conflictedFiles,
       rebasedCommits,
@@ -141,4 +160,15 @@ export async function executeRebase(
   } catch (error) {
     throw mapGitError(error, 'rebase');
   }
+}
+
+function parseConflictedFiles(combined: string): string[] {
+  const seen = new Set<string>();
+  for (const line of combined.split('\n')) {
+    const match = line.match(/CONFLICT.*?\sin\s(.+?)\s*$/);
+    if (match?.[1]) {
+      seen.add(match[1].trim());
+    }
+  }
+  return [...seen];
 }
