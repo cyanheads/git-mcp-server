@@ -48,10 +48,18 @@ const InputSchema = z.object({
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
   mode: z.string().describe('Reset mode that was used.'),
-  target: z.string().describe('Target commit that was reset to.'),
+  target: z.string().describe('Commit hash HEAD points to after the reset.'),
+  previousCommit: z
+    .string()
+    .optional()
+    .describe(
+      'Commit hash HEAD pointed to before the reset (omitted if HEAD did not move).',
+    ),
   filesReset: z
     .array(z.string())
-    .describe('Files that were affected by the reset.'),
+    .describe(
+      'Files affected by the reset. For path-only resets, the listed paths. For commit-move resets, files that differ between the old and new HEAD. For --hard with no HEAD move, files whose pending working-tree changes were discarded.',
+    ),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -105,12 +113,16 @@ async function gitResetLogic(
     tenantId: appContext.tenantId || 'default-tenant',
   });
 
-  return {
+  const output: ToolOutput = {
     success: result.success,
     mode: result.mode,
     target: result.commit,
     filesReset: result.filesReset,
   };
+  if (result.previousCommit !== undefined) {
+    output.previousCommit = result.previousCommit;
+  }
+  return output;
 }
 
 /**
@@ -127,11 +139,15 @@ function filterGitResetOutput(
 ): Partial<ToolOutput> {
   // minimal: Essential info only
   if (level === 'minimal') {
-    return {
+    const minimal: Partial<ToolOutput> = {
       success: result.success,
       mode: result.mode,
       target: result.target,
     };
+    if (result.previousCommit !== undefined) {
+      minimal.previousCommit = result.previousCommit;
+    }
+    return minimal;
   }
 
   // standard & full: Complete output
