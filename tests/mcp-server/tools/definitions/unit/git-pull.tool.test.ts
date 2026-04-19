@@ -101,6 +101,7 @@ describe('git_pull tool', () => {
         branch: 'main',
         strategy: 'merge',
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: ['file1.ts'],
       };
 
@@ -129,6 +130,7 @@ describe('git_pull tool', () => {
         branch: 'main',
         strategy: 'merge',
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: ['file1.ts'],
       });
     });
@@ -140,6 +142,7 @@ describe('git_pull tool', () => {
         branch: 'develop',
         strategy: 'fast-forward',
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: [],
       };
 
@@ -173,6 +176,7 @@ describe('git_pull tool', () => {
         branch: 'main',
         strategy: 'rebase',
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: ['src/index.ts'],
       };
 
@@ -206,6 +210,7 @@ describe('git_pull tool', () => {
         branch: 'main',
         strategy: 'merge' as const,
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: ['file1.ts'],
       };
 
@@ -223,19 +228,24 @@ describe('git_pull tool', () => {
       assertLlmFriendlyFormat(content);
     });
 
-    it('formats pull with conflicts', () => {
+    it('formats pull with conflicts and includes conflictedFiles', () => {
       const result = {
         success: true,
         remote: 'origin',
         branch: 'main',
         strategy: 'merge' as const,
         conflicts: true,
+        conflictedFiles: ['src/index.ts', 'src/utils.ts'],
         filesChanged: ['src/index.ts', 'src/utils.ts'],
       };
 
       const content = gitPullTool.responseFormatter!(result);
 
       assertJsonField(content, 'conflicts', true);
+      assertJsonField(content, 'conflictedFiles', [
+        'src/index.ts',
+        'src/utils.ts',
+      ]);
 
       const parsed = parseJsonContent(content) as {
         filesChanged: string[];
@@ -251,6 +261,7 @@ describe('git_pull tool', () => {
         branch: 'main',
         strategy: 'rebase' as const,
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: [],
       };
 
@@ -267,6 +278,7 @@ describe('git_pull tool', () => {
         branch: 'main',
         strategy: 'fast-forward' as const,
         conflicts: false,
+        conflictedFiles: [],
         filesChanged: [],
       };
 

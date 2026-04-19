@@ -12,7 +12,8 @@ type ExecGitFn = (
   args: string[],
   cwd: string,
   ctx: RequestContext,
-) => Promise<{ stdout: string; stderr: string }>;
+  options?: { allowNonZeroExit?: boolean },
+) => Promise<{ stdout: string; stderr: string; exitCode?: number }>;
 
 describe('executePull', () => {
   const mockContext: GitOperationContext = {
@@ -186,30 +187,55 @@ Fast-forward
   });
 
   describe('conflict detection', () => {
-    it('detects conflicts in stdout', async () => {
+    it('returns structured conflict state from stdout (exit 1)', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: `Auto-merging file.txt
 CONFLICT (content): Merge conflict in file.txt
 Automatic merge failed; fix conflicts and then commit the result.`,
         stderr: '',
+        exitCode: 1,
       });
 
       const result = await executePull({}, mockContext, mockExecGit);
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
+      expect(result.conflictedFiles).toEqual(['file.txt']);
     });
 
     it('detects conflicts in stderr', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: '',
         stderr: 'CONFLICT (content): Merge conflict in file.txt\n',
+        exitCode: 1,
       });
 
       const result = await executePull({}, mockContext, mockExecGit);
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(result.conflicts).toBe(true);
+      expect(result.conflictedFiles).toEqual(['file.txt']);
+    });
+
+    it('passes allowNonZeroExit', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'Already up to date.\n',
+        stderr: '',
+      });
+
+      await executePull({}, mockContext, mockExecGit);
+
+      expect(mockExecGit.mock.calls[0]![3]).toEqual({ allowNonZeroExit: true });
+    });
+
+    it('throws on non-zero exit when no CONFLICT marker present', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'fatal: refusing to merge unrelated histories',
+        exitCode: 128,
+      });
+
+      await expect(executePull({}, mockContext, mockExecGit)).rejects.toThrow();
     });
 
     it('reports no conflicts for clean pull', async () => {
@@ -222,11 +248,12 @@ Automatic merge failed; fix conflicts and then commit the result.`,
 
       expect(result.success).toBe(true);
       expect(result.conflicts).toBe(false);
+      expect(result.conflictedFiles).toEqual([]);
     });
   });
 
   describe('files changed parsing', () => {
-    it('parses changed files from output', async () => {
+    it('parses bare paths from diffstat lines (no pipe/stats leak)', async () => {
       mockExecGit.mockResolvedValueOnce({
         stdout: `Updating abc123..def456
 Fast-forward
@@ -238,47 +265,29 @@ Fast-forward
 
       const result = await executePull({}, mockContext, mockExecGit);
 
-      expect(result.filesChanged.length).toBeGreaterThan(0);
+      expect(result.filesChanged).toEqual(['file1.txt', 'file2.txt']);
     });
 
-    it('filters out CONFLICT lines from filesChanged', async () => {
+    it('parses binary file diffstat entries', async () => {
       mockExecGit.mockResolvedValueOnce({
-        stdout: `Auto-merging file.txt
-CONFLICT (content): Merge conflict in file.txt
-file.txt`,
+        stdout: ' image.png | Bin 0 -> 12345 bytes\n 1 file changed\n',
         stderr: '',
       });
 
       const result = await executePull({}, mockContext, mockExecGit);
 
-      const conflictLines = result.filesChanged.filter((f) =>
-        f.includes('CONFLICT'),
-      );
-      expect(conflictLines).toHaveLength(0);
+      expect(result.filesChanged).toEqual(['image.png']);
     });
 
-    it('filters out git informational messages from filesChanged', async () => {
+    it('returns empty filesChanged for already-up-to-date pulls', async () => {
       mockExecGit.mockResolvedValueOnce({
-        stdout: [
-          'From https://github.com/user/repo',
-          'Updating abc123..def456',
-          'Fast-forward',
-          ' src/index.ts | 5 ++---',
-          ' 1 file changed, 2 insertions(+), 3 deletions(-)',
-          "Your branch is up to date with 'origin/main'.",
-          '(use "git merge" to merge the remote branch into yours)',
-          'Already up to date.',
-        ].join('\n'),
+        stdout: 'Already up to date.\n',
         stderr: '',
       });
 
       const result = await executePull({}, mockContext, mockExecGit);
 
-      for (const file of result.filesChanged) {
-        expect(file).not.toMatch(
-          /^(From |Updating |Fast-forward|Already up to date|\d+ files? changed|Your branch|\(use )/,
-        );
-      }
+      expect(result.filesChanged).toEqual([]);
     });
   });
 
@@ -296,6 +305,7 @@ file.txt`,
       expect(result).toHaveProperty('branch');
       expect(result).toHaveProperty('strategy');
       expect(result).toHaveProperty('conflicts');
+      expect(result).toHaveProperty('conflictedFiles');
       expect(result).toHaveProperty('filesChanged');
     });
 

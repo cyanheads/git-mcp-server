@@ -684,7 +684,9 @@ export interface GitPullResult {
   strategy: 'merge' | 'rebase' | 'fast-forward';
   /** Whether pull had conflicts */
   conflicts: boolean;
-  /** Files that were changed */
+  /** Files with merge conflicts that need resolution */
+  conflictedFiles: string[];
+  /** Files that were changed by the pull */
   filesChanged: string[];
 }
 
@@ -857,7 +859,17 @@ export interface GitResetResult {
   mode: string;
   /** Commit hash after reset */
   commit: string;
-  /** Files that were reset */
+  /** Commit hash before reset (omitted if HEAD did not move) */
+  previousCommit?: string;
+  /**
+   * Files affected by the reset.
+   *
+   * - For path-specific reset: the paths that were unstaged.
+   * - For commit-move reset (any mode): files that differ between the old and
+   *   new HEAD — i.e. the content the reset is rewinding/advancing past.
+   * - For `--hard` with no HEAD move: files that had pending working-tree
+   *   changes which were discarded.
+   */
   filesReset: string[];
 }
 

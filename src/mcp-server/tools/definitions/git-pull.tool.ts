@@ -51,6 +51,11 @@ const OutputSchema = z.object({
     .enum(['merge', 'rebase', 'fast-forward'])
     .describe('Integration strategy used.'),
   conflicts: z.boolean().describe('Whether pull had conflicts.'),
+  conflictedFiles: z
+    .array(z.string())
+    .describe(
+      'Files with conflicts that need resolution (empty if conflicts is false).',
+    ),
   filesChanged: z.array(z.string()).describe('Files that were changed.'),
 });
 
@@ -93,6 +98,7 @@ async function gitPullLogic(
     branch: result.branch,
     strategy: result.strategy,
     conflicts: result.conflicts,
+    conflictedFiles: result.conflictedFiles,
     filesChanged: result.filesChanged,
   };
 }
@@ -109,15 +115,20 @@ function filterGitPullOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // minimal: Essential info only
+  // minimal: Essential info only — but always include conflictedFiles when
+  // conflicts occurred so the LLM can act on them without re-querying.
   if (level === 'minimal') {
-    return {
+    const minimal: Partial<ToolOutput> = {
       success: result.success,
       conflicts: result.conflicts,
       remote: result.remote,
       branch: result.branch,
       strategy: result.strategy,
     };
+    if (result.conflicts) {
+      minimal.conflictedFiles = result.conflictedFiles;
+    }
+    return minimal;
   }
 
   // standard & full: Complete output

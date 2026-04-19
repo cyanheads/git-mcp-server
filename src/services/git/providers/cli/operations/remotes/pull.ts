@@ -14,6 +14,10 @@ import { buildGitCommand, mapGitError } from '../../utils/index.js';
 
 /**
  * Execute git pull to fetch and integrate remote changes.
+ *
+ * A pull that exits non-zero solely because of a CONFLICT is a documented
+ * success state with conflicted files to resolve, not a failure. We pass
+ * `allowNonZeroExit` so the conflict info can be returned structurally.
  */
 export async function executePull(
   options: GitPullOptions,
@@ -22,7 +26,8 @@ export async function executePull(
     args: string[],
     cwd: string,
     ctx: RequestContext,
-  ) => Promise<{ stdout: string; stderr: string }>,
+    options?: { allowNonZeroExit?: boolean },
+  ) => Promise<{ stdout: string; stderr: string; exitCode?: number }>,
 ): Promise<GitPullResult> {
   try {
     const args: string[] = [];
@@ -47,9 +52,19 @@ export async function executePull(
       cmd,
       context.workingDirectory,
       context.requestContext,
+      { allowNonZeroExit: true },
     );
 
-    // Determine strategy
+    const hasConflicts =
+      result.stdout.includes('CONFLICT') || result.stderr.includes('CONFLICT');
+    const exitCode = result.exitCode ?? 0;
+
+    if (exitCode !== 0 && !hasConflicts) {
+      throw new Error(
+        `Exit Code: ${exitCode}\nStderr: ${result.stderr}\nStdout: ${result.stdout}`,
+      );
+    }
+
     let strategy: 'merge' | 'rebase' | 'fast-forward' = 'merge';
     if (options.rebase) {
       strategy = 'rebase';
@@ -57,38 +72,50 @@ export async function executePull(
       strategy = 'fast-forward';
     }
 
-    // Check for conflicts
-    const hasConflicts =
-      result.stdout.includes('CONFLICT') || result.stderr.includes('CONFLICT');
+    const conflictedFiles = parseConflictedFiles(
+      `${result.stdout}\n${result.stderr}`,
+    );
+    const filesChanged = parseFilesChanged(result.stdout);
 
-    // Parse changed files from stat output, filtering git informational messages
-    const filesChanged = result.stdout
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(
-        (line) =>
-          line &&
-          !line.includes('CONFLICT') &&
-          !line.startsWith('Already up to date') &&
-          !line.startsWith('From ') &&
-          !line.startsWith('Your branch') &&
-          !line.startsWith('(use ') &&
-          !line.startsWith('Updating ') &&
-          !line.startsWith('Fast-forward') &&
-          !line.match(/^\d+ files? changed/),
-      );
-
-    const pullResult = {
-      success: !hasConflicts,
+    return {
+      success: true,
       remote,
       branch: options.branch || 'HEAD',
       strategy,
       conflicts: hasConflicts,
+      conflictedFiles,
       filesChanged,
     };
-
-    return pullResult;
   } catch (error) {
     throw mapGitError(error, 'pull');
   }
+}
+
+/** Extract paths from `CONFLICT (...) in <path>` lines, deduplicated. */
+function parseConflictedFiles(combined: string): string[] {
+  const seen = new Set<string>();
+  for (const line of combined.split('\n')) {
+    const match = line.match(/CONFLICT.*?\sin\s(.+?)\s*$/);
+    if (match?.[1]) {
+      seen.add(match[1].trim());
+    }
+  }
+  return [...seen];
+}
+
+/**
+ * Parse changed file paths from `git pull`'s diffstat lines.
+ *
+ * Diffstat format: ` <path> | <count> <symbols>` or ` <path> | Bin <a> -> <b>`.
+ * Returns the bare path without stats; informational lines are skipped.
+ */
+function parseFilesChanged(stdout: string): string[] {
+  const files: string[] = [];
+  for (const line of stdout.split('\n')) {
+    const statMatch = line.match(/^\s(.+?)\s*\|\s*(?:\d+\s*[+-]*|Bin\s)/);
+    if (statMatch?.[1]) {
+      files.push(statMatch[1].trim());
+    }
+  }
+  return files;
 }
