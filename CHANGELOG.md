@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.11.0 - 2026-04-19
+
+Surfaced through `/field-test` against the running server: integration operations were throwing on conflicts (a documented success state), and several tools were leaking raw porcelain into LLM-facing output or omitting fields the LLM needed to act without re-querying.
+
+### Added
+
+- **`allowNonZeroExit` executor option**: `executeGitCommand` and the underlying `spawnGitCommand` (Bun + Node paths) now accept `{ allowNonZeroExit: true }` and return the `exitCode` so operations can handle git's expected non-zero exits structurally instead of as errors. `CliGitProvider` threads this through every operation closure.
+- **`GitPullResult.conflictedFiles`**: `git_pull` now returns the list of conflicted file paths alongside the existing `conflicts` flag — included in `minimal` verbosity when `conflicts: true` so the LLM can act without a follow-up `git_status`.
+- **`GitResetResult.previousCommit`**: `git_reset` now reports the pre-reset HEAD when HEAD moved, and `filesReset` now reflects what actually changed (paths unstaged, files differing across the HEAD move, or working-tree changes discarded by `--hard`).
+
+### Changed
+
+- **`git_merge`, `git_rebase`, `git_cherry_pick`, `git_pull` — conflicts are structured success, not errors**: Previously, a non-zero exit from a `CONFLICT` was thrown as an `McpError`, forcing callers to parse error messages and re-run `git_status` to recover state. These operations now return `{ success: true, conflicts: true, conflictedFiles: [...] }` with an actionable message, and only throw when the non-zero exit is a real failure (no `CONFLICT` marker present). Continuation modes (`--continue`) follow the same pattern.
+- **`git_init` standard verbosity**: `isBare` is now included at `standard` verbosity (was `full`-only). Bare repos reject `git_add`/`git_commit` — the LLM needs this signal without escalating verbosity.
+- **`git_show` standard verbosity**: `metadata` is now included at `standard` verbosity (was `full`-only). Tag/blob/tree objects carry tagger, mode, size, and entry data here that's load-bearing for inspection workflows.
+
+### Fixed
+
+- **`git_status` — porcelain v2 unmerged path index**: The unmerged-entry parser was reading `parts[8]` as the file path, but the porcelain v2 `u` format places the path at index 10 (after `XY sub m1 m2 m3 mW h1 h2 h3 path`). `conflictedFiles` was leaking blob hashes instead of file paths. Fixed to `parts.slice(10).join(' ')`.
+- **`git_checkout` — porcelain prefix in `filesModified`**: Output was returning literal `"M\tREADME.md"` strings instead of bare paths. The parser now matches `/^([A-Z])\t(.+)$/` and emits the path only. Expanded the informational-line skip list to cover `Switched`, `Already`, `Your branch`, `(use `, `HEAD is now`, `Note:`, `Updated`.
+- **`git_pull` — `filesChanged` leaking diffstat formatting**: Previously emitted raw stat lines. Now extracts bare paths from diffstat lines (`/^\s(.+?)\s*\|\s*(?:\d+\s*[+-]*|Bin\s)/`), including binary-file entries.
+- **`git_reset` — incomplete `filesReset`**: The previous implementation returned `input.paths ?? []`, so commit-move resets reported nothing. Now captures HEAD before/after, computes `git diff --name-only OLD..NEW` when HEAD moved, lists working-tree dirty files for `--hard`, and combines all three sources.
+
+### Internal
+
+- **Test coverage**: Updated the `ExecGitFn` mock signature across all operation tests to match the new executor type (`(args, cwd, ctx, options?) => Promise<{stdout, stderr, exitCode?}>`). Added cases for conflict-as-success on merge/rebase/cherry-pick/pull, porcelain v2 unmerged parsing, checkout filesModified parsing, and the rewritten reset semantics. All 1,303 tests pass.
+
 ## v2.10.6 - 2026-04-19
 
 ### Fixed
