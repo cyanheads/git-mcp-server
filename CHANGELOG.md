@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.10.6 - 2026-04-19
+
+### Fixed
+
+- **`GIT_BASE_DIR` path resolution ([#43](https://github.com/cyanheads/git-mcp-server/issues/43))**: When `GIT_BASE_DIR` was set, absolute paths passed to tools were sanitized into relative paths and used as the spawn `cwd`, making behavior dependent on the MCP process's own `cwd`. `resolveWorkingDirectory` now re-anchors sanitized relative paths back to `GIT_BASE_DIR` so git always receives an absolute working directory.
+- **Misleading ENOENT error**: A non-existent or non-directory `cwd` previously surfaced as `"Git command not found. Please ensure Git is installed and in your PATH."` — indistinguishable from a real missing-git error. `executeGitCommand` now pre-flights the cwd with `existsSync`/`statSync` and throws a clear `"Working directory does not exist"` / `"is not a directory"` error instead.
+- **`git_tag` tool descriptions**: `force` now correctly notes it only applies to create mode (git has no force-delete for tags); `message` makes the annotated-tag implication explicit; `annotated` no longer claims auto-coercion that never happened in the tool layer.
+
+### Changed
+
+- **Dependency updates**: Bumped 28 dev dependencies to latest, including `@modelcontextprotocol/sdk` 1.27.1 → 1.29.0, TypeScript 6.0.2 → 6.0.3, Hono 4.12.9 → 4.12.14, Vite 8.0.2 → 8.0.8, msw 2.12.14 → 2.13.4, eslint 10.1.0 → 10.2.1, and the OpenTelemetry suite 2.6.0/0.213.0 → 2.7.0/0.215.0.
+- **Removed all `resolutions` pins** and converted pinned direct dependencies to caret ranges so `bun update` can keep them current.
+- **Tag signing config documented**: `shouldSignCommits()` now explicitly notes it governs both commits and tags; per-call overrides remain available via each tool's `sign` parameter.
+
+### Internal
+
+- **Deduplicated `loadConfig`**: Single source of truth in `config-helper.ts`; `command-builder.ts` imports instead of redefining.
+- **Cleanup in `git-tag.tool.ts`**: Removed dead `if (input.x !== undefined)` guards on fields with Zod defaults (always defined post-parse).
+- **Coverage**: Added unit tests for `executeGitCommand`'s new cwd pre-flight.
+
 ## v2.10.5 - 2026-03-25
 
 ### Fixed
