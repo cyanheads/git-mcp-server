@@ -97,7 +97,10 @@ import {
   executeTag,
   executeWorktree,
 } from './operations/index.js';
-import { executeGitCommand } from './utils/git-executor.js';
+import {
+  executeGitCommand,
+  type ExecuteGitOptions,
+} from './utils/git-executor.js';
 import { validateGitRepository } from './utils/git-validators.js';
 import { isGitNotFoundError } from './utils/error-mapper.js';
 
@@ -168,8 +171,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitInitResult> {
     this.logOperationStart('init', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeInit(options, context, executor);
     this.logOperationSuccess('init', context, { path: result.path });
     return result;
@@ -180,8 +187,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitCloneResult> {
     this.logOperationStart('clone', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeClone(options, context, executor);
     this.logOperationSuccess('clone', context, { path: result.localPath });
     return result;
@@ -192,8 +203,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitStatusResult> {
     this.logOperationStart('status', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeStatus(options, context, executor);
     this.logOperationSuccess('status', context, { isClean: result.isClean });
     return result;
@@ -204,8 +219,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitCleanResult> {
     this.logOperationStart('clean', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeClean(options, context, executor);
     this.logOperationSuccess('clean', context, {
       filesRemoved: result.filesRemoved.length,
@@ -222,8 +241,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitAddResult> {
     this.logOperationStart('add', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeAdd(options, context, executor);
     this.logOperationSuccess('add', context, {
       filesStaged: result.stagedFiles.length,
@@ -236,8 +259,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitCommitResult> {
     this.logOperationStart('commit', context, { message: options.message });
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeCommit(options, context, executor);
     this.logOperationSuccess('commit', context, { hash: result.commitHash });
     return result;
@@ -248,8 +275,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitLogResult> {
     this.logOperationStart('log', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeLog(options, context, executor);
     this.logOperationSuccess('log', context, {
       commitCount: result.totalCount,
@@ -262,8 +293,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitShowResult> {
     this.logOperationStart('show', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeShow(options, context, executor);
     this.logOperationSuccess('show', context, { object: result.object });
     return result;
@@ -274,8 +309,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitDiffResult> {
     this.logOperationStart('diff', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeDiff(options, context, executor);
     this.logOperationSuccess('diff', context, {
       filesChanged: result.filesChanged,
@@ -292,8 +331,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitBranchResult> {
     this.logOperationStart('branch', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeBranch(options, context, executor);
     this.logOperationSuccess('branch', context, { mode: result.mode });
     return result;
@@ -304,8 +347,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitCheckoutResult> {
     this.logOperationStart('checkout', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeCheckout(options, context, executor);
     this.logOperationSuccess('checkout', context, { target: result.target });
     return result;
@@ -316,8 +363,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitMergeResult> {
     this.logOperationStart('merge', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeMerge(options, context, executor);
     this.logOperationSuccess('merge', context, {
       conflicts: result.conflicts,
@@ -330,8 +381,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitRebaseResult> {
     this.logOperationStart('rebase', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeRebase(options, context, executor);
     this.logOperationSuccess('rebase', context, {
       conflicts: result.conflicts,
@@ -344,8 +399,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitCherryPickResult> {
     this.logOperationStart('cherryPick', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeCherryPick(options, context, executor);
     this.logOperationSuccess('cherryPick', context, {
       conflicts: result.conflicts,
@@ -362,8 +421,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitRemoteResult> {
     this.logOperationStart('remote', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeRemote(options, context, executor);
     this.logOperationSuccess('remote', context, { mode: result.mode });
     return result;
@@ -374,8 +437,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitFetchResult> {
     this.logOperationStart('fetch', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeFetch(options, context, executor);
     this.logOperationSuccess('fetch', context, { remote: result.remote });
     return result;
@@ -386,8 +453,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitPushResult> {
     this.logOperationStart('push', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executePush(options, context, executor);
     this.logOperationSuccess('push', context, {
       success: result.success,
@@ -400,8 +471,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitPullResult> {
     this.logOperationStart('pull', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executePull(options, context, executor);
     this.logOperationSuccess('pull', context, {
       strategy: result.strategy,
@@ -418,8 +493,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitTagResult> {
     this.logOperationStart('tag', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeTag(options, context, executor);
     this.logOperationSuccess('tag', context, { mode: result.mode });
     return result;
@@ -434,8 +513,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitStashResult> {
     this.logOperationStart('stash', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeStash(options, context, executor);
     this.logOperationSuccess('stash', context, { mode: result.mode });
     return result;
@@ -450,8 +533,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitWorktreeResult> {
     this.logOperationStart('worktree', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeWorktree(options, context, executor);
     this.logOperationSuccess('worktree', context, { mode: result.mode });
     return result;
@@ -475,8 +562,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
     context: GitOperationContext,
   ): Promise<GitResetResult> {
     this.logOperationStart('reset', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeReset(options, context, executor);
     this.logOperationSuccess('reset', context, { mode: result.mode });
     return result;
@@ -488,8 +579,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
   ): Promise<GitBlameResult> {
     this.checkCapability('blame');
     this.logOperationStart('blame', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeBlame(options, context, executor);
     this.logOperationSuccess('blame', context, {
       file: result.file,
@@ -504,8 +599,12 @@ export class CliGitProvider extends BaseGitProvider implements IGitProvider {
   ): Promise<GitReflogResult> {
     this.checkCapability('reflog');
     this.logOperationStart('reflog', context, options);
-    const executor = (args: string[], cwd: string) =>
-      executeGitCommand(args, cwd);
+    const executor = (
+      args: string[],
+      cwd: string,
+      _ctx?: unknown,
+      options?: ExecuteGitOptions,
+    ) => executeGitCommand(args, cwd, options);
     const result = await executeReflog(options, context, executor);
     this.logOperationSuccess('reflog', context, {
       entries: result.totalEntries,

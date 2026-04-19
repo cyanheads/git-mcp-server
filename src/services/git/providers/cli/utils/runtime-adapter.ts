@@ -30,6 +30,28 @@ export interface GitCommandResult {
   stdout: string;
   /** Standard error from the command */
   stderr: string;
+  /**
+   * Process exit code. Always populated. `0` indicates success.
+   * Non-zero values are only returned when `allowNonZeroExit` is true;
+   * otherwise the command throws on non-zero exit.
+   */
+  exitCode: number;
+}
+
+/**
+ * Options for spawning a git command.
+ */
+export interface SpawnGitOptions {
+  /** Timeout in milliseconds (default: 60000) */
+  timeout?: number;
+  /** Optional AbortSignal for cancellation */
+  signal?: AbortSignal;
+  /**
+   * If true, return the result with the non-zero exit code instead of throwing.
+   * Used by operations (merge, rebase, cherry-pick, reset) that need to inspect
+   * git's output on a "soft" failure such as a merge conflict.
+   */
+  allowNonZeroExit?: boolean;
 }
 
 /**
@@ -132,6 +154,7 @@ async function spawnWithBun(
   env: Record<string, string>,
   timeout: number,
   signal?: AbortSignal,
+  allowNonZeroExit = false,
 ): Promise<GitCommandResult> {
   // Cast globalThis.Bun to our typed interface
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -195,12 +218,12 @@ async function spawnWithBun(
   ]);
 
   // Check if the command succeeded (exit code 0)
-  if (exitCode !== 0) {
+  if (exitCode !== 0 && !allowNonZeroExit) {
     const combinedOutput = `Exit Code: ${exitCode}\nStderr: ${stderr}\nStdout: ${stdout}`;
     throw new Error(combinedOutput);
   }
 
-  return { stdout, stderr };
+  return { stdout, stderr, exitCode };
 }
 
 /**
@@ -222,6 +245,7 @@ async function spawnWithNode(
   env: Record<string, string>,
   timeout: number,
   signal?: AbortSignal,
+  allowNonZeroExit = false,
 ): Promise<GitCommandResult> {
   return new Promise((resolve, reject) => {
     // Check if already aborted before starting
@@ -291,12 +315,13 @@ async function spawnWithNode(
 
       const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
       const stderr = Buffer.concat(stderrChunks).toString('utf-8');
+      const code = exitCode ?? 0;
 
-      if (exitCode !== 0) {
-        const combinedOutput = `Exit Code: ${exitCode}\nStderr: ${stderr}\nStdout: ${stdout}`;
+      if (code !== 0 && !allowNonZeroExit) {
+        const combinedOutput = `Exit Code: ${code}\nStderr: ${stderr}\nStdout: ${stdout}`;
         reject(new Error(combinedOutput));
       } else {
-        resolve({ stdout, stderr });
+        resolve({ stdout, stderr, exitCode: code });
       }
     });
   });
@@ -338,12 +363,13 @@ export async function spawnGitCommand(
   env: Record<string, string>,
   timeout = 60000,
   signal?: AbortSignal,
+  allowNonZeroExit = false,
 ): Promise<GitCommandResult> {
   const runtime = detectRuntime();
 
   if (runtime === 'bun') {
-    return spawnWithBun(args, cwd, env, timeout, signal);
+    return spawnWithBun(args, cwd, env, timeout, signal, allowNonZeroExit);
   } else {
-    return spawnWithNode(args, cwd, env, timeout, signal);
+    return spawnWithNode(args, cwd, env, timeout, signal, allowNonZeroExit);
   }
 }

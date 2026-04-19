@@ -55,10 +55,20 @@ const GIT_COMMAND_TIMEOUT_MS = 60000;
  * console.log(result.stdout); // Git status output
  * ```
  */
+export interface ExecuteGitOptions {
+  /**
+   * If true, return the result with the non-zero exit code instead of throwing.
+   * Used by operations that need to inspect git output on a soft failure
+   * (e.g. a merge conflict).
+   */
+  allowNonZeroExit?: boolean;
+}
+
 export async function executeGitCommand(
   args: string[],
   cwd: string,
-): Promise<{ stdout: string; stderr: string }> {
+  options: ExecuteGitOptions = {},
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   try {
     validateGitArgs(args);
 
@@ -88,6 +98,8 @@ export async function executeGitCommand(
       cwd,
       buildGitEnv(process.env as Record<string, string>),
       GIT_COMMAND_TIMEOUT_MS,
+      undefined,
+      options.allowNonZeroExit,
     );
 
     return result;
