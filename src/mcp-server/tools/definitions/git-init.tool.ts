@@ -95,12 +95,15 @@ function filterGitInitOutput(
     };
   }
 
-  // standard: Above + branch information
+  // standard: Above + branch + bare flag.
+  // isBare matters: bare repos reject commit/add, so the LLM needs to see it
+  // before following up with staging or commit operations.
   if (level === 'standard') {
     return {
       success: result.success,
       path: result.path,
       initialBranch: result.initialBranch,
+      isBare: result.isBare,
     };
   }
 

@@ -120,13 +120,16 @@ function filterGitShowOutput(
     };
   }
 
-  // standard: Above + content (primary output of git show)
+  // standard: Above + content + metadata.
+  // metadata carries fields the LLM needs for non-commit objects:
+  // tagger/message for annotated tags, mode/size for blobs, entries for trees.
   if (level === 'standard') {
     return {
       success: result.success,
       object: result.object,
       type: result.type,
       content: result.content,
+      metadata: result.metadata,
     };
   }
 
