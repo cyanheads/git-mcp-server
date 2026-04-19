@@ -6,6 +6,8 @@
  * For git command execution validators, see src/services/git/providers/cli/utils/git-validators.ts
  */
 
+import path from 'node:path';
+
 import type { StorageService } from '@/storage/core/StorageService.js';
 import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
 import { logger, type RequestContext, sanitization } from '@/utils/index.js';
@@ -113,14 +115,26 @@ export async function resolveWorkingDirectory(
     sanitizeOptions,
   );
 
+  /**
+   * sanitizePath returns paths relative to rootDir when rootDir is set.
+   * Git is spawned with this as its cwd, so a relative path would resolve
+   * against the MCP process cwd — making behavior client-dependent (see
+   * issue #43). Re-anchor to baseDir so spawn always gets an absolute path.
+   */
+  const resolvedPath =
+    sanitizeOptions.rootDir && !path.isAbsolute(sanitizedPath)
+      ? path.resolve(sanitizeOptions.rootDir, sanitizedPath)
+      : sanitizedPath;
+
   logger.debug('Sanitized working directory path', {
     ...appContext,
     original: workingDir,
     sanitized: sanitizedPath,
+    resolved: resolvedPath,
     baseDir: config?.git?.baseDir,
   });
 
-  return sanitizedPath;
+  return resolvedPath;
 }
 
 /**

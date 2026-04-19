@@ -16,6 +16,10 @@
  * - Comprehensive error mapping
  */
 
+import { existsSync, statSync } from 'node:fs';
+
+import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
+
 import { mapGitError } from './error-mapper.js';
 import { buildGitEnv, validateGitArgs } from './command-builder.js';
 import { spawnGitCommand } from './runtime-adapter.js';
@@ -56,11 +60,29 @@ export async function executeGitCommand(
   cwd: string,
 ): Promise<{ stdout: string; stderr: string }> {
   try {
-    // Validate arguments for security before execution
     validateGitArgs(args);
 
-    // Use runtime adapter to spawn the process
-    // This works in both Bun and Node.js runtimes
+    /**
+     * Pre-flight cwd check. Without this, a missing or non-directory cwd
+     * surfaces as a generic ENOENT from spawn, which mapGitError cannot
+     * distinguish from a missing git binary — both historically rendered as
+     * "Git command not found". Surface the real cause directly.
+     */
+    if (!existsSync(cwd)) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `Working directory does not exist: ${cwd}`,
+        { cwd },
+      );
+    }
+    if (!statSync(cwd).isDirectory()) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `Working directory is not a directory: ${cwd}`,
+        { cwd },
+      );
+    }
+
     const result = await spawnGitCommand(
       args,
       cwd,
@@ -70,8 +92,6 @@ export async function executeGitCommand(
 
     return result;
   } catch (error) {
-    // mapGitError will transform the raw error into a structured McpError
-    // with appropriate error codes and user-friendly messages
     throw mapGitError(error, args[0] || 'unknown');
   }
 }
