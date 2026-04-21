@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.11.1 - 2026-04-20
+
+Schema-level clarification so LLM callers stop overriding the server's default signing configuration unnecessarily.
+
+### Changed
+
+- **`SignSchema` description**: The shared `sign` parameter on `git_commit` and `git_tag` now documents its tri-state semantics — omit to use the server's `GIT_SIGN_COMMITS` default, set `true` to force signing, set `false` to skip. Previously the description read only `"Sign the commit/tag with GPG."`, which led LLMs to send explicit `sign: false` and silently override a server configured with `GIT_SIGN_COMMITS=true`. No runtime behavior change — the service-layer `options.sign ?? shouldSignCommits()` fallback was already correct.
+
 ## v2.11.0 - 2026-04-19
 
 Surfaced through `/field-test` against the running server: integration operations were throwing on conflicts (a documented success state), and several tools were leaking raw porcelain into LLM-facing output or omitting fields the LLM needed to act without re-querying.

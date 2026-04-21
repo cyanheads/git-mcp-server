@@ -272,14 +272,18 @@ export const DepthSchema = z
   .describe('Create a shallow clone with history truncated to N commits.');
 
 /**
- * GPG signing
+ * GPG/SSH signing
  *
- * When true, signs commits/tags with GPG.
+ * Tri-state: explicit boolean overrides the server's GIT_SIGN_COMMITS default;
+ * undefined defers to that default. Omit this field unless the caller needs to
+ * override server configuration for a specific operation.
  */
 export const SignSchema = z
   .boolean()
   .optional()
-  .describe('Sign the commit/tag with GPG.');
+  .describe(
+    "Sign the commit/tag with GPG/SSH. Omit to use the server's GIT_SIGN_COMMITS default (recommended). Set true to force signing, or false to skip signing even when the default enables it.",
+  );
 
 /**
  * No-verify flag
