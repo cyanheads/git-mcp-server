@@ -33,9 +33,7 @@ export class ErrorHandler {
     const errorName = getErrorName(error);
     const errorMessage = getErrorMessage(error);
 
-    const mappedFromType = (
-      ERROR_TYPE_MAPPINGS as Record<string, JsonRpcErrorCode>
-    )[errorName];
+    const mappedFromType = ERROR_TYPE_MAPPINGS[errorName];
     if (mappedFromType) {
       return mappedFromType;
     }
@@ -132,7 +130,7 @@ export class ErrorHandler {
         current.cause &&
         depth < 5
       ) {
-        current = current.cause as unknown;
+        current = current.cause;
         depth += 1;
       }
       return current instanceof Error

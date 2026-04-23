@@ -45,9 +45,7 @@ let performanceNow: () => number = () => Date.now(); // Fallback
 export async function loadPerfHooks(): Promise<{
   performance: typeof PerfHooksPerformance;
 }> {
-  return import('perf_hooks') as Promise<{
-    performance: typeof PerfHooksPerformance;
-  }>;
+  return import('perf_hooks');
 }
 
 export async function initializePerformance_Hrt(): Promise<void> {

@@ -164,7 +164,7 @@ export function createMcpToolHandler<
     }
 
     // The `extra` from the SDK is our specific SdkContext type.
-    const sdkContext = extra as unknown as SdkContext;
+    const sdkContext = extra;
 
     const sessionId =
       typeof sdkContext?.sessionId === 'string'

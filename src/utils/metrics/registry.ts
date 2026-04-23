@@ -51,7 +51,7 @@ function getCounter(
   if (description !== undefined) opts.description = description;
   if (unit !== undefined) opts.unit = unit;
   const counter = Object.keys(opts).length
-    ? getMeter().createCounter(name, opts as MetricOptions)
+    ? getMeter().createCounter(name, opts)
     : getMeter().createCounter(name);
   counters.set(key, counter);
   return counter;
@@ -76,7 +76,7 @@ function getHistogram(
   if (description !== undefined) opts.description = description;
   if (unit !== undefined) opts.unit = unit;
   const histogram = Object.keys(opts).length
-    ? getMeter().createHistogram(name, opts as MetricOptions)
+    ? getMeter().createHistogram(name, opts)
     : getMeter().createHistogram(name);
   histograms.set(key, histogram);
   return histogram;

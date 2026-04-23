@@ -162,9 +162,9 @@ const requestContextServiceInstance = {
     // The 'rest' object will contain all properties that are NOT the special keys,
     // effectively capturing the direct context object when passed.
     const { parentContext, additionalContext, operation, ...rest } =
-      params as CreateRequestContextParams;
+      params as Record<string, unknown> & Partial<CreateRequestContextParams>;
 
-    const inheritedContext =
+    const inheritedContext: Record<string, unknown> =
       parentContext && typeof parentContext === 'object'
         ? { ...parentContext }
         : {};
@@ -182,10 +182,10 @@ const requestContextServiceInstance = {
     const authStore = alsAuthContext.getStore();
     const tenantIdFromAuth = authStore?.authInfo?.tenantId;
 
+    const inheritedRequestId = inheritedContext.requestId;
     const requestId =
-      typeof inheritedContext.requestId === 'string' &&
-      inheritedContext.requestId
-        ? inheritedContext.requestId
+      typeof inheritedRequestId === 'string' && inheritedRequestId
+        ? inheritedRequestId
         : generateRequestContextId();
     const timestamp = new Date().toISOString();
 

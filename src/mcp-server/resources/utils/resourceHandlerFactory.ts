@@ -133,12 +133,11 @@ export async function registerResource<
 
           try {
             // Validate params via the schema before invoking logic
-            type TParams = z.infer<TParamsSchema>;
             type TOutput =
               TOutputSchema extends ZodObject<ZodRawShape>
                 ? z.infer<TOutputSchema>
                 : unknown;
-            const parsedParams = def.paramsSchema.parse(params) as TParams;
+            const parsedParams = def.paramsSchema.parse(params);
             const responseData = (await def.logic(
               uri,
               parsedParams,

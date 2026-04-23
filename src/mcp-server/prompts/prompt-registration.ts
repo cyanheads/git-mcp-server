@@ -46,7 +46,7 @@ export class PromptRegistry {
           }),
         },
         async (args: Record<string, unknown>) => {
-          const messages = await promptDef.generate(args as never);
+          const messages = await promptDef.generate(args);
           return { messages };
         },
       );
