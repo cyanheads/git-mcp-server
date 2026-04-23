@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.13.0 - 2026-04-23
+
+Uniform GPG/SSH signing policy: `GIT_SIGN_COMMITS` now defaults to `true` and is the single switch for all signing operations. When enabled, the server attempts to sign and silently falls back to unsigned on failure, surfacing the actual outcome via new `signed` and `signingWarning` fields on tool responses. Per-call `sign` and `forceUnsignedOnFailure` parameters are gone — the tri-state added cognitive load without real utility, and LLM callers were overriding server config with explicit `sign: false` despite v2.11.1's schema clarification.
+
+**Breaking**: `git_commit` and `git_tag` no longer accept `sign` or `forceUnsignedOnFailure` inputs. Callers setting either will have those keys stripped by Zod; server-side policy applies uniformly.
+
+### Changed
+
+- **`GIT_SIGN_COMMITS` default flipped to `true`**: Matches the common case where users want verified commits by default. Set `GIT_SIGN_COMMITS=false` to opt out in environments without a signing key. The setting governs commits, tags, merges, rebases, and cherry-picks uniformly.
+- **Signing policy — attempt then silently fall back**: When `GIT_SIGN_COMMITS=true`, `git_commit` and `git_tag` attempt to sign and retry unsigned on failure without raising an error. A `logger.warning` is emitted for server-side observability, and the tool response carries a factual `signingWarning` message so orchestrating agents can inform the user if appropriate. `git_merge`, `git_rebase`, `git_cherry_pick`, and `git_pull` read the same setting (no fallback there — signing-failure behavior during those operations is git's responsibility).
+- **`git_tag.annotated` description**: Now notes the flag is only effective when no message is provided and signing is disabled — otherwise the tag is always annotated. Previous wording referenced the removed `sign` input.
+
+### Added
+
+- **`git_commit.signed` output field (required boolean)**: Reflects whether the commit was actually signed — `true` only when signing was attempted and succeeded, `false` when signing was not requested or fell back to unsigned on failure. Surfaced at every verbosity level including `minimal`, since signing drift is load-bearing for downstream verification workflows.
+- **`git_tag.signed` output field (optional boolean, create mode only)**: Same semantics as the commit field; absent for `list` and `delete` modes.
+- **`git_commit.signingWarning` / `git_tag.signingWarning` (optional string)**: Populated only when `GIT_SIGN_COMMITS=true` was in effect but signing failed and the operation fell back to unsigned. Factual, not prescriptive — names the env var, the failure, and the underlying error string (e.g., `gpg-agent not running`).
+
+### Removed
+
+- **`git_commit.sign` and `git_tag.sign` input parameters**: The tri-state `boolean | undefined` override is gone. Server config is now the only lever.
+- **`git_commit.forceUnsignedOnFailure` and `git_tag.forceUnsignedOnFailure` input parameters**: Fallback-on-failure is now uniform behavior whenever signing is requested.
+- **`SignSchema` shared Zod schema**: Unused after the tool input removals; dropped from `src/mcp-server/tools/schemas/common.ts`.
+- **Dead `sign?` fields in service-layer option types**: `GitMergeOptions`, `GitRebaseOptions`, and `GitCherryPickOptions` carried a `sign?: boolean` that was never wired to any tool input — only `shouldSignCommits()` was actually consulted. Removed to keep the types honest.
+
+### Fixed
+
+- **`git_pull` now honors `GIT_SIGN_COMMITS`** ([#44](https://github.com/cyanheads/git-mcp-server/issues/44)): `pull.ts` wasn't consulting `shouldSignCommits()` and didn't forward `-S` to the underlying merge/rebase, so pulls producing merge commits (divergent histories) or rebased commits (`rebase: true`) stayed unsigned even with `GIT_SIGN_COMMITS=true` — the one gap in uniform signing. Fixed by mirroring the `merge.ts` / `rebase.ts` / `cherry-pick.ts` pattern: push `-S` when the config is enabled. Fast-forward pulls are unaffected (no commit is created). No tool input or option-type change — server config is the single switch.
+- **`z.coerce.boolean()` footgun for `GIT_SIGN_COMMITS`**: `z.coerce.boolean()` treats the literal string `"false"` as truthy (non-empty string coercion), so `GIT_SIGN_COMMITS=false` would silently fail to opt out under the old schema. Replaced with a `parseBoolEnv(defaultValue)` preprocess helper in `src/config/index.ts` that handles `true/false/1/0/yes/no/on/off/<empty>` case-insensitively and returns the default when the value is malformed or missing.
+
+### Internal
+
+- **`shouldSignCommits()` JSDoc rewrite**: Reflects the single-switch / silent-fallback model and surfaces the observability fields.
+- **`.env.example` and README updates**: Flipped the documented default to `true` and added the `signed`/`signingWarning` fallback note to the env table row and the Commit signing capability description.
+- **Service-layer signing tests rewritten**: `commit.test.ts` and `tag.test.ts` now mock `shouldSignCommits` as a `vi.fn()` and flip it per-case via a direct cast. Describe blocks renamed from `signing option` / `forceUnsignedOnFailure option` to `signing policy`, with test titles describing the observable outcome rather than the removed input.
+- **Tool-layer signing tests updated**: `git-commit.tool.test.ts` fixtures now include `signed` on `GitCommitResult` mocks; `git-tag.tool.test.ts` replaces the old `sign`/`forceUnsignedOnFailure` suite with pass-through assertions for `signed` and `signingWarning`.
+- **Pull signing tests added**: `pull.test.ts` now covers the `-S` pass-through for the merge path (default), explicit opt-out (default `shouldSignCommits = false`), and the rebase path (`rebase: true` with signing enabled). All 1,307 tests pass.
+
 ## v2.12.1 - 2026-04-23
 
 Follow-up to v2.12.0: the `git_wrapup` prompt was still emitting the pre-rewrite phased procedural script and telling callers to pass `updateAgentMetaFiles: "yes"` — an input the tool no longer accepts. Realigned the prompt with the acceptance-criteria protocol it's meant to orchestrate.
