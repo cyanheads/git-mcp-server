@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.12.1 - 2026-04-23
+
+Follow-up to v2.12.0: the `git_wrapup` prompt was still emitting the pre-rewrite phased procedural script and telling callers to pass `updateAgentMetaFiles: "yes"` — an input the tool no longer accepts. Realigned the prompt with the acceptance-criteria protocol it's meant to orchestrate.
+
+### Changed
+
+- **`git_wrapup` prompt — acceptance-criteria orchestration**: Rewrote the prompt body as a thin session-flow wrapper around `git_wrapup_instructions` rather than an inline phased script. It now instructs the agent to load the protocol, set the working directory, analyze the diff, satisfy each acceptance checkbox per project convention, commit atomically, and (optionally) tag. The text no longer prescribes changelog categories or commit structure — those defer to each project's existing conventions, consistent with the tool's goals-strict/mechanism-generic philosophy.
+- **`git_wrapup.createTag` default flipped to `'true'`**: To match the tool's "every wrap-up is a release" stance. Set to `'false'` when tagging is deferred to a separate release step — the prompt then passes `createTag: false` through to the tool call.
+
+### Removed
+
+- **`git_wrapup.skipDocumentation` input parameter**: Documentation currency is now a standing acceptance criterion in the protocol, not a gated section. Callers previously passing this key will have it stripped by Zod with no behavior change in the emitted prompt.
+- **`git_wrapup.updateAgentFiles` input parameter**: Agent-instruction file updates are standing guidance in the protocol now. The prompt also no longer tells the agent to pass the removed `updateAgentMetaFiles` input to the tool.
+
+### Internal
+
+- **Test coverage**: Rewrote `git-wrapup.prompt.test.ts` to assert the new session-flow structure (Load Protocol, Satisfy the Acceptance Criteria, etc.), the flipped `createTag` default, the removed inputs, and the pass-through of `createTag: false` to the tool call. All 17 prompt tests pass.
+- **`@hono/node-server` 2.0 verification**: Confirmed the v2.12.0 upgrade is clean against our usage. The two v2 breaking changes (dropped Node 18, removed Vercel adapter) don't apply — our `engines.node` is `>=20.0.0` and we don't import the Vercel adapter. Public `serve`/`ServerType`/`HttpBindings` API is unchanged; headline is a ~2.3x body-parsing throughput improvement from the new fast path.
+
 ## v2.12.0 - 2026-04-23
 
 Reframed the `git_wrapup_instructions` protocol as an acceptance-criteria checklist (goals-strict, mechanism-generic) so it travels cleanly across projects with different release conventions. Internal type-safety pass removed unnecessary casts across handlers and utilities, and a `skills/` directory now ships agent skill sources alongside the server.
