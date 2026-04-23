@@ -57,10 +57,7 @@ export async function executeCherryPick(
         args.push('--signoff');
       }
 
-      // Add signing support for cherry-picked commits - use explicit option or fall back to config default
-      const shouldSign = options.sign ?? shouldSignCommits();
-
-      if (shouldSign) {
+      if (shouldSignCommits()) {
         args.push('--gpg-sign');
       }
 

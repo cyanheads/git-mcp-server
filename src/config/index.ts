@@ -35,6 +35,24 @@ const emptyStringAsUndefined = (val: unknown) => {
 };
 
 /**
+ * Parse a boolean from an env-var string, applying the given default when
+ * unset. `z.coerce.boolean()` would treat the literal string "false" as
+ * truthy — this helper handles the common string forms correctly so
+ * `GIT_SIGN_COMMITS=false` actually opts out.
+ */
+const parseBoolEnv =
+  (defaultValue: boolean) =>
+  (val: unknown): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const lower = val.trim().toLowerCase();
+      if (['true', '1', 'yes', 'on'].includes(lower)) return true;
+      if (['false', '0', 'no', 'off', ''].includes(lower)) return false;
+    }
+    return defaultValue;
+  };
+
+/**
  * Expands tilde (~) in paths to the user's home directory.
  * Returns undefined for empty/undefined inputs.
  * Supports both ~/path (expands to homedir/path) and ~ alone (expands to homedir).
@@ -219,7 +237,7 @@ const ConfigSchema = z.object({
       emptyStringAsUndefined,
       z.enum(['auto', 'cli', 'isomorphic']).default('auto'),
     ),
-    signCommits: z.coerce.boolean().default(false),
+    signCommits: z.preprocess(parseBoolEnv(true), z.boolean()),
     authorName: z
       .string()
       .regex(

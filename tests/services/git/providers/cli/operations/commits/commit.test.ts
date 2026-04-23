@@ -5,10 +5,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { executeCommit } from '@/services/git/providers/cli/operations/commits/commit.js';
+import { shouldSignCommits } from '@/services/git/providers/cli/utils/config-helper.js';
 import type { GitOperationContext } from '@/services/git/types.js';
 import type { RequestContext } from '@/utils/index.js';
 
-// Mock shouldSignCommits to return false by default so signing doesn't interfere
+// Mock shouldSignCommits to return false by default so signing doesn't
+// interfere. Tests that exercise signing behavior flip it per-case via
+// the `mockReturnValueOnce` cast below — bun's test runner doesn't
+// expose vi.mocked, so we use a direct cast on the imported function.
 vi.mock('@/services/git/providers/cli/utils/config-helper.js', () => ({
   shouldSignCommits: vi.fn(() => false),
   loadConfig: vi.fn(() => null),
@@ -233,8 +237,14 @@ describe('executeCommit', () => {
     });
   });
 
-  describe('signing option', () => {
-    it('passes --gpg-sign flag when sign is true', async () => {
+  describe('signing policy', () => {
+    it('passes --gpg-sign and reports signed: true when GIT_SIGN_COMMITS is enabled and signing succeeds', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
+
       mockExecGit
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
         .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' })
@@ -243,17 +253,19 @@ describe('executeCommit', () => {
           stderr: '',
         });
 
-      await executeCommit(
-        { message: 'signed commit', sign: true },
+      const result = await executeCommit(
+        { message: 'signed commit' },
         mockContext,
         mockExecGit,
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--gpg-sign');
+      expect(result.signed).toBe(true);
+      expect(result.signingWarning).toBeUndefined();
     });
 
-    it('does not pass --gpg-sign when sign is false', async () => {
+    it('omits --gpg-sign and reports signed: false when GIT_SIGN_COMMITS is disabled', async () => {
       mockExecGit
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
         .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' })
@@ -262,19 +274,25 @@ describe('executeCommit', () => {
           stderr: '',
         });
 
-      await executeCommit(
-        { message: 'unsigned commit', sign: false },
+      const result = await executeCommit(
+        { message: 'unsigned commit' },
         mockContext,
         mockExecGit,
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('--gpg-sign');
+      expect(result.signed).toBe(false);
+      expect(result.signingWarning).toBeUndefined();
     });
-  });
 
-  describe('forceUnsignedOnFailure option', () => {
-    it('retries without signing when forceUnsignedOnFailure is true and signing fails', async () => {
+    it('falls back to unsigned, sets signed: false, and populates signingWarning when signing fails', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
+
       const showOutput = `Author${FIELD_DELIM}0${RECORD_DELIM}\nfile.ts\n`;
 
       mockExecGit
@@ -284,7 +302,7 @@ describe('executeCommit', () => {
         .mockResolvedValueOnce({ stdout: showOutput, stderr: '' }); // show
 
       const result = await executeCommit(
-        { message: 'signed commit', sign: true, forceUnsignedOnFailure: true },
+        { message: 'signed commit' },
         mockContext,
         mockExecGit,
       );
@@ -295,43 +313,18 @@ describe('executeCommit', () => {
       expect(retryArgs).toContain('commit');
       expect(retryArgs).not.toContain('--gpg-sign');
       expect(result.success).toBe(true);
+      expect(result.signed).toBe(false);
+      expect(result.signingWarning).toContain('signing failed');
+      expect(result.signingWarning).toContain('gpg failed to sign');
     });
 
-    it('does not retry when forceUnsignedOnFailure is false and signing fails', async () => {
-      mockExecGit.mockRejectedValueOnce(
-        new Error('error: gpg failed to sign the data'),
-      );
-
-      await expect(
-        executeCommit(
-          {
-            message: 'signed commit',
-            sign: true,
-            forceUnsignedOnFailure: false,
-          },
-          mockContext,
-          mockExecGit,
-        ),
-      ).rejects.toThrow();
-
-      expect(mockExecGit).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not retry when signing is not enabled', async () => {
+    it('propagates errors when signing is disabled (no fallback applies)', async () => {
       mockExecGit.mockRejectedValueOnce(
         new Error('nothing to commit, working tree clean'),
       );
 
       await expect(
-        executeCommit(
-          {
-            message: 'unsigned commit',
-            sign: false,
-            forceUnsignedOnFailure: true,
-          },
-          mockContext,
-          mockExecGit,
-        ),
+        executeCommit({ message: 'unsigned commit' }, mockContext, mockExecGit),
       ).rejects.toThrow();
 
       expect(mockExecGit).toHaveBeenCalledTimes(1);

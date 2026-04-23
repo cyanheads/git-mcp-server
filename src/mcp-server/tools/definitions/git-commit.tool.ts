@@ -9,7 +9,6 @@ import {
   CommitMessageSchema,
   NoVerifySchema,
   PathSchema,
-  SignSchema,
 } from '../schemas/common.js';
 import { flattenChanges } from '../utils/git-formatters.js';
 import {
@@ -55,19 +54,12 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe('Allow creating a commit with no changes.'),
-  sign: SignSchema,
   noVerify: NoVerifySchema,
   filesToStage: z
     .array(z.string())
     .optional()
     .describe(
       'File paths to stage before committing (atomic stage+commit operation).',
-    ),
-  forceUnsignedOnFailure: z
-    .boolean()
-    .default(false)
-    .describe(
-      'If GPG/SSH signing fails, retry the commit without signing instead of failing.',
     ),
 });
 
@@ -94,6 +86,17 @@ const OutputSchema = z.object({
     .optional()
     .describe('Number of line insertions.'),
   deletions: z.number().int().optional().describe('Number of line deletions.'),
+  signed: z
+    .boolean()
+    .describe(
+      'Whether the commit was signed. False when GIT_SIGN_COMMITS=false or when signing was attempted and fell back to unsigned on failure.',
+    ),
+  signingWarning: z
+    .string()
+    .optional()
+    .describe(
+      'Populated only when signing was requested but failed, and the commit was created unsigned as a fallback.',
+    ),
   status: z
     .object({
       current_branch: z
@@ -136,28 +139,21 @@ async function gitCommitLogic(
     );
   }
 
-  // Build options object with only defined properties
   const commitOptions: {
     message: string;
     author?: { name: string; email: string };
     amend?: boolean;
     allowEmpty?: boolean;
-    sign?: boolean;
     noVerify?: boolean;
-    forceUnsignedOnFailure?: boolean;
   } = {
     message: input.message,
     amend: input.amend,
     allowEmpty: input.allowEmpty,
     noVerify: input.noVerify,
-    forceUnsignedOnFailure: input.forceUnsignedOnFailure,
   };
 
   if (input.author !== undefined) {
     commitOptions.author = input.author;
-  }
-  if (input.sign !== undefined) {
-    commitOptions.sign = input.sign;
   }
 
   const result = await provider.commit(commitOptions, {
@@ -176,7 +172,7 @@ async function gitCommitLogic(
     },
   );
 
-  return {
+  const output: ToolOutput = {
     success: result.success,
     commitHash: result.commitHash,
     message: result.message,
@@ -184,6 +180,7 @@ async function gitCommitLogic(
     timestamp: result.timestamp,
     filesChanged: result.filesChanged.length,
     committedFiles: result.filesChanged,
+    signed: result.signed,
     status: {
       current_branch: statusResult.currentBranch,
       staged_changes: flattenChanges(statusResult.stagedChanges),
@@ -193,6 +190,12 @@ async function gitCommitLogic(
       is_clean: statusResult.isClean,
     },
   };
+
+  if (result.signingWarning) {
+    output.signingWarning = result.signingWarning;
+  }
+
+  return output;
 }
 
 /**
@@ -207,12 +210,15 @@ function filterGitCommitOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // minimal: Essential commit information only
+  // `signed` and `signingWarning` are surfaced at every verbosity level —
+  // signing drift is important enough to never hide.
   if (level === 'minimal') {
     return {
       success: result.success,
       commitHash: result.commitHash,
       message: result.message,
+      signed: result.signed,
+      ...(result.signingWarning && { signingWarning: result.signingWarning }),
       status: {
         current_branch: result.status.current_branch,
         is_clean: result.status.is_clean,
@@ -224,7 +230,6 @@ function filterGitCommitOutput(
     };
   }
 
-  // standard: Core info + file statistics + complete status
   if (level === 'standard') {
     return {
       success: result.success,
@@ -236,6 +241,8 @@ function filterGitCommitOutput(
       insertions: result.insertions,
       deletions: result.deletions,
       committedFiles: result.committedFiles,
+      signed: result.signed,
+      ...(result.signingWarning && { signingWarning: result.signingWarning }),
       status: {
         current_branch: result.status.current_branch,
         is_clean: result.status.is_clean,

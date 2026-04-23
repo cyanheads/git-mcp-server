@@ -12,7 +12,6 @@ import {
   TagNameSchema,
   CommitRefSchema,
   ForceSchema,
-  SignSchema,
   normalizeMessage,
 } from '../schemas/common.js';
 import {
@@ -51,14 +50,7 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe(
-      'Create an annotated tag with a default "Tag <name>" message. Only effective when both message and sign are absent — otherwise the tag is always annotated.',
-    ),
-  sign: SignSchema,
-  forceUnsignedOnFailure: z
-    .boolean()
-    .default(false)
-    .describe(
-      'If GPG/SSH signing fails, retry the tag creation without signing instead of failing.',
+      'Create an annotated tag with a default "Tag <name>" message. Only effective when no message is provided and signing is disabled — otherwise the tag is always annotated.',
     ),
   force: ForceSchema.describe(
     'Overwrite an existing tag (create mode only; has no effect on list or delete).',
@@ -88,6 +80,18 @@ const OutputSchema = z.object({
     .string()
     .optional()
     .describe('Deleted tag name (for delete mode).'),
+  signed: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether the created tag was signed. Only populated for create mode. False when GIT_SIGN_COMMITS=false or when signing failed and fell back to unsigned.',
+    ),
+  signingWarning: z
+    .string()
+    .optional()
+    .describe(
+      'Populated only when signing was requested but failed, and the tag was created unsigned as a fallback.',
+    ),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -110,14 +114,11 @@ async function gitTagLogic(
     commit?: string;
     message?: string;
     annotated: boolean;
-    sign?: boolean;
-    forceUnsignedOnFailure: boolean;
     force: boolean;
   } = {
     mode: input.mode,
     annotated: input.annotated,
     force: input.force,
-    forceUnsignedOnFailure: input.forceUnsignedOnFailure,
   };
 
   if (input.tagName !== undefined) {
@@ -129,9 +130,6 @@ async function gitTagLogic(
   if (input.message !== undefined) {
     tagOptions.message = normalizeMessage(input.message);
   }
-  if (input.sign !== undefined) {
-    tagOptions.sign = input.sign;
-  }
 
   const result = await provider.tag(tagOptions, {
     workingDirectory: targetPath,
@@ -139,13 +137,22 @@ async function gitTagLogic(
     tenantId: appContext.tenantId || 'default-tenant',
   });
 
-  return {
+  const output: ToolOutput = {
     success: true,
     mode: result.mode,
     tags: result.tags,
     created: result.created,
     deleted: result.deleted,
   };
+
+  if (result.signed !== undefined) {
+    output.signed = result.signed;
+  }
+  if (result.signingWarning) {
+    output.signingWarning = result.signingWarning;
+  }
+
+  return output;
 }
 
 /**
@@ -160,11 +167,14 @@ function filterGitTagOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // minimal: Essential info only
+  // `signed` and `signingWarning` always surface when present — signing
+  // drift is important enough to never hide.
   if (level === 'minimal') {
     return {
       success: result.success,
       mode: result.mode,
+      ...(result.signed !== undefined && { signed: result.signed }),
+      ...(result.signingWarning && { signingWarning: result.signingWarning }),
     };
   }
 

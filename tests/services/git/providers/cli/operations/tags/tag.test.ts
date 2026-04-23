@@ -5,13 +5,17 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { executeTag } from '@/services/git/providers/cli/operations/tags/tag.js';
+import { shouldSignCommits } from '@/services/git/providers/cli/utils/config-helper.js';
 import type { GitOperationContext } from '@/services/git/types.js';
 import type { RequestContext } from '@/utils/index.js';
 
-// Mock shouldSignCommits to always return false in tests
+// Mock shouldSignCommits to return false by default. Tests that exercise
+// signing behavior flip it per-case via the `mockReturnValueOnce` cast
+// below — bun's test runner doesn't expose vi.mocked, so we use a direct
+// cast on the imported function.
 vi.mock('@/services/git/providers/cli/utils/config-helper.js', () => ({
-  shouldSignCommits: () => false,
-  loadConfig: () => null,
+  shouldSignCommits: vi.fn(() => false),
+  loadConfig: vi.fn(() => null),
 }));
 
 type ExecGitFn = (
@@ -196,14 +200,17 @@ describe('executeTag', () => {
       expect(args).not.toContain('-m');
     });
 
-    it('creates a signed tag when sign is true', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: '',
-        stderr: '',
-      });
+    it('creates a signed tag and reports signed: true when GIT_SIGN_COMMITS is enabled and signing succeeds', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
 
-      await executeTag(
-        { mode: 'create', tagName: 'v1.0.0', sign: true },
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeTag(
+        { mode: 'create', tagName: 'v1.0.0' },
         mockContext,
         mockExecGit,
       );
@@ -212,19 +219,23 @@ describe('executeTag', () => {
       expect(args).toContain('-s');
       expect(args).toContain('-m');
       expect(args).toContain('Tag v1.0.0');
+      expect(result.signed).toBe(true);
+      expect(result.signingWarning).toBeUndefined();
     });
 
-    it('creates a signed tag with custom message', async () => {
-      mockExecGit.mockResolvedValueOnce({
-        stdout: '',
-        stderr: '',
-      });
+    it('signs with a custom message when signing is enabled', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
 
-      await executeTag(
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeTag(
         {
           mode: 'create',
           tagName: 'v1.0.0',
-          sign: true,
           message: 'Custom message',
         },
         mockContext,
@@ -235,20 +246,37 @@ describe('executeTag', () => {
       expect(args).toContain('-s');
       expect(args).toContain('-m');
       expect(args).toContain('Custom message');
+      expect(result.signed).toBe(true);
     });
 
-    it('retries unsigned when forceUnsignedOnFailure is true and signing fails', async () => {
+    it('reports signed: false when GIT_SIGN_COMMITS is disabled (opt-out)', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await executeTag(
+        { mode: 'create', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).not.toContain('-s');
+      expect(result.signed).toBe(false);
+      expect(result.signingWarning).toBeUndefined();
+    });
+
+    it('falls back to unsigned, sets signed: false, and populates signingWarning when signing fails', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
+
       mockExecGit
         .mockRejectedValueOnce(new Error('error: gpg failed to sign the data'))
         .mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await executeTag(
-        {
-          mode: 'create',
-          tagName: 'v1.0.0',
-          sign: true,
-          forceUnsignedOnFailure: true,
-        },
+        { mode: 'create', tagName: 'v1.0.0' },
         mockContext,
         mockExecGit,
       );
@@ -258,21 +286,19 @@ describe('executeTag', () => {
       const [retryArgs] = mockExecGit.mock.calls[1]!;
       expect(retryArgs).not.toContain('-s');
       expect(result.created).toBe('v1.0.0');
+      expect(result.signed).toBe(false);
+      expect(result.signingWarning).toContain('signing failed');
+      expect(result.signingWarning).toContain('gpg failed to sign');
     });
 
-    it('does not retry when forceUnsignedOnFailure is false and signing fails', async () => {
+    it('propagates errors when signing is disabled (no fallback applies)', async () => {
       mockExecGit.mockRejectedValueOnce(
-        new Error('error: gpg failed to sign the data'),
+        new Error('fatal: some other non-signing error'),
       );
 
       await expect(
         executeTag(
-          {
-            mode: 'create',
-            tagName: 'v1.0.0',
-            sign: true,
-            forceUnsignedOnFailure: false,
-          },
+          { mode: 'create', tagName: 'v1.0.0' },
           mockContext,
           mockExecGit,
         ),

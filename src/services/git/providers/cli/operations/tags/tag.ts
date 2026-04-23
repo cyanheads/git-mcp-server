@@ -3,7 +3,7 @@
  * @module services/git/providers/cli/operations/tags/tag
  */
 
-import type { RequestContext } from '@/utils/index.js';
+import { logger, type RequestContext } from '@/utils/index.js';
 
 import type {
   GitOperationContext,
@@ -90,10 +90,13 @@ export async function executeTag(
           throw new Error('Tag name is required for create operation');
         }
 
-        // Determine if we should sign the tag - use explicit option or fall back to config default
-        const shouldSign = options.sign ?? shouldSignCommits();
+        // Signing policy: attempt when GIT_SIGN_COMMITS is enabled, fall
+        // back to unsigned silently on failure. `signed` in the result
+        // reflects the actual outcome so callers can observe fallback.
+        const signRequested = shouldSignCommits();
+        let signed = false;
+        let signingWarning: string | undefined;
 
-        // Build args for create, factored out so we can retry unsigned on failure
         const buildCreateArgs = (sign: boolean): string[] => {
           const createArgs: string[] = [options.tagName!];
 
@@ -121,41 +124,51 @@ export async function executeTag(
 
         // When not signing, override git config that might force signing/annotation
         // (e.g., tag.gpgSign=true) which would open an editor in non-interactive MCP context
-        const configOverride = shouldSign ? [] : ['-c', 'tag.gpgSign=false'];
-        const createCmd = [
-          ...configOverride,
-          ...buildGitCommand({
-            command: 'tag',
-            args: buildCreateArgs(shouldSign),
-          }),
-        ];
+        const buildCmd = (sign: boolean): string[] => {
+          const configOverride = sign ? [] : ['-c', 'tag.gpgSign=false'];
+          return [
+            ...configOverride,
+            ...buildGitCommand({
+              command: 'tag',
+              args: buildCreateArgs(sign),
+            }),
+          ];
+        };
 
         try {
           await execGit(
-            createCmd,
+            buildCmd(signRequested),
             context.workingDirectory,
             context.requestContext,
           );
+          signed = signRequested;
         } catch (error) {
-          if (shouldSign && options.forceUnsignedOnFailure) {
-            const unsignedCmd = buildGitCommand({
-              command: 'tag',
-              args: buildCreateArgs(false),
-            });
-            await execGit(
-              unsignedCmd,
-              context.workingDirectory,
-              context.requestContext,
-            );
-          } else {
+          if (!signRequested) {
             throw error;
           }
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          logger.warning(
+            'Tag signing failed; retrying unsigned. Set GIT_SIGN_COMMITS=false to suppress this attempt.',
+            { ...context.requestContext, error },
+          );
+          signingWarning = `GIT_SIGN_COMMITS is enabled but signing failed; tag created unsigned. Check signing key availability (gpg-agent running, SSH key accessible). Underlying error: ${errorMessage}`;
+          await execGit(
+            buildCmd(false),
+            context.workingDirectory,
+            context.requestContext,
+          );
         }
 
-        const createResult = {
+        const createResult: GitTagResult = {
           mode: 'create' as const,
           created: options.tagName,
+          signed,
         };
+
+        if (signingWarning) {
+          createResult.signingWarning = signingWarning;
+        }
 
         return createResult;
       }

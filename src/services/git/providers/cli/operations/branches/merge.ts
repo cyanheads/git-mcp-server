@@ -57,10 +57,7 @@ export async function executeMerge(
         args.push('-m', options.message);
       }
 
-      // Add signing support - use explicit option or fall back to config default
-      const shouldSign = options.sign ?? shouldSignCommits();
-
-      if (shouldSign) {
+      if (shouldSignCommits()) {
         args.push('-S');
       }
 

@@ -3,7 +3,7 @@
  * @module services/git/providers/cli/operations/commits/commit
  */
 
-import type { RequestContext } from '@/utils/index.js';
+import { logger, type RequestContext } from '@/utils/index.js';
 
 import type {
   GitCommitOptions,
@@ -54,10 +54,14 @@ export async function executeCommit(
       args.push('--no-verify');
     }
 
-    // Add signing support - use explicit option or fall back to config default
-    const shouldSign = options.sign ?? shouldSignCommits();
+    // Signing policy: attempt when GIT_SIGN_COMMITS is enabled, fall back
+    // to unsigned silently on failure. `signed` in the result reflects the
+    // actual outcome so callers can observe fallback.
+    const signRequested = shouldSignCommits();
+    let signed = false;
+    let signingWarning: string | undefined;
 
-    if (shouldSign) {
+    if (signRequested) {
       args.push('--gpg-sign');
     }
 
@@ -70,21 +74,28 @@ export async function executeCommit(
 
     try {
       await execGit(cmd, context.workingDirectory, context.requestContext);
+      signed = signRequested;
     } catch (error) {
-      if (shouldSign && options.forceUnsignedOnFailure) {
-        const unsignedArgs = args.filter((a) => a !== '--gpg-sign');
-        const unsignedCmd = buildGitCommand({
-          command: 'commit',
-          args: unsignedArgs,
-        });
-        await execGit(
-          unsignedCmd,
-          context.workingDirectory,
-          context.requestContext,
-        );
-      } else {
+      if (!signRequested) {
         throw error;
       }
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.warning(
+        'Commit signing failed; retrying unsigned. Set GIT_SIGN_COMMITS=false to suppress this attempt.',
+        { ...context.requestContext, error },
+      );
+      signingWarning = `GIT_SIGN_COMMITS is enabled but signing failed; commit created unsigned. Check signing key availability (gpg-agent running, SSH key accessible). Underlying error: ${errorMessage}`;
+      const unsignedArgs = args.filter((a) => a !== '--gpg-sign');
+      const unsignedCmd = buildGitCommand({
+        command: 'commit',
+        args: unsignedArgs,
+      });
+      await execGit(
+        unsignedCmd,
+        context.workingDirectory,
+        context.requestContext,
+      );
     }
 
     // Get commit hash reliably
@@ -123,14 +134,19 @@ export async function executeCommit(
     // git show --name-only outputs filenames after the metadata section
     const filesChanged = parts[1]?.split('\n').filter((f) => f.trim()) || [];
 
-    const result = {
+    const result: GitCommitResult = {
       success: true,
       commitHash,
       message: options.message,
       author: authorName,
       timestamp,
       filesChanged,
+      signed,
     };
+
+    if (signingWarning) {
+      result.signingWarning = signingWarning;
+    }
 
     return result;
   } catch (error) {

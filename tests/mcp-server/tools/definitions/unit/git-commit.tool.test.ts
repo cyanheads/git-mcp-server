@@ -54,7 +54,6 @@ describe('git_commit tool', () => {
       if (result.success) {
         expect(result.data.amend).toBe(false);
         expect(result.data.allowEmpty).toBe(false);
-        expect(result.data.forceUnsignedOnFailure).toBe(false);
       }
     });
 
@@ -122,6 +121,7 @@ describe('git_commit tool', () => {
         author: 'Test User <test@example.com>',
         timestamp: 1234567890,
         filesChanged: ['file1.txt', 'file2.txt'],
+        signed: false,
       };
 
       const mockStatusResult: GitStatusResult = {
@@ -172,6 +172,7 @@ describe('git_commit tool', () => {
         author: 'Test <test@test.com>',
         timestamp: 123,
         filesChanged: ['file1.txt'],
+        signed: false,
       };
 
       const mockStatusResult: GitStatusResult = {
@@ -217,6 +218,7 @@ describe('git_commit tool', () => {
         author: 'Custom Author <custom@example.com>',
         timestamp: 123,
         filesChanged: [],
+        signed: false,
       };
 
       const mockStatusResult: GitStatusResult = {
@@ -256,6 +258,7 @@ describe('git_commit tool', () => {
         author: 'Test <test@test.com>',
         timestamp: 123,
         filesChanged: [],
+        signed: false,
       };
 
       const mockStatusResult: GitStatusResult = {
@@ -292,6 +295,7 @@ describe('git_commit tool', () => {
         author: 'Test <test@test.com>',
         timestamp: 123,
         filesChanged: [],
+        signed: false,
       };
 
       const mockStatusResult: GitStatusResult = {
@@ -330,6 +334,7 @@ describe('git_commit tool', () => {
         timestamp: 1609459200,
         filesChanged: 3,
         committedFiles: ['file1.txt', 'file2.txt', 'file3.txt'],
+        signed: true,
         status: {
           current_branch: 'main',
           staged_changes: {},
@@ -365,6 +370,7 @@ describe('git_commit tool', () => {
         timestamp: 1609459200,
         filesChanged: 1,
         committedFiles: ['committed.txt'],
+        signed: true,
         status: {
           current_branch: 'develop',
           staged_changes: { added: ['staged.txt'] },
@@ -403,6 +409,7 @@ describe('git_commit tool', () => {
         committedFiles: ['a.txt', 'b.txt', 'c.txt', 'd.txt', 'e.txt'],
         insertions: 100,
         deletions: 50,
+        signed: true,
         status: {
           current_branch: 'main',
           staged_changes: {},
@@ -437,6 +444,7 @@ describe('git_commit tool', () => {
         timestamp: 1609459200,
         filesChanged: 2,
         committedFiles: ['important.txt', 'feature.js'],
+        signed: true,
         status: {
           current_branch: 'main',
           staged_changes: {},

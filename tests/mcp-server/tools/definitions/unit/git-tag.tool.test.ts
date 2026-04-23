@@ -102,29 +102,6 @@ describe('git_tag tool', () => {
       }
     });
 
-    it('accepts sign option', () => {
-      const input = {
-        path: '.',
-        mode: 'create',
-        tagName: 'v1.0.0',
-        sign: true,
-      };
-      const result = gitTagTool.inputSchema.safeParse(input);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.sign).toBe(true);
-      }
-    });
-
-    it('defaults forceUnsignedOnFailure to false', () => {
-      const input = { path: '.' };
-      const result = gitTagTool.inputSchema.safeParse(input);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.forceUnsignedOnFailure).toBe(false);
-      }
-    });
-
     it('rejects invalid mode', () => {
       const input = { path: '.', mode: 'invalid' };
       const result = gitTagTool.inputSchema.safeParse(input);
@@ -207,10 +184,11 @@ describe('git_tag tool', () => {
       expect(result.created).toBe('v1.0.0');
     });
 
-    it('passes sign option to provider when specified', async () => {
+    it('surfaces signed field from provider result', async () => {
       const mockResult: GitTagResult = {
         mode: 'create',
         created: 'v1.0.0',
+        signed: true,
       };
 
       mockProvider.tag.mockResolvedValue(mockResult);
@@ -219,15 +197,44 @@ describe('git_tag tool', () => {
         path: '.',
         mode: 'create',
         tagName: 'v1.0.0',
-        sign: true,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
 
-      await gitTagTool.logic(parsedInput, appContext, sdkContext);
+      const result = await gitTagTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+      expect(result.signed).toBe(true);
+    });
 
-      const [tagOptions] = mockProvider.tag.mock.calls[0]!;
-      expect(tagOptions.sign).toBe(true);
+    it('surfaces signingWarning when signing fell back', async () => {
+      const mockResult: GitTagResult = {
+        mode: 'create',
+        created: 'v1.0.0',
+        signed: false,
+        signingWarning:
+          'GIT_SIGN_COMMITS is enabled but signing failed; tag created unsigned. Underlying error: gpg-agent not running',
+      };
+
+      mockProvider.tag.mockResolvedValue(mockResult);
+
+      const parsedInput = gitTagTool.inputSchema.parse({
+        path: '.',
+        mode: 'create',
+        tagName: 'v1.0.0',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitTagTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+      expect(result.signed).toBe(false);
+      expect(result.signingWarning).toContain('signing failed');
     });
 
     it('passes annotated and message options to provider', async () => {

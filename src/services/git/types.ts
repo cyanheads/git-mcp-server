@@ -231,14 +231,10 @@ export interface GitCommitOptions {
   amend?: boolean;
   /** Allow empty commit */
   allowEmpty?: boolean;
-  /** Sign commit with GPG/SSH */
-  sign?: boolean;
   /** Skip pre-commit and commit-msg hooks */
   noVerify?: boolean;
   /** File paths to stage before committing (atomic stage+commit operation) */
   filesToStage?: string[];
-  /** If GPG/SSH signing fails, retry without signing instead of failing */
-  forceUnsignedOnFailure?: boolean;
 }
 
 export interface GitCommitResult {
@@ -254,6 +250,18 @@ export interface GitCommitResult {
   timestamp: number;
   /** Files changed in this commit */
   filesChanged: string[];
+  /**
+   * Whether the commit was signed. True when signing was attempted and
+   * succeeded. False when `GIT_SIGN_COMMITS=false`, or when signing was
+   * attempted and silently fell back to unsigned on failure.
+   */
+  signed: boolean;
+  /**
+   * Populated only when signing was requested (`GIT_SIGN_COMMITS=true`)
+   * but failed, and the commit was created unsigned as a fallback. Absent
+   * when signing succeeded or when signing was not requested at all.
+   */
+  signingWarning?: string;
 }
 
 export interface GitLogOptions {
@@ -480,8 +488,6 @@ export interface GitMergeOptions {
   squash?: boolean;
   /** Custom merge commit message */
   message?: string;
-  /** Sign merge commit with GPG/SSH */
-  sign?: boolean;
   /** Abort an in-progress merge that has conflicts */
   abort?: boolean;
 }
@@ -516,8 +522,6 @@ export interface GitRebaseOptions {
   onto?: string;
   /** Preserve merge commits */
   preserve?: boolean;
-  /** Sign rebased commits with GPG/SSH */
-  sign?: boolean;
 }
 
 export interface GitRebaseResult {
@@ -548,8 +552,6 @@ export interface GitCherryPickOptions {
   strategy?: 'ort' | 'recursive' | 'octopus' | 'ours' | 'subtree';
   /** Add Signed-off-by line to the commit message */
   signoff?: boolean;
-  /** Sign cherry-picked commits with GPG/SSH */
-  sign?: boolean;
 }
 
 export interface GitCherryPickResult {
@@ -705,10 +707,6 @@ export interface GitTagOptions {
   message?: string;
   /** Create annotated tag */
   annotated?: boolean;
-  /** Sign tag with GPG/SSH (implies annotated) */
-  sign?: boolean;
-  /** If signing fails, retry without signing instead of failing */
-  forceUnsignedOnFailure?: boolean;
   /** Force tag creation */
   force?: boolean;
 }
@@ -735,6 +733,19 @@ export interface GitTagResult {
   created?: string;
   /** Deleted tag name (for delete mode) */
   deleted?: string;
+  /**
+   * Whether the created tag was signed. Only populated for create mode.
+   * True when signing was attempted and succeeded. False when
+   * `GIT_SIGN_COMMITS=false`, or when signing failed and fell back to
+   * unsigned silently.
+   */
+  signed?: boolean;
+  /**
+   * Populated only when signing was requested (`GIT_SIGN_COMMITS=true`)
+   * but failed, and the tag was created unsigned as a fallback. Absent
+   * when signing succeeded or when signing was not requested at all.
+   */
+  signingWarning?: string;
 }
 
 // ============================================================================

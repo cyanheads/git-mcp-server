@@ -24,10 +24,11 @@ export function loadConfig(): AppConfig | null {
 }
 
 /**
- * Whether commits and tags should be signed by default. Controlled by
- * GIT_SIGN_COMMITS — the same setting governs both, matching how most
- * signing workflows are configured (one GPG/SSH identity signs everything).
- * Per-call overrides are available through each tool's `sign` parameter.
+ * Whether commits and tags should be signed. Governed by `GIT_SIGN_COMMITS`
+ * — the single switch for all signing operations in the server (commits,
+ * tags, merges, rebases, cherry-picks). When enabled, operations attempt
+ * to sign and fall back to unsigned silently on failure, surfacing the
+ * fallback via the `signed` and `signingWarning` fields in the response.
  * Returns false if config is unavailable.
  */
 export function shouldSignCommits(): boolean {
