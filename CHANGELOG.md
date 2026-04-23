@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.12.0 - 2026-04-23
+
+Reframed the `git_wrapup_instructions` protocol as an acceptance-criteria checklist (goals-strict, mechanism-generic) so it travels cleanly across projects with different release conventions. Internal type-safety pass removed unnecessary casts across handlers and utilities, and a `skills/` directory now ships agent skill sources alongside the server.
+
+### Changed
+
+- **`git_wrapup_instructions` — acceptance-criteria protocol**: The default wrap-up output is now a fixed acceptance-criteria checklist with generic guidance beneath it, rather than a phased procedural script. The checklist is strict on outcomes (version bump, changelog, docs, verification, atomic Conventional Commits, annotated tag) and generic on mechanism, deferring to each project's own conventions for where versions live, how changelogs are formatted, and what the verification suite looks like. Custom instructions loaded from `GIT_WRAPUP_INSTRUCTIONS_PATH` still override the default entirely.
+- **`git_wrapup_instructions.createTag` — inclusion toggle**: Now controls whether the tag criterion appears in the emitted protocol. Omit or set `true` to include the tag step; set `false` to omit it entirely (e.g., when tagging is deferred to a separate release step). Previously appended a procedural step post-hoc.
+
+### Removed
+
+- **`git_wrapup_instructions.updateAgentMetaFiles` input parameter**: The old "append agent-meta-files instruction" toggle is gone. Agent-instruction file updates (`AGENTS.md`, `CLAUDE.md`, etc.) are now a standing element of the protocol's "Commonly relevant files" guidance — surfaced for every wrap-up instead of gated behind a flag. Callers previously passing `updateAgentMetaFiles` will simply have the key stripped by Zod; no type error, but no append behavior either.
+
+### Added
+
+- **`skills/` directory**: Project-level Agent Skills (`field-test`, `maintenance`, `polish-docs-meta`, `release-and-publish`, `report-issue`) now live at the repo root as the source of truth for agent working copies (`.claude/skills/`, `.codex/skills/`, etc.). See `skills/README.md` for the sync pattern.
+
+### Internal
+
+- **Type-safety cleanup across handlers and utilities**: Removed unnecessary casts (`as unknown`, `as TParams`, `as Record<string, JsonRpcErrorCode>`, `as MetricOptions`, `as Promise<...>`) in `prompt-registration.ts`, `resourceHandlerFactory.ts`, `toolHandlerFactory.ts`, `errorHandler.ts`, `performance.ts`, `requestContext.ts`, and `metrics/registry.ts`. Behaviour unchanged; the compiler now infers each type directly.
+- **`@hono/node-server` 1.19 → 2.0**: Major version upgrade of the HTTP runtime adapter. Other bumps: `@cloudflare/workers-types`, `@supabase/supabase-js`, `@types/bun`, `bun-types`, `@vitest/coverage-v8`, `vitest`, `typescript-eslint`, `vite`, `msw`.
+- **Test coverage**: `git_wrapup_instructions` tests now assert the new acceptance-criteria structure (Outcome/Philosophy/Orient/Acceptance criteria/Constraints sections, every checkbox, tag inclusion toggle).
+- **`docs/tree.md`**: Regenerated to include the new `skills/` directory.
+
 ## v2.11.1 - 2026-04-20
 
 Schema-level clarification so LLM callers stop overriding the server's default signing configuration unnecessarily.
