@@ -1,5 +1,5 @@
 /**
- * @fileoverview Git wrap-up prompt - structured workflow for completing git sessions.
+ * @fileoverview Git wrap-up prompt - orchestrates the git_wrapup_instructions acceptance-criteria protocol.
  * @module src/mcp-server/prompts/definitions/git-wrapup.prompt
  */
 import { z } from 'zod';
@@ -8,32 +8,20 @@ import type { PromptDefinition } from '../utils/promptDefinition.js';
 
 const PROMPT_NAME = 'git_wrapup';
 const PROMPT_DESCRIPTION =
-  'Generates a structured workflow prompt for wrapping up git sessions, including reviewing changes, updating documentation, and committing modifications.';
+  'Orchestrates a full git wrap-up: loads the project-aware acceptance-criteria protocol from git_wrapup_instructions, analyzes changes, satisfies each criterion per project convention, commits atomically, and (optionally) tags the release.';
 
 const ArgumentsSchema = z.object({
   changelogPath: z
     .string()
     .optional()
     .describe(
-      'Path to the changelog file to update (defaults to CHANGELOG.md).',
-    ),
-  skipDocumentation: z
-    .string()
-    .optional()
-    .describe(
-      "Whether to skip documentation review ('true' | 'false'). Defaults to 'false'.",
+      'Path to the changelog file when the project uses a flat one (defaults to CHANGELOG.md). The protocol itself defers to project convention.',
     ),
   createTag: z
     .string()
     .optional()
     .describe(
-      "Whether to create a git tag after committing ('true' | 'false'). Defaults to 'false'.",
-    ),
-  updateAgentFiles: z
-    .string()
-    .optional()
-    .describe(
-      "Whether to update agent meta files like CLAUDE.md, AGENTS.md ('true' | 'false'). Defaults to 'false'.",
+      "Whether to include the tag criterion in the protocol ('true' | 'false'). Defaults to 'true' — set to 'false' when tagging is deferred to a separate release step.",
     ),
 });
 
@@ -43,61 +31,35 @@ export const gitWrapupPrompt: PromptDefinition<typeof ArgumentsSchema> = {
   argumentsSchema: ArgumentsSchema,
   generate: (args) => {
     const changelogPath = (args.changelogPath as string) || 'CHANGELOG.md';
-    const skipDocumentation = args.skipDocumentation === 'true';
-    const createTag = args.createTag === 'true';
-    const updateAgentFiles = args.updateAgentFiles === 'true';
-
-    const documentationSection = skipDocumentation
-      ? ''
-      : `\n4. **Review Documentation**: Read the README.md file and verify it accurately reflects the current codebase state. Update as necessary to maintain currency and accuracy.\n`;
-
-    const agentFilesSection = updateAgentFiles
-      ? `\n5. **Update Agent Files**: If present, review and update agent-specific meta files (CLAUDE.md, AGENTS.md, .clinerules/) to reflect any architectural or protocol changes.\n`
-      : '';
-
-    const tagSection = createTag
-      ? `\nAfter all commits are complete and verified via git_status, create an annotated git tag using the git_tag tool. Use semantic versioning (e.g., v1.2.3) and include a summary of key changes in the annotation message.\n`
-      : '';
+    const includeTag = args.createTag !== 'false';
 
     return [
       {
         role: 'user',
         content: {
           type: 'text',
-          text: `You are an expert git workflow manager. Execute a systematic wrap-up protocol for the current git session.
+          text: `You are an expert git workflow manager. Run a complete wrap-up for the current git session.
 
-## Workflow Protocol
+## Session Flow
 
-Follow these steps in order. Do not proceed until the prior step is confirmed complete.
+1. **Load Protocol**: Call \`git_wrapup_instructions\` with \`acknowledgement: "yes"\`${includeTag ? '' : ' and `createTag: false`'}. It returns an acceptance-criteria checklist — every box must be satisfied before the wrap-up is complete — plus the current repository status.
 
-1. **Initialize Context**: First, call the \`git_wrapup_instructions\` tool with \`acknowledgement: "yes"\`${updateAgentFiles ? ' and `updateAgentMetaFiles: "yes"`' : ''}${createTag ? ' and `createTag: true`' : ''}. This will provide the detailed workflow instructions and current repository status.
+2. **Set Working Directory**: If not already set, call \`git_set_working_dir\` to establish the session context. Required before any git operations.
 
-2. **Set Working Directory**: If not already set, use \`git_set_working_dir\` to establish the session context. This is mandatory before any git operations.
+3. **Analyze Changes**: Run \`git_diff\` with \`includeUntracked: true\`. Understand the "why" behind every modification end-to-end before grouping anything — the diff drives your commit plan and messages.
 
-3. **Analyze Changes**: Execute \`git_diff\` with \`includeUntracked: true\` to comprehensively understand all modifications. Analyze the diff output thoroughly to inform your commit strategy and messages.
+4. **Satisfy the Acceptance Criteria**: Work each checkbox from step 1. The protocol is strict on outcomes, generic on mechanism — follow this project's own conventions for where versions live, how the changelog is formatted (default path when flat: \`${changelogPath}\`), and what the verification suite looks like. If the root agent-instruction file (\`AGENTS.md\`, \`CLAUDE.md\`, or equivalent) documents a project-specific wrap-up procedure, that takes precedence over the generic checklist.
 
-4. **Update Changelog**: Read the existing \`${changelogPath}\` file. Append a new version entry at the top that:
-   - Uses past tense and concise language
-   - Categorizes changes (Added, Changed, Fixed, Deprecated, Removed, Security)
-   - Follows the existing changelog format
-   - Provides enough detail for users to understand the impact
-${documentationSection}${agentFilesSection}
-5. **Commit Changes**: Use \`git_commit\` to create atomic, logical commits. For each commit:
-   - Group related changes together using the \`filesToStage\` parameter
-   - Write commit messages following Conventional Commits format (e.g., \`feat(auth): add password reset\`, \`fix(parser): handle edge case\`)
-   - Ensure commits are self-contained and buildable
-   - Do not mix unrelated changes in a single commit
+5. **Commit Atomically**: Use \`git_commit\` to create logical, self-contained commits in Conventional Commits form. Group related changes with the \`filesToStage\` parameter. No mixing unrelated changes in one commit.
 
-6. **Verify Completion**: After all commits, run \`git_status\` to confirm the working directory is clean and all changes are committed.
-${tagSection}
-## Important Guidelines
+6. **Verify Clean**: Run \`git_status\` to confirm the working tree is clean and every change is committed.${includeTag ? '\n\n7. **Tag the Release**: Create an annotated git tag with `git_tag` using semantic versioning (e.g., `v1.2.3`). The annotation message should summarize the real changes — no filler.' : ''}
 
-- **Do NOT push** to the remote repository unless explicitly instructed
-- Create a task list before starting to track your progress
-- Be thorough in your diff analysis - understand the "why" behind changes
-- If you encounter merge conflicts or errors, stop and ask for guidance
-- All commit messages must be clear, descriptive, and follow conventions
-- Preserve existing code style and documentation formatting
+## Constraints
+
+- **Do not push** to the remote unless explicitly instructed.
+- Create a task list before starting so progress is trackable.
+- Do not bypass verification failures to land a green commit.
+- On merge conflicts or unexpected errors: stop and surface the blocker.
 
 Begin by calling \`git_wrapup_instructions\` and creating your task list.`,
         },

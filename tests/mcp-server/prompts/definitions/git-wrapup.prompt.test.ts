@@ -46,9 +46,7 @@ describe('git_wrapup prompt', () => {
     it('accepts all arguments', () => {
       const result = gitWrapupPrompt.argumentsSchema!.safeParse({
         changelogPath: 'CHANGELOG.md',
-        skipDocumentation: 'true',
-        createTag: 'true',
-        updateAgentFiles: 'true',
+        createTag: 'false',
       });
       expect(result.success).toBe(true);
     });
@@ -75,49 +73,51 @@ describe('git_wrapup prompt', () => {
       ).toContain('docs/HISTORY.md');
     });
 
-    it('includes documentation section by default', () => {
-      expect(getText(gitWrapupPrompt.generate({}))).toContain(
-        'Review Documentation',
-      );
+    it('invokes git_wrapup_instructions to load the protocol', () => {
+      const text = getText(gitWrapupPrompt.generate({}));
+      expect(text).toContain('git_wrapup_instructions');
+      expect(text).toContain('acceptance-criteria');
     });
 
-    it('excludes documentation section when skipDocumentation is true', () => {
-      expect(
-        getText(gitWrapupPrompt.generate({ skipDocumentation: 'true' })),
-      ).not.toContain('Review Documentation');
+    it('describes the acceptance-criteria philosophy', () => {
+      const text = getText(gitWrapupPrompt.generate({}));
+      expect(text).toContain('strict on outcomes');
+      expect(text).toContain('generic on mechanism');
     });
 
-    it('excludes agent files section by default', () => {
-      expect(getText(gitWrapupPrompt.generate({}))).not.toContain(
-        'Update Agent Files',
-      );
+    it('references project-specific convention sources', () => {
+      const text = getText(gitWrapupPrompt.generate({}));
+      expect(text).toMatch(/AGENTS\.md|CLAUDE\.md/);
     });
 
-    it('includes agent files section when updateAgentFiles is true', () => {
-      expect(
-        getText(gitWrapupPrompt.generate({ updateAgentFiles: 'true' })),
-      ).toContain('Update Agent Files');
+    it('includes tag step by default', () => {
+      const text = getText(gitWrapupPrompt.generate({}));
+      expect(text).toContain('annotated git tag');
     });
 
-    it('excludes tag section by default', () => {
-      expect(getText(gitWrapupPrompt.generate({}))).not.toContain(
-        'annotated git tag',
-      );
+    it('excludes tag step when createTag is "false"', () => {
+      const text = getText(gitWrapupPrompt.generate({ createTag: 'false' }));
+      expect(text).not.toContain('annotated git tag');
     });
 
-    it('includes tag section when createTag is true', () => {
-      expect(
-        getText(gitWrapupPrompt.generate({ createTag: 'true' })),
-      ).toContain('annotated git tag');
+    it('passes createTag: false through to the tool call when disabled', () => {
+      const text = getText(gitWrapupPrompt.generate({ createTag: 'false' }));
+      expect(text).toContain('createTag: false');
     });
 
     it('includes core workflow steps', () => {
       const text = getText(gitWrapupPrompt.generate({}));
-      expect(text).toContain('Initialize Context');
+      expect(text).toContain('Load Protocol');
       expect(text).toContain('Set Working Directory');
       expect(text).toContain('Analyze Changes');
-      expect(text).toContain('Commit Changes');
-      expect(text).toContain('Verify Completion');
+      expect(text).toContain('Satisfy the Acceptance Criteria');
+      expect(text).toContain('Commit Atomically');
+      expect(text).toContain('Verify Clean');
+    });
+
+    it('does not reference removed tool input parameters', () => {
+      const text = getText(gitWrapupPrompt.generate({}));
+      expect(text).not.toContain('updateAgentMetaFiles');
     });
   });
 });
