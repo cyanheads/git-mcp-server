@@ -38,7 +38,6 @@ describe('git_wrapup_instructions tool', () => {
     container.register(GitProviderFactoryToken, { useValue: mockFactory });
     container.register(StorageServiceToken, { useValue: mockStorage });
 
-    // Set up a working directory for status retrieval
     const tenantId = 'test-tenant';
     const context = createTestContext({ tenantId });
     mockStorage.set(`session:workingDir:${tenantId}`, '/test/repo', context);
@@ -85,18 +84,7 @@ describe('git_wrapup_instructions tool', () => {
       expect(result.success).toBe(false);
     });
 
-    it('accepts optional updateAgentMetaFiles', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
-        acknowledgement: 'Y',
-        updateAgentMetaFiles: 'Y',
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.updateAgentMetaFiles).toBe('Y');
-      }
-    });
-
-    it('accepts optional createTag', () => {
+    it('accepts createTag: true', () => {
       const result = gitWrapupInstructionsTool.inputSchema.safeParse({
         acknowledgement: 'Y',
         createTag: true,
@@ -107,12 +95,15 @@ describe('git_wrapup_instructions tool', () => {
       }
     });
 
-    it('rejects invalid updateAgentMetaFiles value', () => {
+    it('accepts createTag: false', () => {
       const result = gitWrapupInstructionsTool.inputSchema.safeParse({
         acknowledgement: 'Y',
-        updateAgentMetaFiles: 'no',
+        createTag: false,
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.createTag).toBe(false);
+      }
     });
   });
 
@@ -157,7 +148,6 @@ describe('git_wrapup_instructions tool', () => {
     });
 
     it('returns instructions without status when no working directory set', async () => {
-      // Clear the working directory
       const clearContext = createTestContext({ tenantId: 'test-tenant' });
       await mockStorage.delete('session:workingDir:test-tenant', clearContext);
 
@@ -178,7 +168,7 @@ describe('git_wrapup_instructions tool', () => {
       expect(result.gitStatusError).toContain('No working directory set');
     });
 
-    it('appends agent meta files instruction when updateAgentMetaFiles is set', async () => {
+    it('default instructions include the full acceptance protocol', async () => {
       mockProvider.status.mockResolvedValue({
         currentBranch: 'main',
         isClean: true,
@@ -190,7 +180,6 @@ describe('git_wrapup_instructions tool', () => {
 
       const parsedInput = gitWrapupInstructionsTool.inputSchema.parse({
         acknowledgement: 'Y',
-        updateAgentMetaFiles: 'Y',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -201,10 +190,54 @@ describe('git_wrapup_instructions tool', () => {
         sdkContext,
       );
 
-      expect(result.instructions).toContain('.cline_rules and claude.md');
+      expect(result.instructions).toContain('# Git Wrap-up');
+      expect(result.instructions).toContain('**Outcome**');
+      expect(result.instructions).toContain('**Philosophy**');
+      expect(result.instructions).toContain('## Orient');
+      expect(result.instructions).toContain('## Acceptance criteria');
+      expect(result.instructions).toContain('Every wrap-up is a release');
+      expect(result.instructions).toContain('Full diff reviewed');
+      expect(result.instructions).toContain('Version bumped per semver');
+      expect(result.instructions).toContain("project's existing format");
+      expect(result.instructions).toContain(
+        'Documentation that references changed behaviour',
+      );
+      expect(result.instructions).toContain('Verification suite passes');
+      expect(result.instructions).toContain('Conventional Commits');
+      expect(result.instructions).toContain('Commonly relevant files');
+      expect(result.instructions).toContain('AGENTS.md');
+      expect(result.instructions).toContain('CLAUDE.md');
+      expect(result.instructions).toContain('server.json');
+      expect(result.instructions).toContain('## Constraints');
     });
 
-    it('appends tag instruction when createTag is true', async () => {
+    it('default (createTag unset) includes the tag criterion', async () => {
+      mockProvider.status.mockResolvedValue({
+        currentBranch: 'main',
+        isClean: true,
+        stagedChanges: {},
+        unstagedChanges: {},
+        untrackedFiles: [],
+        conflictedFiles: [],
+      });
+
+      const parsedInput = gitWrapupInstructionsTool.inputSchema.parse({
+        acknowledgement: 'Y',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitWrapupInstructionsTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      expect(result.instructions).toContain('Annotated tag');
+      expect(result.instructions).toContain('Flag if a tag already exists');
+    });
+
+    it('createTag: true includes the tag criterion', async () => {
       mockProvider.status.mockResolvedValue({
         currentBranch: 'main',
         isClean: true,
@@ -227,8 +260,37 @@ describe('git_wrapup_instructions tool', () => {
         sdkContext,
       );
 
-      expect(result.instructions).toContain('git_tag');
-      expect(result.instructions).toContain('semantic versioning');
+      expect(result.instructions).toContain('Annotated tag');
+    });
+
+    it('createTag: false omits the tag criterion entirely', async () => {
+      mockProvider.status.mockResolvedValue({
+        currentBranch: 'main',
+        isClean: true,
+        stagedChanges: {},
+        unstagedChanges: {},
+        untrackedFiles: [],
+        conflictedFiles: [],
+      });
+
+      const parsedInput = gitWrapupInstructionsTool.inputSchema.parse({
+        acknowledgement: 'Y',
+        createTag: false,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitWrapupInstructionsTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      expect(result.instructions).not.toContain('Annotated tag');
+      expect(result.instructions).not.toContain('Flag if a tag already exists');
+      // Other acceptance criteria remain present
+      expect(result.instructions).toContain('Full diff reviewed');
+      expect(result.instructions).toContain('Conventional Commits');
     });
 
     it('handles status retrieval failure gracefully', async () => {
@@ -255,7 +317,7 @@ describe('git_wrapup_instructions tool', () => {
   describe('Response Formatter', () => {
     it('formats instructions with git status', () => {
       const result = {
-        instructions: '# Git Wrap-up Protocol\n\nSome instructions here...',
+        instructions: '# Git Wrap-up\n\nSome instructions here...',
         gitStatus: {
           branch: 'main',
           staged: ['staged.txt'],
@@ -272,7 +334,7 @@ describe('git_wrapup_instructions tool', () => {
         gitStatus: { branch: string };
       };
 
-      expect(parsed.instructions).toContain('Wrap-up Protocol');
+      expect(parsed.instructions).toContain('Wrap-up');
       expect(parsed.gitStatus.branch).toBe('main');
 
       assertLlmFriendlyFormat(content);
@@ -280,7 +342,7 @@ describe('git_wrapup_instructions tool', () => {
 
     it('formats instructions with error', () => {
       const result = {
-        instructions: '# Git Wrap-up Protocol\n\nSome instructions here...',
+        instructions: '# Git Wrap-up\n\nSome instructions here...',
         gitStatus: undefined,
         gitStatusError:
           'No working directory set for session, git status skipped.',
@@ -323,7 +385,6 @@ describe('git_wrapup_instructions tool', () => {
 
       const inputShape = gitWrapupInstructionsTool.inputSchema.shape;
       expect(inputShape.acknowledgement).toBeDefined();
-      expect(inputShape.updateAgentMetaFiles).toBeDefined();
       expect(inputShape.createTag).toBeDefined();
 
       const outputShape = gitWrapupInstructionsTool.outputSchema.shape;
