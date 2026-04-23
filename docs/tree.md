@@ -1,6 +1,6 @@
 # git-mcp-server - Directory Structure
 
-Generated on: 2026-03-09 02:41:48
+Generated on: 2026-04-23 21:25:30
 
 ```
 git-mcp-server
@@ -12,6 +12,7 @@ git-mcp-server
 │   └── FUNDING.yml
 ├── .husky
 ├── .vscode
+├── claude-plans
 ├── docs
 │   └── tree.md
 ├── scripts
@@ -22,6 +23,18 @@ git-mcp-server
 │   ├── make-executable.ts
 │   ├── tree.ts
 │   └── validate-mcp-publish-schema.ts
+├── skills
+│   ├── field-test
+│   │   └── SKILL.md
+│   ├── maintenance
+│   │   └── SKILL.md
+│   ├── polish-docs-meta
+│   │   └── SKILL.md
+│   ├── release-and-publish
+│   │   └── SKILL.md
+│   ├── report-issue
+│   │   └── SKILL.md
+│   └── README.md
 ├── src
 │   ├── config
 │   │   └── index.ts
@@ -328,6 +341,7 @@ git-mcp-server
 │   │               │       └── worktree.test.ts
 │   │               └── utils
 │   │                   ├── command-builder.test.ts
+│   │                   ├── git-executor.test.ts
 │   │                   └── runtime-adapter.test.ts
 │   ├── storage
 │   │   ├── providers
