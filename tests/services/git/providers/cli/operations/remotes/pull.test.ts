@@ -5,8 +5,18 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { executePull } from '@/services/git/providers/cli/operations/remotes/pull.js';
+import { shouldSignCommits } from '@/services/git/providers/cli/utils/config-helper.js';
 import type { GitOperationContext } from '@/services/git/types.js';
 import type { RequestContext } from '@/utils/index.js';
+
+// Mock shouldSignCommits to return false by default. Tests that exercise
+// signing behavior flip it per-case via the `mockReturnValueOnce` cast
+// below — bun's test runner doesn't expose vi.mocked, so we use a direct
+// cast on the imported function.
+vi.mock('@/services/git/providers/cli/utils/config-helper.js', () => ({
+  shouldSignCommits: vi.fn(() => false),
+  loadConfig: vi.fn(() => null),
+}));
 
 type ExecGitFn = (
   args: string[],
@@ -288,6 +298,57 @@ Fast-forward
       const result = await executePull({}, mockContext, mockExecGit);
 
       expect(result.filesChanged).toEqual([]);
+    });
+  });
+
+  describe('signing policy', () => {
+    it('adds -S when GIT_SIGN_COMMITS is enabled', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
+
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'Already up to date.\n',
+        stderr: '',
+      });
+
+      await executePull({}, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('-S');
+    });
+
+    it('omits -S when GIT_SIGN_COMMITS is disabled (default)', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'Already up to date.\n',
+        stderr: '',
+      });
+
+      await executePull({}, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).not.toContain('-S');
+    });
+
+    it('forwards -S through the rebase path', async () => {
+      (
+        shouldSignCommits as unknown as {
+          mockReturnValueOnce: (v: boolean) => void;
+        }
+      ).mockReturnValueOnce(true);
+
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'Successfully rebased and updated refs/heads/main.\n',
+        stderr: '',
+      });
+
+      await executePull({ rebase: true }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('--rebase');
+      expect(args).toContain('-S');
     });
   });
 

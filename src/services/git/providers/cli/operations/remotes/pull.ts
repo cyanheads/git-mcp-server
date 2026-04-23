@@ -10,7 +10,11 @@ import type {
   GitPullOptions,
   GitPullResult,
 } from '../../../../types.js';
-import { buildGitCommand, mapGitError } from '../../utils/index.js';
+import {
+  buildGitCommand,
+  mapGitError,
+  shouldSignCommits,
+} from '../../utils/index.js';
 
 /**
  * Execute git pull to fetch and integrate remote changes.
@@ -45,6 +49,13 @@ export async function executePull(
 
     if (options.fastForwardOnly) {
       args.push('--ff-only');
+    }
+
+    // Pull itself doesn't honor commit.gpgsign — `-S` must be passed explicitly
+    // so the underlying merge/rebase signs any commit it produces. Fast-forward
+    // pulls don't create commits; `-S` is a no-op there and safe to include.
+    if (shouldSignCommits()) {
+      args.push('-S');
     }
 
     const cmd = buildGitCommand({ command: 'pull', args });
