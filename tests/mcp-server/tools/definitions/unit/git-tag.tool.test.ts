@@ -72,6 +72,16 @@ describe('git_tag tool', () => {
       expect(result.success).toBe(true);
     });
 
+    it('accepts verify mode with tag name', () => {
+      const input = { path: '.', mode: 'verify', tagName: 'v1.0.0' };
+      const result = gitTagTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.mode).toBe('verify');
+        expect(result.data.tagName).toBe('v1.0.0');
+      }
+    });
+
     it('accepts annotated flag and message', () => {
       const input = {
         path: '.',
@@ -344,6 +354,87 @@ describe('git_tag tool', () => {
     });
   });
 
+  describe('Tool Logic - Verify Operation', () => {
+    it('rejects verify without tagName', async () => {
+      const parsedInput = gitTagTool.inputSchema.parse({
+        path: '.',
+        mode: 'verify',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await expect(
+        gitTagTool.logic(parsedInput, appContext, sdkContext),
+      ).rejects.toThrow(/tag name is required/i);
+    });
+
+    it('forwards verify mode to the provider', async () => {
+      const mockResult: GitTagResult = {
+        mode: 'verify',
+        verifiedTag: 'v1.0.0',
+        verified: true,
+        signatureType: 'gpg',
+        signerIdentity: 'Test <t@e.com>',
+        rawOutput: 'gpg: Good signature',
+      };
+
+      mockProvider.tag.mockResolvedValue(mockResult);
+
+      const parsedInput = gitTagTool.inputSchema.parse({
+        path: '.',
+        mode: 'verify',
+        tagName: 'v1.0.0',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitTagTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      const [tagOptions] = mockProvider.tag.mock.calls[0]!;
+      expect(tagOptions.mode).toBe('verify');
+      expect(tagOptions.tagName).toBe('v1.0.0');
+
+      expect(result.mode).toBe('verify');
+      expect(result.verifiedTag).toBe('v1.0.0');
+      expect(result.verified).toBe(true);
+      expect(result.signatureType).toBe('gpg');
+      expect(result.signerIdentity).toBe('Test <t@e.com>');
+      expect(result.rawOutput).toBe('gpg: Good signature');
+    });
+
+    it('surfaces warning for unsigned tags without throwing', async () => {
+      mockProvider.tag.mockResolvedValue({
+        mode: 'verify',
+        verifiedTag: 'v1.0.0',
+        verified: false,
+        warning: 'Tag has no signature.',
+        rawOutput: 'error: no signature found',
+      });
+
+      const parsedInput = gitTagTool.inputSchema.parse({
+        path: '.',
+        mode: 'verify',
+        tagName: 'v1.0.0',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitTagTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.verified).toBe(false);
+      expect(result.warning).toContain('no signature');
+    });
+  });
+
   describe('Response Formatter', () => {
     it('formats tag list correctly', () => {
       const result = {
@@ -416,6 +507,32 @@ describe('git_tag tool', () => {
       });
 
       assertJsonField(content, 'deleted', 'v1.0.0');
+    });
+
+    it('formats verify result and strips rawOutput at standard verbosity', () => {
+      const result = {
+        success: true,
+        mode: 'verify',
+        tags: undefined,
+        created: undefined,
+        deleted: undefined,
+        verifiedTag: 'v1.0.0',
+        verified: true,
+        signatureType: 'gpg' as const,
+        signerIdentity: 'Test <t@e.com>',
+        signerKey: 'ABCDEF',
+        rawOutput: 'gpg: Good signature from "Test <t@e.com>"',
+      };
+
+      const content = gitTagTool.responseFormatter!(result);
+      const parsed = parseJsonContent(content) as Record<string, unknown>;
+
+      // standard is the default — rawOutput should be dropped, everything else kept
+      expect(parsed.verified).toBe(true);
+      expect(parsed.signatureType).toBe('gpg');
+      expect(parsed.signerIdentity).toBe('Test <t@e.com>');
+      expect(parsed.signerKey).toBe('ABCDEF');
+      expect(parsed.rawOutput).toBeUndefined();
     });
   });
 

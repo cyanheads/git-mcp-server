@@ -27,16 +27,16 @@ import {
 const TOOL_NAME = 'git_tag';
 const TOOL_TITLE = 'Git Tag';
 const TOOL_DESCRIPTION =
-  'Manage tags: list all tags, create a new tag, or delete a tag. Tags are used to mark specific points in history (releases, milestones).';
+  'Manage tags: list all tags, create a new tag, delete a tag, or verify a signed tag. Tags are used to mark specific points in history (releases, milestones). Verify runs `git tag -v` and returns a structured result distinguishing unsigned tags, missing trust configuration, bad signatures, and valid signatures.';
 
 const InputSchema = z.object({
   path: PathSchema,
   mode: z
-    .enum(['list', 'create', 'delete'])
+    .enum(['list', 'create', 'delete', 'verify'])
     .default('list')
     .describe('The tag operation to perform.'),
   tagName: TagNameSchema.optional().describe(
-    'Tag name for create/delete operations.',
+    'Tag name for create/delete/verify operations.',
   ),
   commit: CommitRefSchema.optional().describe(
     'Commit to tag (default: HEAD for create operation).',
@@ -107,6 +107,48 @@ const OutputSchema = z.object({
     .describe(
       'Populated only when signing was requested but failed, and the tag was created unsigned as a fallback.',
     ),
+  verifiedTag: z
+    .string()
+    .optional()
+    .describe(
+      'Verified tag name (for verify mode). Echoes the input so callers can correlate results in batched flows.',
+    ),
+  verified: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether the signature validated (for verify mode). `false` for unsigned tags, missing trust config, bad signatures, or unparseable output — inspect `warning` to distinguish.',
+    ),
+  signatureType: z
+    .enum(['gpg', 'ssh', 'x509'])
+    .optional()
+    .describe(
+      'Signature algorithm family when detectable from `git tag -v` output (verify mode). Absent for unsigned tags or unparseable output.',
+    ),
+  signerIdentity: z
+    .string()
+    .optional()
+    .describe(
+      'Signer identity as emitted by git — e.g., `Name <email>` for GPG or the SSH principal. Verify mode only.',
+    ),
+  signerKey: z
+    .string()
+    .optional()
+    .describe(
+      'Key material emitted by git — GPG fingerprint/key ID or SSH key fingerprint (`SHA256:…`). Verify mode only; absent when git did not surface it.',
+    ),
+  warning: z
+    .string()
+    .optional()
+    .describe(
+      'Populated on verify failure with a human-readable reason distinguishing unsigned tags, missing trust configuration, bad signatures, and unparseable output.',
+    ),
+  rawOutput: z
+    .string()
+    .optional()
+    .describe(
+      'Raw stderr from `git tag -v` for callers that need the full verification output (verify mode only).',
+    ),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -116,7 +158,12 @@ async function gitTagLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  if ((input.mode === 'create' || input.mode === 'delete') && !input.tagName) {
+  if (
+    (input.mode === 'create' ||
+      input.mode === 'delete' ||
+      input.mode === 'verify') &&
+    !input.tagName
+  ) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
       `Tag name is required for ${input.mode} operation.`,
@@ -124,7 +171,7 @@ async function gitTagLogic(
   }
 
   const tagOptions: {
-    mode: 'list' | 'create' | 'delete';
+    mode: 'list' | 'create' | 'delete' | 'verify';
     tagName?: string;
     commit?: string;
     message?: string;
@@ -170,6 +217,27 @@ async function gitTagLogic(
   if (result.signingWarning) {
     output.signingWarning = result.signingWarning;
   }
+  if (result.verifiedTag !== undefined) {
+    output.verifiedTag = result.verifiedTag;
+  }
+  if (result.verified !== undefined) {
+    output.verified = result.verified;
+  }
+  if (result.signatureType !== undefined) {
+    output.signatureType = result.signatureType;
+  }
+  if (result.signerIdentity !== undefined) {
+    output.signerIdentity = result.signerIdentity;
+  }
+  if (result.signerKey !== undefined) {
+    output.signerKey = result.signerKey;
+  }
+  if (result.warning !== undefined) {
+    output.warning = result.warning;
+  }
+  if (result.rawOutput !== undefined) {
+    output.rawOutput = result.rawOutput;
+  }
 
   return output;
 }
@@ -178,28 +246,34 @@ async function gitTagLogic(
  * Filter git_tag output based on verbosity level.
  *
  * Verbosity levels:
- * - minimal: Success and mode only
- * - standard: Above + complete tags array (for list) or created/deleted name (for other ops) (RECOMMENDED)
- * - full: Complete output
+ * - minimal: Success, mode, and load-bearing signing/verify outcomes
+ * - standard: Above + complete tags array (list) / created/deleted name + verify details (RECOMMENDED)
+ * - full: Complete output including rawOutput from `git tag -v`
  */
 function filterGitTagOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // `signed` and `signingWarning` always surface when present — signing
-  // drift is important enough to never hide.
+  // `signed`, `signingWarning`, `verified`, and `warning` always surface
+  // when present — signing/verify outcomes are load-bearing.
   if (level === 'minimal') {
     return {
       success: result.success,
       mode: result.mode,
       ...(result.signed !== undefined && { signed: result.signed }),
       ...(result.signingWarning && { signingWarning: result.signingWarning }),
+      ...(result.verified !== undefined && { verified: result.verified }),
+      ...(result.warning && { warning: result.warning }),
     };
   }
 
-  // standard & full: Complete output
-  // (LLMs need complete context - include all tags or operation results)
-  return result;
+  if (level === 'full') {
+    return result;
+  }
+
+  // standard (default): everything except the noisy rawOutput stderr dump.
+  const { rawOutput: _raw, ...rest } = result;
+  return rest;
 }
 
 // Create JSON response formatter with verbosity filtering

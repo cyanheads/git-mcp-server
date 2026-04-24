@@ -22,7 +22,8 @@ type ExecGitFn = (
   args: string[],
   cwd: string,
   ctx: RequestContext,
-) => Promise<{ stdout: string; stderr: string }>;
+  options?: { allowNonZeroExit?: boolean },
+) => Promise<{ stdout: string; stderr: string; exitCode?: number }>;
 
 describe('executeTag', () => {
   const mockContext: GitOperationContext = {
@@ -383,6 +384,169 @@ describe('executeTag', () => {
       await expect(
         executeTag({ mode: 'delete' } as any, mockContext, mockExecGit),
       ).rejects.toThrow();
+    });
+  });
+
+  describe('verify mode', () => {
+    it('invokes `git tag -v <name>` with allowNonZeroExit', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'gpg: Good signature from "Test <t@e.com>"',
+        exitCode: 0,
+      });
+
+      await executeTag(
+        { mode: 'verify', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args, , , options] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('tag');
+      expect(args).toContain('-v');
+      expect(args).toContain('v1.0.0');
+      expect(options?.allowNonZeroExit).toBe(true);
+    });
+
+    it('parses a valid GPG signature: type, identity, and key fingerprint', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr:
+          'gpg: Signature made Tue Jun  1 12:34:56 2021 UTC\n' +
+          'gpg:                using RSA key 0123456789ABCDEF\n' +
+          'gpg: Good signature from "Casey Hand <casey@example.com>" [ultimate]',
+        exitCode: 0,
+      });
+
+      const result = await executeTag(
+        { mode: 'verify', tagName: 'v2.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.mode).toBe('verify');
+      expect(result.verifiedTag).toBe('v2.0.0');
+      expect(result.verified).toBe(true);
+      expect(result.signatureType).toBe('gpg');
+      expect(result.signerIdentity).toBe('Casey Hand <casey@example.com>');
+      expect(result.signerKey).toBe('0123456789ABCDEF');
+      expect(result.warning).toBeUndefined();
+    });
+
+    it('parses a valid SSH signature: type, identity, and SHA256 fingerprint', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr:
+          'Good "git" signature for casey@example.com with ED25519 key SHA256:abc123xyz',
+        exitCode: 0,
+      });
+
+      const result = await executeTag(
+        { mode: 'verify', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.verified).toBe(true);
+      expect(result.signatureType).toBe('ssh');
+      expect(result.signerIdentity).toBe('casey@example.com');
+      expect(result.signerKey).toBe('SHA256:abc123xyz');
+    });
+
+    it('flags unsigned tags without throwing', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'object abc\ntype commit\ntag v1.0.0\n',
+        stderr: 'error: no signature found',
+        exitCode: 1,
+      });
+
+      const result = await executeTag(
+        { mode: 'verify', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.verified).toBe(false);
+      expect(result.warning).toContain('no signature');
+      expect(result.signatureType).toBeUndefined();
+      expect(result.rawOutput).toContain('no signature found');
+    });
+
+    it('distinguishes missing SSH trust config from a real failure', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: 'object abc\n',
+        stderr:
+          'error: gpg.ssh.allowedSignersFile needs to be configured and exist for ssh signature verification',
+        exitCode: 1,
+      });
+
+      const result = await executeTag(
+        { mode: 'verify', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.verified).toBe(false);
+      expect(result.signatureType).toBe('ssh');
+      expect(result.warning).toContain('allowedSignersFile');
+      expect(result.warning).toContain('may be validly signed');
+    });
+
+    it('surfaces bad GPG signatures with identity preserved', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: 'gpg: BAD signature from "Impostor <fake@example.com>"',
+        exitCode: 1,
+      });
+
+      const result = await executeTag(
+        { mode: 'verify', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.verified).toBe(false);
+      expect(result.signatureType).toBe('gpg');
+      expect(result.signerIdentity).toBe('Impostor <fake@example.com>');
+      expect(result.warning).toContain('BAD signature');
+    });
+
+    it('throws McpError when the tag does not exist', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: "error: tag 'nonexistent' not found.",
+        exitCode: 128,
+      });
+
+      await expect(
+        executeTag(
+          { mode: 'verify', tagName: 'nonexistent' },
+          mockContext,
+          mockExecGit,
+        ),
+      ).rejects.toThrow(/tag not found/i);
+    });
+
+    it('throws when tagName is missing', async () => {
+      await expect(
+        executeTag({ mode: 'verify' } as any, mockContext, mockExecGit),
+      ).rejects.toThrow();
+    });
+
+    it('trusts git exit 0 even when output pattern is unrecognized', async () => {
+      mockExecGit.mockResolvedValueOnce({
+        stdout: '',
+        stderr: "some future success format we haven't seen",
+        exitCode: 0,
+      });
+
+      const result = await executeTag(
+        { mode: 'verify', tagName: 'v1.0.0' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.verified).toBe(true);
     });
   });
 

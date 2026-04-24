@@ -3,6 +3,7 @@
  * @module services/git/providers/cli/operations/tags/tag
  */
 
+import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
 import { logger, type RequestContext } from '@/utils/index.js';
 
 import type {
@@ -34,7 +35,8 @@ export async function executeTag(
     args: string[],
     cwd: string,
     ctx: RequestContext,
-  ) => Promise<{ stdout: string; stderr: string }>,
+    options?: { allowNonZeroExit?: boolean },
+  ) => Promise<{ stdout: string; stderr: string; exitCode?: number }>,
 ): Promise<GitTagResult> {
   try {
     const args: string[] = [];
@@ -208,10 +210,170 @@ export async function executeTag(
         return deleteResult;
       }
 
+      case 'verify': {
+        if (!options.tagName) {
+          throw new Error('Tag name is required for verify operation');
+        }
+
+        /**
+         * `git tag -v` writes tag metadata to stdout and signature
+         * verification output to stderr, returning non-zero on any
+         * verification failure. We pass `allowNonZeroExit` so we can
+         * distinguish "unsigned / missing trust / bad sig" (all valid
+         * structured outcomes) from "tag doesn't exist" (a real error).
+         */
+        const cmd = buildGitCommand({
+          command: 'tag',
+          args: ['-v', options.tagName],
+        });
+        const result = await execGit(
+          cmd,
+          context.workingDirectory,
+          context.requestContext,
+          { allowNonZeroExit: true },
+        );
+
+        return parseVerifyOutput(
+          options.tagName,
+          result.stderr,
+          result.exitCode ?? 0,
+        );
+      }
+
       default:
         throw new Error('Unknown tag operation mode');
     }
   } catch (error) {
     throw mapGitError(error, 'tag');
   }
+}
+
+/**
+ * Parse `git tag -v` stderr into a structured verify result.
+ *
+ * Distinguishes five outcomes so callers can act on them without
+ * re-parsing raw output:
+ * 1. tag not found → throws (a real caller error, not a verify outcome)
+ * 2. unsigned → verified=false, warning explains no signature
+ * 3. missing SSH trust config → verified=false, warning points at
+ *    `gpg.ssh.allowedSignersFile` (signature may be valid; env can't tell)
+ * 4. bad signature → verified=false, warning names the failure
+ * 5. good signature → verified=true, populates type/identity/key
+ */
+function parseVerifyOutput(
+  tagName: string,
+  stderr: string,
+  exitCode: number,
+): GitTagResult {
+  if (/^error: tag '.+' not found/m.test(stderr)) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      `Tag not found: ${tagName}`,
+      { tagName },
+    );
+  }
+
+  const base: GitTagResult = {
+    mode: 'verify',
+    verifiedTag: tagName,
+    rawOutput: stderr,
+  };
+
+  if (/^error: no signature found$/m.test(stderr)) {
+    return {
+      ...base,
+      verified: false,
+      warning:
+        'Tag has no signature. Create with a signing key and `GIT_SIGN_COMMITS=true` to produce a signed tag.',
+    };
+  }
+
+  if (
+    /gpg\.ssh\.allowedSignersFile needs to be configured/.test(stderr) ||
+    /No principal matched/.test(stderr)
+  ) {
+    return {
+      ...base,
+      verified: false,
+      signatureType: 'ssh',
+      warning:
+        'SSH signature verification requires `gpg.ssh.allowedSignersFile` to be configured. The tag may be validly signed; this environment cannot verify it.',
+    };
+  }
+
+  const gpgBadMatch = /(?:gpg|gpgsm): BAD signature from "([^"]+)"/.exec(
+    stderr,
+  );
+  if (gpgBadMatch) {
+    return {
+      ...base,
+      verified: false,
+      signatureType: stderr.includes('gpgsm:') ? 'x509' : 'gpg',
+      signerIdentity: gpgBadMatch[1]!,
+      warning: 'Signature does not validate (BAD signature).',
+    };
+  }
+
+  const sshBadMatch =
+    /Signature verification failed.*? for "([^"]+)"|Could not verify signature/i.exec(
+      stderr,
+    );
+  if (sshBadMatch && exitCode !== 0) {
+    const result: GitTagResult = {
+      ...base,
+      verified: false,
+      signatureType: 'ssh',
+      warning: 'SSH signature does not validate.',
+    };
+    if (sshBadMatch[1]) result.signerIdentity = sshBadMatch[1];
+    return result;
+  }
+
+  const gpgGoodMatch = /gpg: Good signature from "([^"]+)"/.exec(stderr);
+  if (gpgGoodMatch) {
+    const result: GitTagResult = {
+      ...base,
+      verified: true,
+      signatureType: 'gpg',
+      signerIdentity: gpgGoodMatch[1]!,
+    };
+    const keyMatch = /using \S+ key ([0-9A-Fa-f]{8,})/.exec(stderr);
+    if (keyMatch) result.signerKey = keyMatch[1]!;
+    return result;
+  }
+
+  const x509GoodMatch = /gpgsm: Good signature from "([^"]+)"/.exec(stderr);
+  if (x509GoodMatch) {
+    return {
+      ...base,
+      verified: true,
+      signatureType: 'x509',
+      signerIdentity: x509GoodMatch[1]!,
+    };
+  }
+
+  const sshGoodMatch =
+    /Good "git" signature for (.+?) with \S+ key (SHA256:\S+)/.exec(stderr);
+  if (sshGoodMatch) {
+    return {
+      ...base,
+      verified: true,
+      signatureType: 'ssh',
+      signerIdentity: sshGoodMatch[1]!.trim(),
+      signerKey: sshGoodMatch[2]!,
+    };
+  }
+
+  // Exit 0 with no recognized pattern → trust git's exit code. This
+  // catches future output variants that still succeed.
+  if (exitCode === 0) {
+    return { ...base, verified: true };
+  }
+
+  return {
+    ...base,
+    verified: false,
+    warning:
+      'Verification failed but the output format was not recognized. See `rawOutput` for details.',
+  };
 }

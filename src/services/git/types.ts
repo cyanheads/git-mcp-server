@@ -712,8 +712,8 @@ export interface GitPullResult {
 
 export interface GitTagOptions {
   /** Operation mode */
-  mode: 'list' | 'create' | 'delete';
-  /** Tag name (for create/delete) */
+  mode: 'list' | 'create' | 'delete' | 'verify';
+  /** Tag name (for create/delete/verify) */
   tagName?: string;
   /** Commit to tag (default: HEAD) */
   commit?: string;
@@ -764,6 +764,46 @@ export interface GitTagResult {
    * when signing succeeded or when signing was not requested at all.
    */
   signingWarning?: string;
+  /**
+   * Verified tag name (for verify mode). Echoes the input so callers
+   * can correlate results with requests in batched flows.
+   */
+  verifiedTag?: string;
+  /**
+   * Whether the tag signature validated. Only populated for verify mode.
+   * - `true`: signature validates against a trusted key
+   * - `false`: unsigned, bad signature, or local environment cannot
+   *   verify (e.g., missing `gpg.ssh.allowedSignersFile`). See `warning`
+   *   for the distinguishing detail.
+   */
+  verified?: boolean;
+  /**
+   * Signature algorithm family when detectable from `git tag -v` output.
+   * Absent for unsigned tags and when the format couldn't be parsed.
+   */
+  signatureType?: 'gpg' | 'ssh' | 'x509';
+  /**
+   * Signer identity as emitted by git (e.g., `Name <email>` for GPG, or
+   * the principal key identifier for SSH). Absent for unsigned/unparseable
+   * output.
+   */
+  signerIdentity?: string;
+  /**
+   * Key material emitted by git — GPG fingerprint/key ID, or SSH key
+   * fingerprint (`SHA256:…`). Absent when git didn't surface it.
+   */
+  signerKey?: string;
+  /**
+   * Populated on verify failure with a human-readable reason distinguishing
+   * unsigned tags, missing trust configuration, bad signatures, and
+   * unparseable verification output. Absent on successful verification.
+   */
+  warning?: string;
+  /**
+   * Raw stderr captured from `git tag -v`, preserved for callers who need
+   * to inspect the full verification output. Only populated for verify mode.
+   */
+  rawOutput?: string;
 }
 
 // ============================================================================
