@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.14.2 - 2026-04-23
+
+Closes [#46](https://github.com/cyanheads/git-mcp-server/issues/46): `git_tag` gains a `verify` mode so callers can confirm a tag signature without falling back to a raw `git tag -v` shell call. Runs `git tag -v <tagName>` at the service layer with `allowNonZeroExit` and parses the stderr into a structured result that distinguishes the five real outcomes — valid signature, unsigned tag, missing local trust configuration (e.g. `gpg.ssh.allowedSignersFile`), bad signature, and tag-not-found. Only the last throws; the other four return `verified: false` with a `warning` explaining why, so verification drift never disappears into an exception.
+
+### Added
+
+- **`git_tag.mode: 'verify'` — new operation**: Accepts `tagName` (required) and returns `verified`, `signatureType` (`'gpg' | 'ssh' | 'x509'`), `signerIdentity`, `signerKey`, `warning`, `rawOutput`, and echoes the input as `verifiedTag`. Parsed patterns: `gpg: Good signature from "..."` and SSH `Good "git" signature for X with TYPE key SHA256:...` for success; `gpg: BAD signature from "..."`, `error: no signature found`, `gpg.ssh.allowedSignersFile needs to be configured`, and `error: tag '...' not found` for the four failure branches. Unparseable-but-exit-0 output is still trusted as verified, so future git output variants don't silently regress to `verified: false`.
+- **`GitTagResult` verify fields (service layer)**: `verifiedTag`, `verified`, `signatureType`, `signerIdentity`, `signerKey`, `warning`, `rawOutput`. Absent on list/create/delete results.
+- **Service-layer executor signature extended**: `executeTag`'s `execGit` parameter now accepts an optional `{ allowNonZeroExit?: boolean }` and returns an optional `exitCode`, mirroring the pattern already used by `executeMerge` and `executeCherryPick`. Required for the verify branch to distinguish "tag not found" (throws) from "verification failed but output was captured" (returns `verified: false`).
+
+### Changed
+
+- **`git_tag` description and schema**: Tool description now names all four modes. `tagName` description updated to note create/delete/verify all require it. `readOnlyHint` stays `false` because create/delete remain on the tool — MCP annotations are tool-scoped, not per-mode.
+- **`git_tag` response formatter verbosity**: Default (standard) output now drops `rawOutput` — it's verbose stderr intended for full-verbosity inspection only. `verified` and `warning` always surface at every verbosity level alongside `signed` and `signingWarning`, because verify outcomes are load-bearing.
+
+### Internal
+
+- **Test coverage — service layer**: Added nine verify-mode tests in `tag.test.ts` covering all five issue-mandated cases (valid GPG, valid SSH, unsigned, missing SSH trust config, bad signature, tag-not-found) plus executor argument shape, missing `tagName`, and the exit-0 fallback path.
+- **Test coverage — tool layer**: Added input-schema acceptance, verify-requires-tagName rejection, provider pass-through (mode + tagName), warning surfacing, and `rawOutput` stripping at standard verbosity in `git-tag.tool.test.ts`.
+
 ## v2.14.1 - 2026-04-23
 
 Follow-up to v2.14.0: the service layer for `git_tag` grew `limit` (list mode) and split the annotation `message` / `annotationBody` fields, but the tool-layer Zod schema was never extended to match. Zod silently stripped `limit` from inputs and the `annotationBody` field never surfaced on responses — the documented v2.14.0 features only reached the CLI executor, not callers. Realigned the tool schema with the service contract.
