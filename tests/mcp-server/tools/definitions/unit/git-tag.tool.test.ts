@@ -149,6 +149,53 @@ describe('git_tag tool', () => {
       expect(result.tags).toHaveLength(2);
       expect(result.tags![0]!.name).toBe('v1.0.0');
     });
+
+    it('forwards limit to the provider', async () => {
+      mockProvider.tag.mockResolvedValue({ mode: 'list', tags: [] });
+
+      const parsedInput = gitTagTool.inputSchema.parse({
+        path: '.',
+        mode: 'list',
+        limit: 5,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await gitTagTool.logic(parsedInput, appContext, sdkContext);
+
+      const [tagOptions] = mockProvider.tag.mock.calls[0]!;
+      expect(tagOptions.limit).toBe(5);
+    });
+
+    it('surfaces annotationBody on list results', async () => {
+      const mockResult: GitTagResult = {
+        mode: 'list',
+        tags: [
+          {
+            name: 'v2.0.0',
+            commit: 'def456',
+            message: 'Release v2.0.0',
+            annotationBody: 'Detailed release notes spanning\nmultiple lines.',
+          },
+        ],
+      };
+
+      mockProvider.tag.mockResolvedValue(mockResult);
+
+      const parsedInput = gitTagTool.inputSchema.parse({ path: '.' });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitTagTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      expect(result.tags![0]!.annotationBody).toBe(
+        'Detailed release notes spanning\nmultiple lines.',
+      );
+    });
   });
 
   describe('Tool Logic - Create Operation', () => {

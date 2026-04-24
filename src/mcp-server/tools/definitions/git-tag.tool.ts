@@ -12,6 +12,7 @@ import {
   TagNameSchema,
   CommitRefSchema,
   ForceSchema,
+  LimitSchema,
   normalizeMessage,
 } from '../schemas/common.js';
 import {
@@ -55,12 +56,26 @@ const InputSchema = z.object({
   force: ForceSchema.describe(
     'Overwrite an existing tag (create mode only; has no effect on list or delete).',
   ),
+  limit: LimitSchema.describe(
+    'For list mode: cap the number of tags returned (applied at the git command via `--count=N`). Use on repos with many tags.',
+  ),
 });
 
 const TagInfoSchema = z.object({
   name: z.string().describe('Tag name.'),
   commit: z.string().describe('Commit hash the tag points to.'),
-  message: z.string().optional().describe('Tag message (for annotated tags).'),
+  message: z
+    .string()
+    .optional()
+    .describe(
+      'First line of the tag annotation (annotated tags only). See `annotationBody` for the remainder.',
+    ),
+  annotationBody: z
+    .string()
+    .optional()
+    .describe(
+      'Remaining annotation body after the subject line (annotated tags only).',
+    ),
   tagger: z.string().optional().describe('Tagger name and email.'),
   timestamp: z.number().int().optional().describe('Tag creation timestamp.'),
 });
@@ -115,6 +130,7 @@ async function gitTagLogic(
     message?: string;
     annotated: boolean;
     force: boolean;
+    limit?: number;
   } = {
     mode: input.mode,
     annotated: input.annotated,
@@ -129,6 +145,9 @@ async function gitTagLogic(
   }
   if (input.message !== undefined) {
     tagOptions.message = normalizeMessage(input.message);
+  }
+  if (input.limit !== undefined) {
+    tagOptions.limit = input.limit;
   }
 
   const result = await provider.tag(tagOptions, {
