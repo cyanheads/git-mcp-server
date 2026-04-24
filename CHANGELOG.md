@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.14.1 - 2026-04-23
+
+Follow-up to v2.14.0: the service layer for `git_tag` grew `limit` (list mode) and split the annotation `message` / `annotationBody` fields, but the tool-layer Zod schema was never extended to match. Zod silently stripped `limit` from inputs and the `annotationBody` field never surfaced on responses — the documented v2.14.0 features only reached the CLI executor, not callers. Realigned the tool schema with the service contract.
+
+### Fixed
+
+- **`git_tag.limit` input surfaced to callers**: Added `LimitSchema`-backed `limit` to the tool's `InputSchema` (list mode) and forwarded it through to the provider call. Without this wire-up, `--count=N` was unreachable from the MCP boundary despite the provider accepting it.
+- **`git_tag` list response includes `annotationBody`**: Added the optional `annotationBody` field to `TagInfoSchema` and refined the `message` description to clarify it carries only the subject line. The provider was already populating `GitTagInfo.annotationBody` via `GIT_RECORD_DELIMITER` parsing; the tool's output schema was dropping it on the way out.
+
+### Internal
+
+- **Test coverage**: Added two tool-layer tests in `git-tag.tool.test.ts` — one asserting `limit` pass-through to `provider.tag(...)`, one asserting `annotationBody` surfaces on list results. Closes the tool-layer gap left by v2.14.0, which only covered the new parse paths at the service layer.
+
 ## v2.14.0 - 2026-04-23
 
 Session-orientation pass: tools that set up or wrap up a session now return a consistent, best-effort "repository snapshot" (status with upstream tracking, recent commits, recent tags, optional remotes) so callers have the context they need on the first response instead of round-tripping through `git_status`, `git_log`, and `git_tag` separately. Extracted the gathering logic into a shared `gatherRepoSnapshot` helper so the shape stays identical across `git_set_working_dir` and `git_wrapup_instructions`. Added a `limit` input to every list-style tool (`git_branch`, `git_tag`, `git_stash`, plus `maxTags` on `git_changelog_analyze`) so large catalogs don't bloat responses.
