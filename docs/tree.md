@@ -1,6 +1,6 @@
 # git-mcp-server - Directory Structure
 
-Generated on: 2026-04-23 21:25:30
+Generated on: 2026-04-24 01:48:15
 
 ```
 git-mcp-server
@@ -98,6 +98,7 @@ git-mcp-server
 │   │   │   │   ├── git-validators.ts
 │   │   │   │   ├── json-response-formatter.ts
 │   │   │   │   ├── markdown-builder.ts
+│   │   │   │   ├── repo-snapshot.ts
 │   │   │   │   ├── toolDefinition.ts
 │   │   │   │   └── toolHandlerFactory.ts
 │   │   │   └── tool-registration.ts
@@ -292,7 +293,8 @@ git-mcp-server
 │   │   │   └── utils
 │   │   │       ├── git-validators.test.ts
 │   │   │       ├── json-response-formatter.test.ts
-│   │   │       └── markdown-builder.test.ts
+│   │   │       ├── markdown-builder.test.ts
+│   │   │       └── repo-snapshot.test.ts
 │   │   └── transports
 │   │       └── auth
 │   │           └── lib

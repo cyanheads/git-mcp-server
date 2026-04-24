@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.14.0 - 2026-04-23
+
+Session-orientation pass: tools that set up or wrap up a session now return a consistent, best-effort "repository snapshot" (status with upstream tracking, recent commits, recent tags, optional remotes) so callers have the context they need on the first response instead of round-tripping through `git_status`, `git_log`, and `git_tag` separately. Extracted the gathering logic into a shared `gatherRepoSnapshot` helper so the shape stays identical across `git_set_working_dir` and `git_wrapup_instructions`. Added a `limit` input to every list-style tool (`git_branch`, `git_tag`, `git_stash`, plus `maxTags` on `git_changelog_analyze`) so large catalogs don't bloat responses.
+
+**Breaking**: `git_set_working_dir` dropped the `includeMetadata` input (snapshot is always included) and renamed `repositoryContext` → `repository` with a reshaped status block (full path arrays instead of per-type counts). `git_wrapup_instructions` renamed `gitStatus` → `repository.status` and replaced the single `gitStatusError` string with a `enrichmentWarnings` array. The service-level `GitCommitInfo.author/authorEmail/timestamp/parents` fields became optional (omitted in oneline mode, where only `%H|%h|%s` is fetched).
+
+### Added
+
+- **`gatherRepoSnapshot` shared utility** (`src/mcp-server/tools/utils/repo-snapshot.ts`): Best-effort gatherer that runs `status`/`log`/`tag` (and optionally `remote`) in parallel via `Promise.allSettled`, collapses "not a git repository" errors from every branch into a single actionable hint, and surfaces per-operation failures as `warnings` entries rather than bubbling up. Exports `RepoSnapshot*Schema` so tool output schemas stay in lockstep with the produced shape.
+- **`git_status.upstream` / `ahead` / `behind` output fields**: Parsed from `git status --porcelain=v2 --branch` headers (`# branch.upstream`, `# branch.ab`). Present only when the current branch is tracking an upstream — callers can decide whether to push, pull, or rebase without a second round-trip.
+- **`git_branch.operation: 'show-current'` — dedicated fast path**: One `git symbolic-ref --quiet --short HEAD` call instead of loading every ref under `refs/heads`. Returns `null` for detached HEAD via the command's exit-code-1 signal.
+- **`git_branch.limit` input (list mode)**: Caps results at the git command via `--count=N` on `for-each-ref`. Applied at the source, not post-hoc in JS.
+- **`git_tag.limit` input (list mode)**: Same mechanism — `--count=N` on `for-each-ref refs/tags`. Paired with a stricter sort: `--sort=-version:refname --sort=-creatordate` (last key is primary, so creator date leads and version-aware refname is the tiebreaker when timestamps tie in the same second).
+- **`git_tag` annotation body split**: `GitTagInfo.annotationBody` (optional string) carries the body separately from `message` (now explicitly the subject/first line). Uses `GIT_RECORD_DELIMITER` as the record terminator so multi-line bodies round-trip without breaking the `\n`-based line split.
+- **`git_stash.limit` input (list mode)**: `git stash list` wraps `git log` on the stash ref, so `-nN` caps entries at the source.
+- **`git_changelog_analyze.maxTags` input (default 100)**: Caps the tag fetch at the git command. Large tag catalogs no longer bloat the response.
+- **`git_log.note` output field**: Set only when filters returned zero commits. Echoes the applied criteria (`author=`, `grep=`, `since=`, `until=`, `filePath=`, `branch=`) and suggests broadening so callers can self-correct without inspecting the request.
+
+### Changed
+
+- **`git_set_working_dir` — always returns a repository snapshot**: Dropped the `includeMetadata` toggle. Every call now returns `repository` (status, recentCommits, recentTags, remotes) via `gatherRepoSnapshot` with `commitLimit: 2, tagLimit: 2, includeRemotes: true`. The snapshot is omitted only when the path isn't a git repository — in which case `enrichmentWarnings` explains why and points to `git_init` or `initializeIfNotPresent`.
+- **`git_wrapup_instructions` — returns the same repository shape**: Renamed `gitStatus` → `repository.status` with the richer schema (full staged/unstaged path arrays + upstream tracking). The single `gitStatusError` string became an `enrichmentWarnings` array, so per-operation failures are listed individually. No session working directory set is now a warning (`Call git_set_working_dir first...`) rather than a protocol-breaking error.
+- **`git_log.oneline` — fetches less data at the source**: Oneline mode now requests only `%H|%h|%s` from `git log --format` instead of the full eight-field format and discarding most fields in JS. Non-oneline mode is unchanged.
+- **`git_show` — parallelized `cat-file -t` and `show`**: Object type detection and content fetch are independent queries against the same object; they now run concurrently via `Promise.all` instead of sequentially.
+- **`git_tag` list sort order**: Dual-sort (`-version:refname`, `-creatordate`) fixes the edge case where tags created in the same second (common in CI) fell back to lexical ordering so `v0.10.0` ranked below `v0.7.0`. Primary key is still creator date; version-aware refname is only the tiebreaker.
+- **`GitCommitInfo` — optional fields for oneline mode**: `author`, `authorEmail`, `timestamp`, and `parents` became optional at the service level. Present in the full format; omitted when the caller requested `oneline` (the git command didn't fetch them).
+- **`GitBranchResult` — new `'show-current'` variant**: Discriminated union gained `{ mode: 'show-current'; current: string | null }`. Existing `list`/`create`/`delete`/`rename` variants unchanged.
+
+### Removed
+
+- **`git_set_working_dir.includeMetadata` input parameter**: Snapshot gathering is cheap (parallel, graceful degradation) and callers almost always wanted the context — the toggle added friction without real payoff. Callers passing `includeMetadata` will have the key stripped by Zod.
+- **`git_set_working_dir.repositoryContext.status.{stagedCount, unstagedCount, untrackedCount, conflictsCount}`**: Replaced by full path arrays on the new `repository.status` shape (same data as `git_status`). Counts were trivially derivable from the arrays and callers consistently wanted the paths anyway.
+- **`git_set_working_dir.repositoryContext.branches.{totalLocal, totalRemote}`**: Branch counts required two extra `git branch --list` calls per snapshot. The snapshot now carries upstream tracking on `status` instead — which is what callers actually needed for "am I ahead/behind main".
+
+### Fixed
+
+- **`README.md` — stale `git_wrapup` prompt params**: The Prompts table still listed `skipDocumentation` and `updateAgentFiles`, removed in v2.12.1. Updated to the current `changelogPath`, `createTag`.
+
+### Internal
+
+- **Test coverage**: Added dedicated test suites for the new `gatherRepoSnapshot` utility (`tests/mcp-server/tools/utils/repo-snapshot.test.ts`) and per-operation CLI tests for `status`, `branch`, `log`, `stash`, and `tag` covering the new parse paths, `limit` pass-through, and annotation-body round-tripping. Tool-layer tests updated to the reshaped output (`repository` vs `repositoryContext`, `enrichmentWarnings` vs `gitStatusError`, `show-current` mode).
+
 ## v2.13.0 - 2026-04-23
 
 Uniform GPG/SSH signing policy: `GIT_SIGN_COMMITS` now defaults to `true` and is the single switch for all signing operations. When enabled, the server attempts to sign and silently falls back to unsigned on failure, surfacing the actual outcome via new `signed` and `signingWarning` fields on tool responses. Per-call `sign` and `forceUnsignedOnFailure` parameters are gone — the tri-state added cognitive load without real utility, and LLM callers were overriding server config with explicit `sign: false` despite v2.11.1's schema clarification.
