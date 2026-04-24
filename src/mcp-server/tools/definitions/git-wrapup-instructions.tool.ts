@@ -18,11 +18,17 @@ import {
   createJsonFormatter,
   type VerbosityLevel,
 } from '../utils/json-response-formatter.js';
+import {
+  gatherRepoSnapshot,
+  RepoSnapshotCommitSchema,
+  RepoSnapshotStatusSchema,
+  RepoSnapshotTagSchema,
+} from '../utils/repo-snapshot.js';
 
 const TOOL_NAME = 'git_wrapup_instructions';
 const TOOL_TITLE = 'Git Wrap-up Instructions';
 const TOOL_DESCRIPTION =
-  "Returns a Git wrap-up protocol: an acceptance-criteria checklist the agent must satisfy before the session is considered shipped. Uses the operator's custom instructions if configured, otherwise emits a generic goals-strict/mechanism-generic default. Includes current repository status to guide next actions.";
+  "Returns a Git wrap-up protocol: an acceptance-criteria checklist the agent must satisfy before the session is considered shipped. Uses the operator's custom instructions if configured, otherwise emits a generic goals-strict/mechanism-generic default. Enriches the response with a repository snapshot (status, recent commits, recent tags) so the agent has immediate orientation for the commit and release steps.";
 
 const InputSchema = z.object({
   acknowledgement: z
@@ -39,20 +45,27 @@ const InputSchema = z.object({
 const OutputSchema = z.object({
   instructions: z
     .string()
-    .describe('The set of instructions for the wrap-up workflow.'),
-  gitStatus: z
+    .describe('The wrap-up protocol to satisfy before the session ships.'),
+  repository: z
     .object({
-      branch: z.string().describe('Current branch name.'),
-      staged: z.array(z.string()).describe('Files staged for commit.'),
-      unstaged: z.array(z.string()).describe('Files with unstaged changes.'),
-      untracked: z.array(z.string()).describe('Untracked files.'),
+      status: RepoSnapshotStatusSchema,
+      recentCommits: z
+        .array(RepoSnapshotCommitSchema)
+        .describe('Up to 2 most recent commits on the current branch.'),
+      recentTags: z
+        .array(RepoSnapshotTagSchema)
+        .describe('Up to 2 most recent tags by creator date.'),
     })
     .optional()
-    .describe('The current structured git status.'),
-  gitStatusError: z
-    .string()
+    .describe(
+      'Best-effort repository snapshot. Omitted when no working directory is set or when the path is not a git repository.',
+    ),
+  enrichmentWarnings: z
+    .array(z.string())
     .optional()
-    .describe('Any error message if getting git status failed.'),
+    .describe(
+      'Actionable notes when snapshot gathering was skipped or partially failed.',
+    ),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -152,81 +165,53 @@ async function gitWrapupInstructionsLogic(
   { provider, storage, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
   const tenantId = appContext.tenantId || 'default-tenant';
-
   const finalInstructions =
     customInstructions ?? buildDefaultInstructions(input);
 
-  let gitStatus:
-    | {
-        branch: string;
-        staged: string[];
-        unstaged: string[];
-        untracked: string[];
-      }
-    | undefined;
-  let gitStatusError: string | undefined;
+  const storageKey = `session:workingDir:${tenantId}`;
+  const workingDir = await storage.get<string>(storageKey, appContext);
 
-  try {
-    const storageKey = `session:workingDir:${tenantId}`;
-    const workingDir = await storage.get<string>(storageKey, appContext);
-
-    if (workingDir) {
-      const result = await provider.status(
-        { includeUntracked: true },
-        {
-          workingDirectory: workingDir,
-          requestContext: appContext,
-          tenantId,
-        },
-      );
-
-      gitStatus = {
-        branch: result.currentBranch || 'detached HEAD',
-        staged: [
-          ...(result.stagedChanges.added || []),
-          ...(result.stagedChanges.modified || []),
-          ...(result.stagedChanges.deleted || []),
-        ],
-        unstaged: [
-          ...(result.unstagedChanges.modified || []),
-          ...(result.unstagedChanges.deleted || []),
-        ],
-        untracked: result.untrackedFiles,
-      };
-    } else {
-      gitStatusError =
-        'No working directory set for session, git status skipped.';
-    }
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-    gitStatusError = `Failed to get git status: ${errorMessage}`;
-    logger.warning(gitStatusError, { ...appContext, error });
+  if (!workingDir) {
+    return {
+      instructions: finalInstructions,
+      enrichmentWarnings: [
+        'No session working directory set. Call git_set_working_dir first to include a repository snapshot (status, recent commits, recent tags) in this response.',
+      ],
+    };
   }
+
+  const { snapshot, warnings } = await gatherRepoSnapshot(
+    { provider, appContext, workingDirectory: workingDir },
+    { commitLimit: 2, tagLimit: 2 },
+  );
 
   return {
     instructions: finalInstructions,
-    gitStatus,
-    gitStatusError,
+    ...(snapshot
+      ? {
+          repository: {
+            status: snapshot.status,
+            recentCommits: snapshot.recentCommits,
+            recentTags: snapshot.recentTags,
+          },
+        }
+      : {}),
+    ...(warnings.length > 0 ? { enrichmentWarnings: warnings } : {}),
   };
 }
 
 /**
  * Filter git_wrapup_instructions output based on verbosity level.
  *
- * Verbosity levels:
- * - minimal: Instructions only, no git status
- * - standard: Above + complete git status (RECOMMENDED)
- * - full: Complete output (same as standard)
+ * - minimal: instructions only
+ * - standard/full: instructions + repository snapshot + warnings
  */
 function filterGitWrapupInstructionsOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
   if (level === 'minimal') {
-    return {
-      instructions: result.instructions,
-    };
+    return { instructions: result.instructions };
   }
   return result;
 }

@@ -261,6 +261,35 @@ describe('git_changelog_analyze tool', () => {
       expect(logOptions.maxCount).toBe(50);
     });
 
+    it('passes maxTags to provider.tag as limit (capping at git command)', async () => {
+      const parsedInput = gitChangelogAnalyzeTool.inputSchema.parse({
+        path: '.',
+        reviewTypes: ['storyline'],
+        maxTags: 25,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await gitChangelogAnalyzeTool.logic(parsedInput, appContext, sdkContext);
+
+      const [tagOptions] = mockProvider.tag.mock.calls[0]!;
+      expect(tagOptions).toEqual({ mode: 'list', limit: 25 });
+    });
+
+    it('defaults maxTags to 100 when not provided', async () => {
+      const parsedInput = gitChangelogAnalyzeTool.inputSchema.parse({
+        path: '.',
+        reviewTypes: ['storyline'],
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await gitChangelogAnalyzeTool.logic(parsedInput, appContext, sdkContext);
+
+      const [tagOptions] = mockProvider.tag.mock.calls[0]!;
+      expect(tagOptions).toEqual({ mode: 'list', limit: 100 });
+    });
+
     it('uses sinceTag as range when provided', async () => {
       const parsedInput = gitChangelogAnalyzeTool.inputSchema.parse({
         path: '.',

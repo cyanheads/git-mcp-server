@@ -7,12 +7,14 @@ import { logger, type RequestContext } from '@/utils/index.js';
 
 import type {
   GitOperationContext,
+  GitTagInfo,
   GitTagOptions,
   GitTagResult,
 } from '../../../../types.js';
 import {
   buildGitCommand,
   GIT_FIELD_DELIMITER,
+  GIT_RECORD_DELIMITER,
   mapGitError,
   shouldSignCommits,
 } from '../../utils/index.js';
@@ -39,18 +41,35 @@ export async function executeTag(
 
     switch (options.mode) {
       case 'list': {
-        // Use for-each-ref to get tag names with their dereferenced commit hashes
-        const format = [
-          '%(refname:short)', // Tag name
-          '%(if)%(*objectname:short)%(then)%(*objectname:short)%(else)%(objectname:short)%(end)', // Dereferenced commit hash (resolves annotated tags to their target)
-          '%(if)%(contents:subject)%(then)%(contents:subject)%(end)', // Tag message subject (annotated tags only)
-          '%(if)%(taggername)%(then)%(taggername) %(taggeremail)%(end)', // Tagger (annotated tags only)
-          '%(if)%(creatordate:unix)%(then)%(creatordate:unix)%(end)', // Timestamp
-        ].join(GIT_FIELD_DELIMITER);
+        // Use for-each-ref with ASCII control chars as delimiters so multi-line
+        // annotation bodies round-trip cleanly (body always last, RS terminates record).
+        const format =
+          [
+            '%(refname:short)', // Tag name
+            '%(if)%(*objectname:short)%(then)%(*objectname:short)%(else)%(objectname:short)%(end)', // Dereferenced commit hash
+            '%(if)%(contents:subject)%(then)%(contents:subject)%(end)', // Annotation subject
+            '%(if)%(taggername)%(then)%(taggername) %(taggeremail)%(end)', // Tagger
+            '%(if)%(creatordate:unix)%(then)%(creatordate:unix)%(end)', // Timestamp
+            '%(if)%(contents:body)%(then)%(contents:body)%(end)', // Annotation body (may contain newlines)
+          ].join(GIT_FIELD_DELIMITER) + GIT_RECORD_DELIMITER;
+
+        // Multiple --sort flags: the LAST one is the primary key. Listing
+        // -version:refname first makes version-aware refname the tiebreaker
+        // when creatordate ties (e.g., tags created in the same second), so
+        // v0.10.0 outranks v0.7.0 instead of falling below it lexically.
+        const forEachRefArgs = [
+          `--format=${format}`,
+          '--sort=-version:refname',
+          '--sort=-creatordate',
+        ];
+        if (typeof options.limit === 'number' && options.limit > 0) {
+          forEachRefArgs.push(`--count=${options.limit}`);
+        }
+        forEachRefArgs.push('refs/tags');
 
         const refCmd = buildGitCommand({
           command: 'for-each-ref',
-          args: [`--format=${format}`, '--sort=-creatordate', 'refs/tags'],
+          args: forEachRefArgs,
         });
         const result = await execGit(
           refCmd,
@@ -58,26 +77,24 @@ export async function executeTag(
           context.requestContext,
         );
 
-        const tags: Array<{
-          name: string;
-          commit: string;
-          message?: string;
-          tagger?: string;
-          timestamp?: number;
-        }> = [];
+        const tags: GitTagInfo[] = [];
 
-        for (const line of result.stdout.split('\n').filter((l) => l.trim())) {
-          const [name, commit, message, tagger, timestamp] =
-            line.split(GIT_FIELD_DELIMITER);
+        for (const record of result.stdout
+          .split(GIT_RECORD_DELIMITER)
+          .map((r) => r.replace(/^\n/, ''))
+          .filter((r) => r.length > 0)) {
+          const [name, commit, message, tagger, timestamp, annotationBody] =
+            record.split(GIT_FIELD_DELIMITER);
           if (!name) continue;
 
-          const tag: (typeof tags)[number] = {
+          const tag: GitTagInfo = {
             name,
             commit: commit || '',
           };
           if (message) tag.message = message;
           if (tagger) tag.tagger = tagger;
           if (timestamp) tag.timestamp = parseInt(timestamp, 10);
+          if (annotationBody) tag.annotationBody = annotationBody.trimEnd();
 
           tags.push(tag);
         }

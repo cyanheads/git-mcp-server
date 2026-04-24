@@ -263,6 +263,23 @@ describe('git_stash tool', () => {
       expect(result.stashes).toHaveLength(2);
       expect(result.stashes![0]!.ref).toBe('stash@{0}');
     });
+
+    it('passes limit through to provider.stash for list mode', async () => {
+      mockProvider.stash.mockResolvedValue({ mode: 'list', stashes: [] });
+
+      const parsedInput = gitStashTool.inputSchema.parse({
+        path: '.',
+        mode: 'list',
+        limit: 4,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await gitStashTool.logic(parsedInput, appContext, sdkContext);
+
+      const [opts] = mockProvider.stash.mock.calls[0]!;
+      expect(opts.limit).toBe(4);
+    });
   });
 
   describe('Tool Logic - Pop/Apply Mode', () => {

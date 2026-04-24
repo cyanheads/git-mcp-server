@@ -273,6 +273,76 @@ describe('git_branch tool', () => {
     });
   });
 
+  describe('Tool Logic - show-current operation', () => {
+    it('calls provider with mode show-current (cheap path)', async () => {
+      mockProvider.branch.mockResolvedValue({
+        mode: 'show-current',
+        current: 'main',
+      });
+
+      const parsedInput = gitBranchTool.inputSchema.parse({
+        path: '.',
+        operation: 'show-current',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitBranchTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      const [opts] = mockProvider.branch.mock.calls[0]!;
+      expect(opts).toEqual({ mode: 'show-current' });
+      expect(result.operation).toBe('show-current');
+      expect(result.currentBranch).toBe('main');
+      expect(result.message).toContain('main');
+    });
+
+    it('reports detached HEAD when provider returns null current', async () => {
+      mockProvider.branch.mockResolvedValue({
+        mode: 'show-current',
+        current: null,
+      });
+
+      const parsedInput = gitBranchTool.inputSchema.parse({
+        path: '.',
+        operation: 'show-current',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitBranchTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      expect(result.currentBranch).toBeUndefined();
+      expect(result.message).toContain('detached HEAD');
+    });
+  });
+
+  describe('Tool Logic - list limit', () => {
+    it('passes limit through to provider.branch', async () => {
+      mockProvider.branch.mockResolvedValue({ mode: 'list', branches: [] });
+
+      const parsedInput = gitBranchTool.inputSchema.parse({
+        path: '.',
+        operation: 'list',
+        limit: 10,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await gitBranchTool.logic(parsedInput, appContext, sdkContext);
+
+      const [opts] = mockProvider.branch.mock.calls[0]!;
+      expect(opts.limit).toBe(10);
+    });
+  });
+
   describe('Tool Logic - Rename Operation', () => {
     it('renames branch successfully', async () => {
       const mockResult: GitBranchResult = {

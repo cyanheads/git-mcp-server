@@ -109,6 +109,12 @@ const OutputSchema = z.object({
     .number()
     .int()
     .describe('Total number of commits returned (may be limited by maxCount).'),
+  note: z
+    .string()
+    .optional()
+    .describe(
+      'Set when filters returned zero commits. Echoes the criteria and suggests broadening so callers can self-correct without inspecting the request.',
+    ),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -142,18 +148,24 @@ async function gitLogLogic(
     },
   );
 
-  const commits = input.oneline
-    ? result.commits.map(({ hash, shortHash, subject }) => ({
-        hash,
-        shortHash,
-        subject,
-      }))
-    : result.commits;
+  const appliedFilters: string[] = [];
+  if (input.author) appliedFilters.push(`author=${input.author}`);
+  if (input.grep) appliedFilters.push(`grep=${input.grep}`);
+  if (input.since) appliedFilters.push(`since=${input.since}`);
+  if (input.until) appliedFilters.push(`until=${input.until}`);
+  if (input.filePath) appliedFilters.push(`filePath=${input.filePath}`);
+  if (input.branch) appliedFilters.push(`branch=${input.branch}`);
+
+  const note =
+    result.commits.length === 0 && appliedFilters.length > 0
+      ? `No commits matched the applied filters (${appliedFilters.join(', ')}). Try removing filters or broadening the date/author/path criteria.`
+      : undefined;
 
   return {
     success: true,
-    commits,
+    commits: result.commits,
     totalCount: result.totalCount,
+    ...(note && { note }),
   };
 }
 

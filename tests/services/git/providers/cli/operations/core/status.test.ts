@@ -255,6 +255,78 @@ describe('executeStatus', () => {
     });
   });
 
+  describe('branch tracking info (porcelain v2 headers)', () => {
+    it('parses upstream from # branch.upstream header', async () => {
+      const output = [
+        '# branch.head main',
+        '# branch.upstream origin/main',
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.upstream).toBe('origin/main');
+    });
+
+    it('parses ahead/behind from # branch.ab header', async () => {
+      const output = [
+        '# branch.head main',
+        '# branch.upstream origin/main',
+        '# branch.ab +3 -2',
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.ahead).toBe(3);
+      expect(result.behind).toBe(2);
+    });
+
+    it('handles in-sync branch (+0 -0)', async () => {
+      const output = [
+        '# branch.head main',
+        '# branch.upstream origin/main',
+        '# branch.ab +0 -0',
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.ahead).toBe(0);
+      expect(result.behind).toBe(0);
+    });
+
+    it('omits upstream/ahead/behind when no upstream is configured', async () => {
+      const output = '# branch.head main';
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.upstream).toBeUndefined();
+      expect(result.ahead).toBeUndefined();
+      expect(result.behind).toBeUndefined();
+    });
+
+    it('does not flip isClean to false based on tracking headers alone', async () => {
+      const output = [
+        '# branch.head main',
+        '# branch.upstream origin/main',
+        '# branch.ab +5 -0',
+      ].join('\n');
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeStatus({}, mockContext, mockExecGit);
+
+      expect(result.isClean).toBe(true);
+      expect(result.ahead).toBe(5);
+    });
+  });
+
   describe('ignore submodules', () => {
     it('passes --ignore-submodules flag when enabled', async () => {
       mockExecGit.mockResolvedValueOnce({

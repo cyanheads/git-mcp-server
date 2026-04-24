@@ -47,29 +47,24 @@ export async function executeShow(
       args.push(options.object);
     }
 
-    // Determine object type reliably via cat-file
+    // Fetch type and content concurrently — they're independent queries against the same object.
     const typeCmd = buildGitCommand({
       command: 'cat-file',
       args: ['-t', options.object],
     });
-    const typeResult = await execGit(
-      typeCmd,
-      context.workingDirectory,
-      context.requestContext,
-    );
+    const cmd = buildGitCommand({ command: 'show', args });
+
+    const [typeResult, result] = await Promise.all([
+      execGit(typeCmd, context.workingDirectory, context.requestContext),
+      execGit(cmd, context.workingDirectory, context.requestContext),
+    ]);
+
     const detectedType = typeResult.stdout.trim();
     const objectType = (['commit', 'tree', 'blob', 'tag'] as const).includes(
       detectedType as 'commit' | 'tree' | 'blob' | 'tag',
     )
       ? (detectedType as 'commit' | 'tree' | 'blob' | 'tag')
       : 'commit';
-
-    const cmd = buildGitCommand({ command: 'show', args });
-    const result = await execGit(
-      cmd,
-      context.workingDirectory,
-      context.requestContext,
-    );
 
     const showResult = {
       object: options.object,

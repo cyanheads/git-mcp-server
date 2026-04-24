@@ -173,6 +173,12 @@ export interface GitStatusOptions {
 export interface GitStatusResult {
   /** Current branch name (null if detached HEAD) */
   currentBranch: string | null;
+  /** Upstream ref the current branch is tracking (from porcelain v2 `# branch.upstream`). */
+  upstream?: string;
+  /** Commits ahead of upstream (from porcelain v2 `# branch.ab`). */
+  ahead?: number;
+  /** Commits behind upstream (from porcelain v2 `# branch.ab`). */
+  behind?: number;
   /** Changes staged for commit */
   stagedChanges: {
     added?: string[];
@@ -296,18 +302,18 @@ export interface GitCommitInfo {
   hash: string;
   /** Short commit hash (7 chars) */
   shortHash: string;
-  /** Author name */
-  author: string;
-  /** Author email */
-  authorEmail: string;
-  /** Commit timestamp (Unix timestamp) */
-  timestamp: number;
+  /** Author name. Omitted when the caller requested `oneline` (only hash and subject are fetched). */
+  author?: string;
+  /** Author email. Omitted in oneline mode. */
+  authorEmail?: string;
+  /** Commit timestamp (Unix seconds). Omitted in oneline mode. */
+  timestamp?: number;
   /** Commit subject (first line of message) */
   subject: string;
   /** Commit body (rest of message) */
   body?: string;
-  /** Parent commit hashes */
-  parents: string[];
+  /** Parent commit hashes. Omitted in oneline mode. */
+  parents?: string[];
   /** References (branches, tags) pointing to this commit */
   refs?: string[];
   /** File change statistics (when stat option is used) */
@@ -387,7 +393,7 @@ export interface GitDiffResult {
 
 export interface GitBranchOptions {
   /** Operation mode */
-  mode: 'list' | 'create' | 'delete' | 'rename';
+  mode: 'list' | 'create' | 'delete' | 'rename' | 'show-current';
   /** Branch name (for create/delete/rename) */
   branchName?: string;
   /** New branch name (for rename) */
@@ -404,6 +410,8 @@ export interface GitBranchOptions {
   merged?: boolean | string;
   /** Filter to show only branches NOT merged into specified commit (defaults to HEAD) */
   noMerged?: boolean | string;
+  /** Cap the number of branches returned in list mode (applied at the git command). */
+  limit?: number;
 }
 
 export interface GitBranchInfo {
@@ -451,6 +459,12 @@ export type GitBranchResult =
       mode: 'rename';
       /** Rename information */
       renamed: { from: string; to: string };
+    }
+  | {
+      /** Show-current operation mode */
+      mode: 'show-current';
+      /** Current branch name, or null when HEAD is detached. */
+      current: string | null;
     };
 
 export interface GitCheckoutOptions {
@@ -709,6 +723,8 @@ export interface GitTagOptions {
   annotated?: boolean;
   /** Force tag creation */
   force?: boolean;
+  /** Cap the number of tags returned in list mode (applied at the git command). */
+  limit?: number;
 }
 
 export interface GitTagInfo {
@@ -716,8 +732,10 @@ export interface GitTagInfo {
   name: string;
   /** Commit hash */
   commit: string;
-  /** Tag message (for annotated tags) */
+  /** Tag message subject — first line of the annotation (annotated tags only) */
   message?: string;
+  /** Tag message body — remainder after the subject line (annotated tags only) */
+  annotationBody?: string;
   /** Tagger name and email */
   tagger?: string;
   /** Tag creation timestamp */
@@ -763,6 +781,8 @@ export interface GitStashOptions {
   includeUntracked?: boolean;
   /** Keep index (don't revert staged changes) */
   keepIndex?: boolean;
+  /** Cap the number of stash entries returned in list mode (applied at the git command). */
+  limit?: number;
 }
 
 export interface GitStashInfo {

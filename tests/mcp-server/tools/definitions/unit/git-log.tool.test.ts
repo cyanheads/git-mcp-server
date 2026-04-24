@@ -241,6 +241,47 @@ describe('git_log tool', () => {
       expect(result.commits).toHaveLength(0);
       expect(result.totalCount).toBe(0);
     });
+
+    it('strips commits to {hash, shortHash, subject} when oneline is true', async () => {
+      // Provider returns minimal commits in oneline mode (author/timestamp/etc absent).
+      const onelineResult: GitLogResult = {
+        commits: [
+          {
+            hash: 'abc123def456',
+            shortHash: 'abc123d',
+            subject: 'feat: do thing',
+          } as GitLogResult['commits'][number],
+        ],
+        totalCount: 1,
+      };
+
+      mockProvider.log.mockResolvedValue(onelineResult);
+
+      const parsedInput = gitLogTool.inputSchema.parse({
+        path: '.',
+        oneline: true,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const result = await gitLogTool.logic(
+        parsedInput,
+        appContext,
+        sdkContext,
+      );
+
+      // Confirm oneline flag was forwarded to the provider so the CLI can
+      // skip fetching body/author/timestamp/parents at the source.
+      const [logOptions] = mockProvider.log.mock.calls[0]!;
+      expect(logOptions.oneline).toBe(true);
+
+      expect(result.commits).toHaveLength(1);
+      expect(Object.keys(result.commits[0]!).sort()).toEqual([
+        'hash',
+        'shortHash',
+        'subject',
+      ]);
+    });
   });
 
   describe('Response Formatter', () => {

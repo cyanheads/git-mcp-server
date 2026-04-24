@@ -34,8 +34,12 @@ export async function executeStash(
 
     switch (options.mode) {
       case 'list': {
-        // Use custom format to include unix timestamp
+        // Use custom format to include unix timestamp.
+        // `stash list` wraps `git log` on the stash ref, so `-n N` caps entries at the source.
         args.push('--format=%gd\t%ct\t%gs');
+        if (typeof options.limit === 'number' && options.limit > 0) {
+          args.push(`-n${options.limit}`);
+        }
         const cmd = buildGitCommand({ command: 'stash', args });
         const result = await execGit(
           cmd,

@@ -10,6 +10,7 @@ import {
   BranchNameSchema,
   CommitRefSchema,
   ForceSchema,
+  LimitSchema,
   PathSchema,
 } from '../schemas/common.js';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
@@ -68,6 +69,9 @@ const InputSchema = z.object({
     .describe(
       'For list operation: show only branches not merged into HEAD (true) or specified commit (string).',
     ),
+  limit: LimitSchema.describe(
+    'For list operation: cap the number of branches returned (applied at the git command). Use on repos with many branches.',
+  ),
 });
 
 const BranchInfoSchema = z.object({
@@ -103,10 +107,9 @@ async function gitBranchLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Handle show-current operation separately (lightweight, no need for full branch call)
   if (input.operation === 'show-current') {
     const result = await provider.branch(
-      { mode: 'list' },
+      { mode: 'show-current' },
       {
         workingDirectory: targetPath,
         requestContext: appContext,
@@ -114,17 +117,14 @@ async function gitBranchLogic(
       },
     );
 
-    const current =
-      result.mode === 'list'
-        ? result.branches.find((b) => b.current)
-        : undefined;
+    const current = result.mode === 'show-current' ? result.current : null;
     return {
       success: true,
       operation: 'show-current',
       branches: undefined,
-      currentBranch: current?.name,
+      currentBranch: current ?? undefined,
       message: current
-        ? `Current branch: ${current.name}`
+        ? `Current branch: ${current}`
         : 'Not on any branch (detached HEAD)',
     };
   }
@@ -142,6 +142,7 @@ async function gitBranchLogic(
     all?: boolean;
     merged?: boolean | string;
     noMerged?: boolean | string;
+    limit?: number;
   } = {
     mode: operation,
   };
@@ -168,6 +169,9 @@ async function gitBranchLogic(
   }
   if (rest.noMerged !== undefined) {
     branchOptions.noMerged = rest.noMerged;
+  }
+  if (rest.limit !== undefined) {
+    branchOptions.limit = rest.limit;
   }
 
   const result = await provider.branch(branchOptions, {
@@ -201,8 +205,7 @@ async function gitBranchLogic(
       currentBranch: undefined,
       message: `Branch '${result.deleted}' deleted successfully.`,
     };
-  } else {
-    // rename
+  } else if (result.mode === 'rename') {
     return {
       success: true,
       operation: 'rename',
@@ -211,6 +214,9 @@ async function gitBranchLogic(
       message: `Branch '${result.renamed.from}' renamed to '${result.renamed.to}'.`,
     };
   }
+
+  // Unreachable: show-current is handled in the early-return above.
+  throw new Error(`Unexpected branch result mode: ${result.mode}`);
 }
 
 /**

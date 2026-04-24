@@ -526,4 +526,73 @@ This is line 3`;
       expect(result.commits[0]!.body).toBeUndefined();
     });
   });
+
+  describe('oneline mode', () => {
+    it('uses a shorter format string that omits %an/%ae/%at/%b/%P', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeLog({ oneline: true }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const formatArg = args.find((a) => a.startsWith('--format='));
+      expect(formatArg).toBeDefined();
+      expect(formatArg).toContain('%H');
+      expect(formatArg).toContain('%h');
+      expect(formatArg).toContain('%s');
+      expect(formatArg).not.toContain('%an');
+      expect(formatArg).not.toContain('%ae');
+      expect(formatArg).not.toContain('%at');
+      expect(formatArg).not.toContain('%b');
+      expect(formatArg).not.toContain('%P');
+    });
+
+    it('parses oneline output with no author/email/timestamp/parents fields', async () => {
+      // Oneline format: START hash|shortHash|subject END
+      const stdout = `${COMMIT_START}abc123def456${FIELD_DELIMITER}abc123d${FIELD_DELIMITER}feat: do the thing${COMMIT_END}\n${COMMIT_START}789xyz${FIELD_DELIMITER}789xyzz${FIELD_DELIMITER}fix: prior bug${COMMIT_END}`;
+
+      mockExecGit.mockResolvedValueOnce({ stdout, stderr: '' });
+
+      const result = await executeLog(
+        { oneline: true },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.commits).toHaveLength(2);
+      expect(result.commits[0]!.hash).toBe('abc123def456');
+      expect(result.commits[0]!.shortHash).toBe('abc123d');
+      expect(result.commits[0]!.subject).toBe('feat: do the thing');
+      // Honest absence — no placeholder values
+      expect(result.commits[0]!.author).toBeUndefined();
+      expect(result.commits[0]!.authorEmail).toBeUndefined();
+      expect(result.commits[0]!.timestamp).toBeUndefined();
+      expect(result.commits[0]!.parents).toBeUndefined();
+      expect(result.commits[0]!.body).toBeUndefined();
+    });
+
+    it('full mode (default) still populates author/email/timestamp/parents', async () => {
+      const output = buildLogOutput([
+        {
+          hash: 'abc123',
+          shortHash: 'abc',
+          author: 'Test User',
+          email: 'test@example.com',
+          timestamp: 1700000000,
+          subject: 'feat: add thing',
+          body: 'body text',
+          parents: 'parent1 parent2',
+        },
+      ]);
+
+      mockExecGit.mockResolvedValueOnce({ stdout: output, stderr: '' });
+
+      const result = await executeLog({}, mockContext, mockExecGit);
+
+      expect(result.commits[0]!.author).toBe('Test User');
+      expect(result.commits[0]!.authorEmail).toBe('test@example.com');
+      expect(result.commits[0]!.timestamp).toBe(1700000000);
+      expect(result.commits[0]!.parents).toEqual(['parent1', 'parent2']);
+      expect(result.commits[0]!.body).toBe('body text');
+    });
+  });
 });

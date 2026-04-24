@@ -38,9 +38,11 @@ export async function executeLog(
   ) => Promise<{ stdout: string; stderr: string }>,
 ): Promise<GitLogResult> {
   try {
-    // Format with start/end markers for robust parsing when stat/patch is included
-    // Format: START hash|shortHash|author|email|timestamp|subject|body|parents END
-    const formatStr = `${COMMIT_START_MARKER}%H${GIT_FIELD_DELIMITER}%h${GIT_FIELD_DELIMITER}%an${GIT_FIELD_DELIMITER}%ae${GIT_FIELD_DELIMITER}%at${GIT_FIELD_DELIMITER}%s${GIT_FIELD_DELIMITER}%b${GIT_FIELD_DELIMITER}%P${COMMIT_END_MARKER}`;
+    // Full format: START hash|shortHash|author|email|timestamp|subject|body|parents END
+    // Oneline format: START hash|shortHash|subject END (skip body/author/email/timestamp/parents at the source).
+    const fullFormat = `${COMMIT_START_MARKER}%H${GIT_FIELD_DELIMITER}%h${GIT_FIELD_DELIMITER}%an${GIT_FIELD_DELIMITER}%ae${GIT_FIELD_DELIMITER}%at${GIT_FIELD_DELIMITER}%s${GIT_FIELD_DELIMITER}%b${GIT_FIELD_DELIMITER}%P${COMMIT_END_MARKER}`;
+    const onelineFormat = `${COMMIT_START_MARKER}%H${GIT_FIELD_DELIMITER}%h${GIT_FIELD_DELIMITER}%s${COMMIT_END_MARKER}`;
+    const formatStr = options.oneline ? onelineFormat : fullFormat;
 
     const args = [`--format=${formatStr}`];
 
@@ -100,12 +102,12 @@ export async function executeLog(
     const commits: Array<{
       hash: string;
       shortHash: string;
-      author: string;
-      authorEmail: string;
-      timestamp: number;
+      author?: string;
+      authorEmail?: string;
+      timestamp?: number;
       subject: string;
       body?: string;
-      parents: string[];
+      parents?: string[];
       refs?: string[];
       stat?: string;
       patch?: string;
@@ -130,26 +132,32 @@ export async function executeLog(
       const commit: {
         hash: string;
         shortHash: string;
-        author: string;
-        authorEmail: string;
-        timestamp: number;
+        author?: string;
+        authorEmail?: string;
+        timestamp?: number;
         subject: string;
         body?: string;
-        parents: string[];
+        parents?: string[];
         refs?: string[];
         stat?: string;
         patch?: string;
-      } = {
-        hash: fields[0] || '',
-        shortHash: fields[1] || '',
-        author: fields[2] || '',
-        authorEmail: fields[3] || '',
-        timestamp: parseInt(fields[4] || '0', 10),
-        subject: fields[5] || '',
-        parents: (fields[7] || '').split(' ').filter((p) => p),
-      };
+      } = options.oneline
+        ? {
+            hash: fields[0] || '',
+            shortHash: fields[1] || '',
+            subject: fields[2] || '',
+          }
+        : {
+            hash: fields[0] || '',
+            shortHash: fields[1] || '',
+            author: fields[2] || '',
+            authorEmail: fields[3] || '',
+            timestamp: parseInt(fields[4] || '0', 10),
+            subject: fields[5] || '',
+            parents: (fields[7] || '').split(' ').filter((p) => p),
+          };
 
-      if (fields[6]) {
+      if (!options.oneline && fields[6]) {
         commit.body = fields[6];
       }
 

@@ -33,6 +33,28 @@ export async function executeBranch(
     const args: string[] = [];
 
     switch (options.mode) {
+      case 'show-current': {
+        // One cheap call — avoids scanning refs/heads just to find the current branch.
+        const cmd = buildGitCommand({
+          command: 'symbolic-ref',
+          args: ['--quiet', '--short', 'HEAD'],
+        });
+        try {
+          const res = await execGit(
+            cmd,
+            context.workingDirectory,
+            context.requestContext,
+          );
+          return {
+            mode: 'show-current' as const,
+            current: res.stdout.trim() || null,
+          };
+        } catch {
+          // Exit code 1 with --quiet means detached HEAD; treat as null.
+          return { mode: 'show-current' as const, current: null };
+        }
+      }
+
       case 'list': {
         // Build a custom format for git for-each-ref using field delimiters
         // This provides structured, machine-readable output that's more stable
@@ -62,6 +84,10 @@ export async function executeBranch(
           const noMergedRef =
             typeof options.noMerged === 'string' ? options.noMerged : 'HEAD';
           args.push(`--no-merged=${noMergedRef}`);
+        }
+
+        if (typeof options.limit === 'number' && options.limit > 0) {
+          args.push(`--count=${options.limit}`);
         }
 
         const cmd = buildGitCommand({ command: 'for-each-ref', args });

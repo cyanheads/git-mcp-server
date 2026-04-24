@@ -109,6 +109,15 @@ const InputSchema = z.object({
     .describe(
       'Maximum recent commits to fetch for cross-referencing (1-1000).',
     ),
+  maxTags: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .default(100)
+    .describe(
+      'Maximum recent tags to fetch for release context (1-1000). Applied at the git command so large tag catalogs do not bloat the response.',
+    ),
   sinceTag: z
     .string()
     .optional()
@@ -218,7 +227,7 @@ async function gitChangelogAnalyzeLogic(
   // Fetch commits, tags, and status in parallel
   const [logResult, tagResult, statusResult] = await Promise.all([
     provider.log(logOptions, operationContext),
-    provider.tag({ mode: 'list' }, operationContext),
+    provider.tag({ mode: 'list', limit: input.maxTags }, operationContext),
     provider.status({ includeUntracked: false }, operationContext),
   ]);
 
@@ -233,8 +242,8 @@ async function gitChangelogAnalyzeLogic(
       commits: logResult.commits.map((c) => ({
         hash: c.shortHash,
         subject: c.subject,
-        author: c.author,
-        timestamp: c.timestamp,
+        author: c.author ?? '',
+        timestamp: c.timestamp ?? 0,
         ...(c.refs && c.refs.length > 0 && { refs: c.refs }),
       })),
       tags: (tagResult.tags ?? []).map((t) => ({

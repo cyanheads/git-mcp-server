@@ -56,10 +56,18 @@ export function parseGitStatus(output: string): GitStatusResult {
 
   for (const line of lines) {
     if (line.startsWith('#')) {
-      // Header line, e.g., '# branch.head main'
+      // Header line, e.g., '# branch.head main', '# branch.upstream origin/main',
+      // '# branch.ab +1 -2'
       const parts = line.split(' ');
       if (parts[1] === 'branch.head' && parts[2]) {
         result.currentBranch = parts[2] === '(detached)' ? null : parts[2];
+      } else if (parts[1] === 'branch.upstream' && parts[2]) {
+        result.upstream = parts[2];
+      } else if (parts[1] === 'branch.ab' && parts[2] && parts[3]) {
+        const ahead = parseInt(parts[2].replace(/^\+/, ''), 10);
+        const behind = parseInt(parts[3].replace(/^-/, ''), 10);
+        if (Number.isFinite(ahead)) result.ahead = ahead;
+        if (Number.isFinite(behind)) result.behind = behind;
       }
       continue;
     }

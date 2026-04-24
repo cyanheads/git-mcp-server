@@ -5,6 +5,7 @@
 import { z } from 'zod';
 
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
+import { JsonRpcErrorCode, McpError } from '@/types-global/errors.js';
 import {
   createJsonFormatter,
   type VerbosityLevel,
@@ -14,11 +15,18 @@ import {
   createToolHandler,
   type ToolLogicDependencies,
 } from '../utils/toolHandlerFactory.js';
+import {
+  gatherRepoSnapshot,
+  RepoSnapshotCommitSchema,
+  RepoSnapshotRemoteSchema,
+  RepoSnapshotStatusSchema,
+  RepoSnapshotTagSchema,
+} from '../utils/repo-snapshot.js';
 
 const TOOL_NAME = 'git_set_working_dir';
 const TOOL_TITLE = 'Git Set Working Directory';
 const TOOL_DESCRIPTION =
-  'Set the session working directory for all git operations. This allows subsequent git commands to omit the path parameter and use this directory as the default.';
+  'Set the session working directory for all git operations so subsequent calls can omit the path parameter. Always returns a repository snapshot (status, recent commits, recent tags, remotes) to orient the caller.';
 
 const InputSchema = z.object({
   path: z
@@ -35,100 +43,34 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe("If not a Git repository, initialize it with 'git init'."),
-  includeMetadata: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Include repository metadata (status, branches, remotes, recent commits) in the response. Set to true for immediate repository context understanding. Defaults to false to minimize response size.',
-    ),
 });
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
   path: z.string().describe('The working directory that was set.'),
   message: z.string().describe('Confirmation message.'),
-  repositoryContext: z
+  repository: z
     .object({
-      status: z
-        .object({
-          branch: z
-            .string()
-            .nullable()
-            .describe('Current branch name (null if detached HEAD).'),
-          isClean: z.boolean().describe('True if working directory is clean.'),
-          stagedCount: z
-            .number()
-            .int()
-            .describe('Number of staged files ready for commit.'),
-          unstagedCount: z
-            .number()
-            .int()
-            .describe('Number of files with unstaged changes.'),
-          untrackedCount: z
-            .number()
-            .int()
-            .describe('Number of untracked files.'),
-          conflictsCount: z
-            .number()
-            .int()
-            .describe('Number of files with merge conflicts.'),
-        })
-        .describe('Current repository working tree status.'),
-      branches: z
-        .object({
-          current: z
-            .string()
-            .nullable()
-            .describe('Current branch name (null if detached HEAD).'),
-          totalLocal: z
-            .number()
-            .int()
-            .describe('Total number of local branches.'),
-          totalRemote: z
-            .number()
-            .int()
-            .describe('Total number of remote-tracking branches.'),
-          upstream: z
-            .string()
-            .optional()
-            .describe(
-              'Upstream branch name if current branch is tracking one.',
-            ),
-          ahead: z
-            .number()
-            .int()
-            .optional()
-            .describe('Commits ahead of upstream (if tracking).'),
-          behind: z
-            .number()
-            .int()
-            .optional()
-            .describe('Commits behind upstream (if tracking).'),
-        })
-        .describe('Branch information and tracking status.'),
-      remotes: z
-        .array(
-          z.object({
-            name: z.string().describe('Remote name.'),
-            fetchUrl: z.string().describe('Fetch URL.'),
-            pushUrl: z.string().describe('Push URL (may differ from fetch).'),
-          }),
-        )
-        .describe('Configured remote repositories.'),
+      status: RepoSnapshotStatusSchema,
       recentCommits: z
-        .array(
-          z.object({
-            hash: z.string().describe('Commit hash (short form).'),
-            author: z.string().describe('Commit author name.'),
-            date: z.string().describe('Commit date (ISO 8601 format).'),
-            message: z.string().describe('Commit message (first line).'),
-          }),
-        )
-        .describe('Recent commits (up to 5 most recent).'),
+        .array(RepoSnapshotCommitSchema)
+        .describe('Up to 2 most recent commits on the current branch.'),
+      recentTags: z
+        .array(RepoSnapshotTagSchema)
+        .describe('Up to 2 most recent tags by creator date.'),
+      remotes: z
+        .array(RepoSnapshotRemoteSchema)
+        .describe('Configured remote repositories.'),
     })
     .optional()
     .describe(
-      'Rich repository metadata including status, branches, remotes, and recent history. Only included when includeMetadata parameter is true.',
+      'Best-effort repository snapshot. Omitted when the path is not a git repository (see enrichmentWarnings).',
+    ),
+  enrichmentWarnings: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Actionable notes when snapshot gathering was skipped or partially failed.',
     ),
 });
 
@@ -136,126 +78,42 @@ type ToolInput = z.infer<typeof InputSchema>;
 type ToolOutput = z.infer<typeof OutputSchema>;
 
 /**
- * Gather rich repository context including status, branches, remotes, and recent commits.
- * This provides LLMs with immediate understanding of repository state.
- *
- * Failures in context gathering are logged but don't fail the operation - context is
- * nice-to-have enrichment, not critical for setting the working directory.
+ * Ensure the target path is a git repository before we pin it as the session
+ * working directory. Owns its own try/catch because the fallback path
+ * (initialize-if-missing) treats the thrown validation error as a signal rather
+ * than a failure. Throws an actionable McpError when no fallback is available.
  */
-async function gatherRepositoryContext(
-  targetPath: string,
+async function ensureRepositoryReady(
+  input: ToolInput,
   dependencies: ToolLogicDependencies,
-): Promise<ToolOutput['repositoryContext']> {
+  tenantId: string,
+): Promise<void> {
+  if (!input.validateGitRepo) return;
+
   const { provider, appContext } = dependencies;
-  const tenantId = appContext.tenantId || 'default-tenant';
-  const context = {
-    workingDirectory: targetPath,
+  const opContext = {
+    workingDirectory: input.path,
     requestContext: appContext,
     tenantId,
   };
 
   try {
-    // Gather all context in parallel for efficiency
-    // Use separate local/remote branch queries for accurate counts
-    const [
-      statusResult,
-      localBranchesResult,
-      remoteBranchesResult,
-      remotesResult,
-      logResult,
-    ] = await Promise.allSettled([
-      provider.status({ includeUntracked: true }, context),
-      provider.branch({ mode: 'list' }, context),
-      provider.branch({ mode: 'list', remote: true }, context),
-      provider.remote({ mode: 'list' }, context),
-      provider.log({ maxCount: 5 }, context),
-    ]);
-
-    // Process status
-    const status =
-      statusResult.status === 'fulfilled'
-        ? {
-            branch: statusResult.value.currentBranch,
-            isClean: statusResult.value.isClean,
-            stagedCount:
-              (statusResult.value.stagedChanges.added?.length || 0) +
-              (statusResult.value.stagedChanges.modified?.length || 0) +
-              (statusResult.value.stagedChanges.deleted?.length || 0) +
-              (statusResult.value.stagedChanges.renamed?.length || 0) +
-              (statusResult.value.stagedChanges.copied?.length || 0),
-            unstagedCount:
-              (statusResult.value.unstagedChanges.added?.length || 0) +
-              (statusResult.value.unstagedChanges.modified?.length || 0) +
-              (statusResult.value.unstagedChanges.deleted?.length || 0),
-            untrackedCount: statusResult.value.untrackedFiles.length,
-            conflictsCount: statusResult.value.conflictedFiles.length,
-          }
-        : {
-            branch: null,
-            isClean: false,
-            stagedCount: 0,
-            unstagedCount: 0,
-            untrackedCount: 0,
-            conflictsCount: 0,
-          };
-
-    // Process branches from separate local/remote queries
-    const localBranches =
-      localBranchesResult.status === 'fulfilled' &&
-      localBranchesResult.value.mode === 'list'
-        ? localBranchesResult.value.branches
-        : [];
-    const remoteBranchCount =
-      remoteBranchesResult.status === 'fulfilled' &&
-      remoteBranchesResult.value.mode === 'list'
-        ? remoteBranchesResult.value.branches.length
-        : 0;
-    const currentBranch = localBranches.find((b) => b.current);
-
-    const branches: NonNullable<ToolOutput['repositoryContext']>['branches'] = {
-      current: currentBranch?.name || null,
-      totalLocal: localBranches.length,
-      totalRemote: remoteBranchCount,
-      upstream: currentBranch?.upstream,
-      ahead: currentBranch?.ahead,
-      behind: currentBranch?.behind,
-    };
-
-    // Process remotes
-    const remotes: NonNullable<ToolOutput['repositoryContext']>['remotes'] =
-      remotesResult.status === 'fulfilled' &&
-      remotesResult.value.mode === 'list'
-        ? remotesResult.value.remotes || []
-        : [];
-
-    // Process recent commits
-    const recentCommits: NonNullable<
-      ToolOutput['repositoryContext']
-    >['recentCommits'] =
-      logResult.status === 'fulfilled'
-        ? logResult.value.commits.map((commit) => ({
-            hash: commit.shortHash,
-            author: commit.author,
-            date: new Date(commit.timestamp * 1000).toISOString(),
-            message: commit.subject,
-          }))
-        : [];
-
-    return {
-      status,
-      branches,
-      remotes,
-      recentCommits,
-    };
+    await provider.validateRepository(input.path, opContext);
+    return;
   } catch (error) {
-    // Log error but return undefined - context gathering is optional
-    const { logger } = await import('@/utils/index.js');
-    logger.debug('Failed to gather repository context', {
-      ...appContext,
-      error: error instanceof Error ? error.message : String(error),
-      targetPath,
-    });
-    return undefined;
+    if (input.initializeIfNotPresent) {
+      await provider.init(
+        { path: input.path, initialBranch: 'main', bare: false },
+        opContext,
+      );
+      return;
+    }
+    const original = error instanceof Error ? error.message : String(error);
+    throw new McpError(
+      JsonRpcErrorCode.ValidationError,
+      `Path is not a git repository: ${input.path}. Pass initializeIfNotPresent: true to run 'git init' here, or point at an existing repository. Underlying error: ${original}`,
+      { path: input.path },
+    );
   }
 }
 
@@ -264,85 +122,50 @@ async function gitSetWorkingDirLogic(
   dependencies: ToolLogicDependencies,
 ): Promise<ToolOutput> {
   const { provider, storage, appContext } = dependencies;
-
-  // Graceful degradation for tenantId
   const tenantId = appContext.tenantId || 'default-tenant';
 
-  // Validate git repository if requested (using provider interface instead of direct CLI import)
-  if (input.validateGitRepo) {
-    try {
-      await provider.validateRepository(input.path, {
-        workingDirectory: input.path,
-        requestContext: appContext,
-        tenantId,
-      });
-    } catch (error) {
-      // If validation fails and initializeIfNotPresent is true, initialize the repo
-      if (input.initializeIfNotPresent) {
-        await provider.init(
-          {
-            path: input.path,
-            initialBranch: 'main',
-            bare: false,
-          },
-          {
-            workingDirectory: input.path,
-            requestContext: appContext,
-            tenantId,
-          },
-        );
-      } else {
-        // Re-throw validation error if initializeIfNotPresent is false
-        throw error;
-      }
-    }
-  }
+  await ensureRepositoryReady(input, dependencies, tenantId);
 
-  // Store the working directory in session storage
   const storageKey = `session:workingDir:${tenantId}`;
   await storage.set(storageKey, input.path, appContext);
 
-  // Gather repository metadata only if requested
-  const repositoryContext = input.includeMetadata
-    ? await gatherRepositoryContext(input.path, dependencies)
-    : undefined;
+  const { snapshot, warnings } = await gatherRepoSnapshot(
+    { provider, appContext, workingDirectory: input.path },
+    { commitLimit: 2, tagLimit: 2, includeRemotes: true },
+  );
 
   return {
     success: true,
     path: input.path,
     message: `Working directory set to: ${input.path}`,
-    repositoryContext,
+    ...(snapshot
+      ? {
+          repository: {
+            status: snapshot.status,
+            recentCommits: snapshot.recentCommits,
+            recentTags: snapshot.recentTags,
+            remotes: snapshot.remotes ?? [],
+          },
+        }
+      : {}),
+    ...(warnings.length > 0 ? { enrichmentWarnings: warnings } : {}),
   };
 }
 
 /**
- * Filter git_set_working_dir output based on verbosity level.
- *
- * Verbosity levels:
- * - minimal: Success and path only (omits message and metadata)
- * - standard: Success, path, message, and full repository metadata (if includeMetadata was true)
- * - full: Complete output (same as standard)
- *
- * Note: Repository metadata is only gathered when includeMetadata parameter is true.
- * Verbosity filtering applies to the response format, not whether metadata is gathered.
+ * - minimal: success + path only
+ * - standard/full: everything (message, repository, warnings)
  */
 function filterGitSetWorkingDirOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // minimal: Essential info only - no message, no metadata
   if (level === 'minimal') {
-    return {
-      success: result.success,
-      path: result.path,
-    };
+    return { success: result.success, path: result.path };
   }
-
-  // standard & full: Complete output including metadata (if it was requested)
   return result;
 }
 
-// Create JSON response formatter with verbosity filtering
 const responseFormatter = createJsonFormatter<ToolOutput>({
   filter: filterGitSetWorkingDirOutput,
 });

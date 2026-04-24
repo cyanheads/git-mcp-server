@@ -32,6 +32,20 @@ const InputSchema = z.object({
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
   currentBranch: z.string().nullable().describe('Current branch name.'),
+  upstream: z
+    .string()
+    .optional()
+    .describe('Upstream ref the current branch is tracking (if any).'),
+  ahead: z
+    .number()
+    .int()
+    .optional()
+    .describe('Commits ahead of upstream (if tracking).'),
+  behind: z
+    .number()
+    .int()
+    .optional()
+    .describe('Commits behind upstream (if tracking).'),
   isClean: z
     .boolean()
     .describe(
@@ -107,6 +121,9 @@ async function gitStatusLogic(
   return {
     success: true,
     currentBranch: result.currentBranch,
+    ...(result.upstream !== undefined && { upstream: result.upstream }),
+    ...(result.ahead !== undefined && { ahead: result.ahead }),
+    ...(result.behind !== undefined && { behind: result.behind }),
     isClean: result.isClean,
     stagedChanges: result.stagedChanges,
     unstagedChanges: result.unstagedChanges,

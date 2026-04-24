@@ -332,4 +332,76 @@ describe('executeBranch', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('list mode limit', () => {
+    it('passes --count=N when limit is set', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeBranch({ mode: 'list', limit: 5 }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('--count=5');
+    });
+
+    it('omits --count when limit is zero or negative', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeBranch({ mode: 'list', limit: 0 }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args.some((arg) => arg.startsWith('--count='))).toBe(false);
+    });
+  });
+
+  describe('show-current mode', () => {
+    it('uses git symbolic-ref --short HEAD instead of listing all refs', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: 'main\n', stderr: '' });
+
+      const result = await executeBranch(
+        { mode: 'show-current' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(mockExecGit).toHaveBeenCalledTimes(1);
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('symbolic-ref');
+      expect(args).toContain('--short');
+      expect(args).toContain('HEAD');
+      expect(args).not.toContain('for-each-ref');
+      expect(result.mode).toBe('show-current');
+      if (result.mode === 'show-current') {
+        expect(result.current).toBe('main');
+      }
+    });
+
+    it('returns null on detached HEAD (symbolic-ref exits non-zero with --quiet)', async () => {
+      mockExecGit.mockRejectedValueOnce(new Error('exit code 1'));
+
+      const result = await executeBranch(
+        { mode: 'show-current' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.mode).toBe('show-current');
+      if (result.mode === 'show-current') {
+        expect(result.current).toBeNull();
+      }
+    });
+
+    it('returns null when symbolic-ref output is empty', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '\n', stderr: '' });
+
+      const result = await executeBranch(
+        { mode: 'show-current' },
+        mockContext,
+        mockExecGit,
+      );
+
+      if (result.mode === 'show-current') {
+        expect(result.current).toBeNull();
+      }
+    });
+  });
 });

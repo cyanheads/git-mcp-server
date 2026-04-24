@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema, normalizeMessage } from '../schemas/common.js';
+import {
+  LimitSchema,
+  PathSchema,
+  normalizeMessage,
+} from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -47,6 +51,9 @@ const InputSchema = z.object({
     .boolean()
     .default(false)
     .describe("Don't revert staged changes (for push operation)."),
+  limit: LimitSchema.describe(
+    'For list mode: cap the number of stash entries returned (applied at the git command).',
+  ),
 });
 
 const StashInfoSchema = z.object({
@@ -95,6 +102,7 @@ async function gitStashLogic(
     stashRef?: string;
     includeUntracked?: boolean;
     keepIndex?: boolean;
+    limit?: number;
   } = {
     mode: input.mode,
   };
@@ -110,6 +118,9 @@ async function gitStashLogic(
   }
   if (input.keepIndex !== undefined) {
     stashOptions.keepIndex = input.keepIndex;
+  }
+  if (input.limit !== undefined) {
+    stashOptions.limit = input.limit;
   }
 
   const result = await provider.stash(stashOptions, {

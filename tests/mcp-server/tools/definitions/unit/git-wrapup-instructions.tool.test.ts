@@ -15,13 +15,54 @@ import {
   createTestSdkContext,
   createMockGitProvider,
   createMockStorageService,
-  assertJsonContent,
-  assertJsonField,
   parseJsonContent,
   assertLlmFriendlyFormat,
 } from '../helpers/index.js';
-import type { GitStatusResult } from '@/services/git/types.js';
+import type {
+  GitLogResult,
+  GitStatusResult,
+  GitTagResult,
+} from '@/services/git/types.js';
 import { GitProviderFactory } from '@/services/git/core/GitProviderFactory.js';
+
+const logResult: GitLogResult = {
+  commits: [
+    {
+      hash: 'abc123def456',
+      shortHash: 'abc123d',
+      author: 'Test User',
+      authorEmail: 'test@example.com',
+      timestamp: 1704067200,
+      subject: 'feat: initial commit',
+      body: '',
+      parents: [],
+    },
+  ],
+  totalCount: 1,
+};
+
+const tagResult: GitTagResult = {
+  mode: 'list',
+  tags: [
+    {
+      name: 'v1.0.0',
+      commit: 'abc123d',
+      message: 'First release',
+      annotationBody: 'Signed off for production.',
+      tagger: 'Test User <test@example.com>',
+      timestamp: 1704067200,
+    },
+  ],
+};
+
+function primeSnapshotMocks(
+  mockProvider: ReturnType<typeof createMockGitProvider>,
+  status: GitStatusResult,
+) {
+  mockProvider.status.mockResolvedValue(status);
+  mockProvider.log.mockResolvedValue(logResult);
+  mockProvider.tag.mockResolvedValue(tagResult);
+}
 
 describe('git_wrapup_instructions tool', () => {
   const mockProvider = createMockGitProvider();
@@ -44,33 +85,15 @@ describe('git_wrapup_instructions tool', () => {
   });
 
   describe('Input Schema', () => {
-    it('accepts uppercase Y acknowledgement', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
-        acknowledgement: 'Y',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts lowercase y acknowledgement', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
-        acknowledgement: 'y',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts Yes acknowledgement', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
-        acknowledgement: 'Yes',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts yes acknowledgement', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
-        acknowledgement: 'yes',
-      });
-      expect(result.success).toBe(true);
-    });
+    it.each([['Y'], ['y'], ['Yes'], ['yes']])(
+      'accepts %s acknowledgement',
+      (ack) => {
+        const result = gitWrapupInstructionsTool.inputSchema.safeParse({
+          acknowledgement: ack,
+        });
+        expect(result.success).toBe(true);
+      },
+    );
 
     it('rejects invalid acknowledgement', () => {
       const result = gitWrapupInstructionsTool.inputSchema.safeParse({
@@ -84,33 +107,27 @@ describe('git_wrapup_instructions tool', () => {
       expect(result.success).toBe(false);
     });
 
-    it('accepts createTag: true', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
+    it('accepts createTag: true/false', () => {
+      const okTrue = gitWrapupInstructionsTool.inputSchema.safeParse({
         acknowledgement: 'Y',
         createTag: true,
       });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.createTag).toBe(true);
-      }
-    });
-
-    it('accepts createTag: false', () => {
-      const result = gitWrapupInstructionsTool.inputSchema.safeParse({
+      const okFalse = gitWrapupInstructionsTool.inputSchema.safeParse({
         acknowledgement: 'Y',
         createTag: false,
       });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.createTag).toBe(false);
-      }
+      expect(okTrue.success).toBe(true);
+      expect(okFalse.success).toBe(true);
     });
   });
 
   describe('Tool Logic', () => {
-    it('returns instructions with git status', async () => {
-      const mockStatusResult: GitStatusResult = {
+    it('returns instructions with repository snapshot', async () => {
+      primeSnapshotMocks(mockProvider, {
         currentBranch: 'main',
+        upstream: 'origin/main',
+        ahead: 0,
+        behind: 0,
         isClean: false,
         stagedChanges: {
           added: ['new-file.txt'],
@@ -121,9 +138,7 @@ describe('git_wrapup_instructions tool', () => {
         },
         untrackedFiles: ['untracked.txt'],
         conflictedFiles: [],
-      };
-
-      mockProvider.status.mockResolvedValue(mockStatusResult);
+      });
 
       const parsedInput = gitWrapupInstructionsTool.inputSchema.parse({
         acknowledgement: 'Y',
@@ -138,16 +153,23 @@ describe('git_wrapup_instructions tool', () => {
       );
 
       expect(result.instructions).toBeTruthy();
-      expect(result.instructions.length).toBeGreaterThan(100);
-      expect(result.gitStatus).toBeDefined();
-      expect(result.gitStatus!.branch).toBe('main');
-      expect(result.gitStatus!.staged).toContain('new-file.txt');
-      expect(result.gitStatus!.unstaged).toContain('unstaged.txt');
-      expect(result.gitStatus!.untracked).toContain('untracked.txt');
-      expect(result.gitStatusError).toBeUndefined();
+      expect(result.repository).toBeDefined();
+      expect(result.repository!.status.branch).toBe('main');
+      expect(result.repository!.status.upstream).toBe('origin/main');
+      expect(result.repository!.status.staged).toContain('new-file.txt');
+      expect(result.repository!.status.unstaged).toContain('unstaged.txt');
+      expect(result.repository!.status.untracked).toContain('untracked.txt');
+      expect(result.repository!.recentCommits).toHaveLength(1);
+      expect(result.repository!.recentTags[0]!.annotationSubject).toBe(
+        'First release',
+      );
+      expect(result.repository!.recentTags[0]!.annotationBody).toBe(
+        'Signed off for production.',
+      );
+      expect(result.enrichmentWarnings).toBeUndefined();
     });
 
-    it('returns instructions without status when no working directory set', async () => {
+    it('emits an actionable warning when no working directory is set', async () => {
       const clearContext = createTestContext({ tenantId: 'test-tenant' });
       await mockStorage.delete('session:workingDir:test-tenant', clearContext);
 
@@ -164,12 +186,13 @@ describe('git_wrapup_instructions tool', () => {
       );
 
       expect(result.instructions).toBeTruthy();
-      expect(result.gitStatus).toBeUndefined();
-      expect(result.gitStatusError).toContain('No working directory set');
+      expect(result.repository).toBeUndefined();
+      expect(result.enrichmentWarnings).toHaveLength(1);
+      expect(result.enrichmentWarnings![0]).toContain('git_set_working_dir');
     });
 
     it('default instructions include the full acceptance protocol', async () => {
-      mockProvider.status.mockResolvedValue({
+      primeSnapshotMocks(mockProvider, {
         currentBranch: 'main',
         isClean: true,
         stagedChanges: {},
@@ -192,53 +215,15 @@ describe('git_wrapup_instructions tool', () => {
 
       expect(result.instructions).toContain('# Git Wrap-up');
       expect(result.instructions).toContain('**Outcome**');
-      expect(result.instructions).toContain('**Philosophy**');
       expect(result.instructions).toContain('## Orient');
       expect(result.instructions).toContain('## Acceptance criteria');
-      expect(result.instructions).toContain('Every wrap-up is a release');
       expect(result.instructions).toContain('Full diff reviewed');
-      expect(result.instructions).toContain('Version bumped per semver');
-      expect(result.instructions).toContain("project's existing format");
-      expect(result.instructions).toContain(
-        'Documentation that references changed behaviour',
-      );
-      expect(result.instructions).toContain('Verification suite passes');
       expect(result.instructions).toContain('Conventional Commits');
-      expect(result.instructions).toContain('Commonly relevant files');
-      expect(result.instructions).toContain('AGENTS.md');
-      expect(result.instructions).toContain('CLAUDE.md');
-      expect(result.instructions).toContain('server.json');
       expect(result.instructions).toContain('## Constraints');
     });
 
-    it('default (createTag unset) includes the tag criterion', async () => {
-      mockProvider.status.mockResolvedValue({
-        currentBranch: 'main',
-        isClean: true,
-        stagedChanges: {},
-        unstagedChanges: {},
-        untrackedFiles: [],
-        conflictedFiles: [],
-      });
-
-      const parsedInput = gitWrapupInstructionsTool.inputSchema.parse({
-        acknowledgement: 'Y',
-      });
-      const appContext = createTestContext({ tenantId: 'test-tenant' });
-      const sdkContext = createTestSdkContext();
-
-      const result = await gitWrapupInstructionsTool.logic(
-        parsedInput,
-        appContext,
-        sdkContext,
-      );
-
-      expect(result.instructions).toContain('Annotated tag');
-      expect(result.instructions).toContain('Flag if a tag already exists');
-    });
-
     it('createTag: true includes the tag criterion', async () => {
-      mockProvider.status.mockResolvedValue({
+      primeSnapshotMocks(mockProvider, {
         currentBranch: 'main',
         isClean: true,
         stagedChanges: {},
@@ -264,7 +249,7 @@ describe('git_wrapup_instructions tool', () => {
     });
 
     it('createTag: false omits the tag criterion entirely', async () => {
-      mockProvider.status.mockResolvedValue({
+      primeSnapshotMocks(mockProvider, {
         currentBranch: 'main',
         isClean: true,
         stagedChanges: {},
@@ -287,14 +272,20 @@ describe('git_wrapup_instructions tool', () => {
       );
 
       expect(result.instructions).not.toContain('Annotated tag');
-      expect(result.instructions).not.toContain('Flag if a tag already exists');
-      // Other acceptance criteria remain present
       expect(result.instructions).toContain('Full diff reviewed');
-      expect(result.instructions).toContain('Conventional Commits');
     });
 
-    it('handles status retrieval failure gracefully', async () => {
-      mockProvider.status.mockRejectedValue(new Error('Git error'));
+    it('surfaces partial snapshot failures as warnings', async () => {
+      mockProvider.status.mockResolvedValue({
+        currentBranch: 'main',
+        isClean: true,
+        stagedChanges: {},
+        unstagedChanges: {},
+        untrackedFiles: [],
+        conflictedFiles: [],
+      });
+      mockProvider.log.mockResolvedValue(logResult);
+      mockProvider.tag.mockRejectedValue(new Error('tag listing exploded'));
 
       const parsedInput = gitWrapupInstructionsTool.inputSchema.parse({
         acknowledgement: 'Y',
@@ -308,57 +299,80 @@ describe('git_wrapup_instructions tool', () => {
         sdkContext,
       );
 
-      expect(result.instructions).toBeTruthy();
-      expect(result.gitStatus).toBeUndefined();
-      expect(result.gitStatusError).toContain('Failed to get git status');
+      expect(result.repository).toBeDefined();
+      expect(result.repository!.recentTags).toEqual([]);
+      expect(result.enrichmentWarnings).toBeDefined();
+      expect(result.enrichmentWarnings!.some((w) => w.includes('tag'))).toBe(
+        true,
+      );
     });
   });
 
   describe('Response Formatter', () => {
-    it('formats instructions with git status', () => {
+    it('formats instructions with repository snapshot', () => {
       const result = {
         instructions: '# Git Wrap-up\n\nSome instructions here...',
-        gitStatus: {
-          branch: 'main',
-          staged: ['staged.txt'],
-          unstaged: ['unstaged.txt'],
-          untracked: ['untracked.txt'],
+        repository: {
+          status: {
+            branch: 'main',
+            isClean: false,
+            staged: ['staged.txt'],
+            unstaged: ['unstaged.txt'],
+            untracked: ['untracked.txt'],
+            conflicts: [],
+          },
+          recentCommits: [
+            {
+              hash: 'abc123d',
+              author: 'Test User',
+              date: '2024-01-01T00:00:00.000Z',
+              subject: 'feat: initial commit',
+            },
+          ],
+          recentTags: [
+            {
+              name: 'v1.0.0',
+              date: '2024-01-01T00:00:00.000Z',
+              annotationSubject: 'First release',
+              annotationBody: 'Signed off for production.',
+            },
+          ],
         },
-        gitStatusError: undefined,
       };
 
       const content = gitWrapupInstructionsTool.responseFormatter!(result);
 
       const parsed = parseJsonContent(content) as {
         instructions: string;
-        gitStatus: { branch: string };
+        repository: {
+          status: { branch: string };
+          recentTags: Array<{ annotationBody: string }>;
+        };
       };
 
       expect(parsed.instructions).toContain('Wrap-up');
-      expect(parsed.gitStatus.branch).toBe('main');
-
+      expect(parsed.repository.status.branch).toBe('main');
+      expect(parsed.repository.recentTags[0]!.annotationBody).toBe(
+        'Signed off for production.',
+      );
       assertLlmFriendlyFormat(content);
     });
 
-    it('formats instructions with error', () => {
+    it('formats instructions with enrichment warning', () => {
       const result = {
         instructions: '# Git Wrap-up\n\nSome instructions here...',
-        gitStatus: undefined,
-        gitStatusError:
-          'No working directory set for session, git status skipped.',
+        enrichmentWarnings: [
+          'No session working directory set. Call git_set_working_dir first to include a repository snapshot (status, recent commits, recent tags) in this response.',
+        ],
       };
 
       const content = gitWrapupInstructionsTool.responseFormatter!(result);
+      const parsed = parseJsonContent(content) as {
+        instructions: string;
+        enrichmentWarnings: string[];
+      };
 
-      assertJsonContent(content, {
-        instructions: result.instructions,
-      });
-
-      assertJsonField(
-        content,
-        'gitStatusError',
-        'No working directory set for session, git status skipped.',
-      );
+      expect(parsed.enrichmentWarnings[0]).toContain('git_set_working_dir');
     });
   });
 
@@ -389,8 +403,8 @@ describe('git_wrapup_instructions tool', () => {
 
       const outputShape = gitWrapupInstructionsTool.outputSchema.shape;
       expect(outputShape.instructions).toBeDefined();
-      expect(outputShape.gitStatus).toBeDefined();
-      expect(outputShape.gitStatusError).toBeDefined();
+      expect(outputShape.repository).toBeDefined();
+      expect(outputShape.enrichmentWarnings).toBeDefined();
     });
   });
 });

@@ -97,6 +97,24 @@ describe('executeStash', () => {
 
       expect(result.stashes).toHaveLength(0);
     });
+
+    it('passes -nN to git stash list when limit is set', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeStash({ mode: 'list', limit: 5 }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('-n5');
+    });
+
+    it('omits -nN when limit is zero or negative', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeStash({ mode: 'list', limit: 0 }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args.some((arg) => /^-n\d+$/.test(arg))).toBe(false);
+    });
   });
 
   describe('push mode', () => {

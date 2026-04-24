@@ -40,13 +40,15 @@ describe('executeTag', () => {
   });
 
   describe('list mode', () => {
-    it('lists tags via for-each-ref', async () => {
-      // for-each-ref output with field delimiters (\x1F)
-      const stdout = [
-        `v2.0.0\x1Fabc1234\x1FRelease 2.0\x1FTagger <t@e.com>\x1F1700000000`,
-        `v1.1.0\x1Fdef5678\x1F\x1F\x1F`,
-        `v1.0.0\x1F9876543\x1FInitial\x1F\x1F1690000000`,
-      ].join('\n');
+    it('lists tags via for-each-ref with field + record delimiters', async () => {
+      // Fields separated by \x1F, records terminated by \x1E. Body field is last
+      // and may contain newlines — the record delimiter is what terminates.
+      const stdout =
+        [
+          `v2.0.0\x1Fabc1234\x1FRelease 2.0\x1FTagger <t@e.com>\x1F1700000000\x1FFirst body line\nSecond body line`,
+          `v1.1.0\x1Fdef5678\x1F\x1F\x1F\x1F`,
+          `v1.0.0\x1F9876543\x1FInitial\x1F\x1F1690000000\x1F`,
+        ].join('\x1E\n') + '\x1E\n';
 
       mockExecGit.mockResolvedValueOnce({ stdout, stderr: '' });
 
@@ -64,9 +66,14 @@ describe('executeTag', () => {
       expect(result.tags![0]!.name).toBe('v2.0.0');
       expect(result.tags![0]!.commit).toBe('abc1234');
       expect(result.tags![0]!.message).toBe('Release 2.0');
+      expect(result.tags![0]!.annotationBody).toBe(
+        'First body line\nSecond body line',
+      );
       expect(result.tags![1]!.name).toBe('v1.1.0');
       expect(result.tags![1]!.commit).toBe('def5678');
+      expect(result.tags![1]!.annotationBody).toBeUndefined();
       expect(result.tags![2]!.name).toBe('v1.0.0');
+      expect(result.tags![2]!.annotationBody).toBeUndefined();
     });
 
     it('returns empty tags array for no tags', async () => {
@@ -82,6 +89,43 @@ describe('executeTag', () => {
       );
 
       expect(result.tags).toHaveLength(0);
+    });
+
+    it('passes --count=N to for-each-ref when limit is set', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeTag({ mode: 'list', limit: 3 }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args).toContain('--count=3');
+    });
+
+    it('omits --count when limit is zero or negative', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeTag({ mode: 'list', limit: 0 }, mockContext, mockExecGit);
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      expect(args.some((arg) => arg.startsWith('--count='))).toBe(false);
+    });
+
+    it('parses annotation body with embedded newlines as a single field', async () => {
+      // Body spanning multiple lines must round-trip cleanly because the record
+      // delimiter (\x1E) — not newline — is what terminates the record.
+      const stdout = `v3.0.0\x1Faaa1111\x1FBig release\x1FT <t@e.com>\x1F1700000000\x1FLine one\nLine two\n\nLine four\x1E\n`;
+
+      mockExecGit.mockResolvedValueOnce({ stdout, stderr: '' });
+
+      const result = await executeTag(
+        { mode: 'list' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.tags).toHaveLength(1);
+      expect(result.tags![0]!.annotationBody).toBe(
+        'Line one\nLine two\n\nLine four',
+      );
     });
   });
 
@@ -345,7 +389,7 @@ describe('executeTag', () => {
   describe('result structure', () => {
     it('returns correct structure for list', async () => {
       mockExecGit.mockResolvedValueOnce({
-        stdout: 'v1.0.0\n',
+        stdout: 'v1.0.0\x1F\x1F\x1F\x1F\x1F\x1E\n',
         stderr: '',
       });
 

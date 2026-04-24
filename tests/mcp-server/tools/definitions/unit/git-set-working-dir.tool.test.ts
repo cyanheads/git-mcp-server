@@ -21,12 +21,74 @@ import {
   assertLlmFriendlyFormat,
 } from '../helpers/index.js';
 import type {
-  GitStatusResult,
-  GitBranchResult,
-  GitRemoteResult,
   GitLogResult,
+  GitRemoteResult,
+  GitStatusResult,
+  GitTagResult,
 } from '@/services/git/types.js';
 import { GitProviderFactory } from '@/services/git/core/GitProviderFactory.js';
+
+const cleanStatus: GitStatusResult = {
+  currentBranch: 'main',
+  upstream: 'origin/main',
+  ahead: 0,
+  behind: 0,
+  isClean: true,
+  stagedChanges: {},
+  unstagedChanges: {},
+  untrackedFiles: [],
+  conflictedFiles: [],
+};
+
+const remoteResult: GitRemoteResult = {
+  mode: 'list',
+  remotes: [
+    {
+      name: 'origin',
+      fetchUrl: 'https://github.com/test/repo.git',
+      pushUrl: 'https://github.com/test/repo.git',
+    },
+  ],
+};
+
+const logResult: GitLogResult = {
+  commits: [
+    {
+      hash: 'abc123def456',
+      shortHash: 'abc123d',
+      author: 'Test User',
+      authorEmail: 'test@example.com',
+      timestamp: 1704067200,
+      subject: 'Initial commit',
+      body: '',
+      parents: [],
+    },
+  ],
+  totalCount: 1,
+};
+
+const tagResult: GitTagResult = {
+  mode: 'list',
+  tags: [
+    {
+      name: 'v1.0.0',
+      commit: 'abc123d',
+      message: 'Initial release',
+      annotationBody: 'First stable release.',
+      tagger: 'Test User <test@example.com>',
+      timestamp: 1704067200,
+    },
+  ],
+};
+
+function primeSnapshotMocks(
+  mockProvider: ReturnType<typeof createMockGitProvider>,
+) {
+  mockProvider.status.mockResolvedValue(cleanStatus);
+  mockProvider.log.mockResolvedValue(logResult);
+  mockProvider.tag.mockResolvedValue(tagResult);
+  mockProvider.remote.mockResolvedValue(remoteResult);
+}
 
 describe('git_set_working_dir tool', () => {
   const mockProvider = createMockGitProvider();
@@ -42,8 +104,6 @@ describe('git_set_working_dir tool', () => {
     container.clearInstances();
     container.register(GitProviderFactoryToken, { useValue: mockFactory });
     container.register(StorageServiceToken, { useValue: mockStorage });
-
-    // Note: no session working dir set by default for this tool (skipPathResolution)
   });
 
   describe('Input Schema', () => {
@@ -54,7 +114,6 @@ describe('git_set_working_dir tool', () => {
       if (result.success) {
         expect(result.data.validateGitRepo).toBe(true);
         expect(result.data.initializeIfNotPresent).toBe(false);
-        expect(result.data.includeMetadata).toBe(false);
       }
     });
 
@@ -63,39 +122,35 @@ describe('git_set_working_dir tool', () => {
         path: '/test/repo',
         validateGitRepo: false,
         initializeIfNotPresent: true,
-        includeMetadata: true,
       };
       const result = gitSetWorkingDirTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.validateGitRepo).toBe(false);
         expect(result.data.initializeIfNotPresent).toBe(true);
-        expect(result.data.includeMetadata).toBe(true);
       }
     });
 
     it('rejects empty path', () => {
-      const input = { path: '' };
-      const result = gitSetWorkingDirTool.inputSchema.safeParse(input);
+      const result = gitSetWorkingDirTool.inputSchema.safeParse({ path: '' });
       expect(result.success).toBe(false);
     });
 
     it('rejects invalid path type', () => {
-      const input = { path: 123 };
-      const result = gitSetWorkingDirTool.inputSchema.safeParse(input);
+      const result = gitSetWorkingDirTool.inputSchema.safeParse({ path: 123 });
       expect(result.success).toBe(false);
     });
 
     it('rejects missing path', () => {
-      const input = {};
-      const result = gitSetWorkingDirTool.inputSchema.safeParse(input);
+      const result = gitSetWorkingDirTool.inputSchema.safeParse({});
       expect(result.success).toBe(false);
     });
   });
 
   describe('Tool Logic', () => {
-    it('sets working directory successfully', async () => {
+    it('sets working directory and returns snapshot by default', async () => {
       mockProvider.validateRepository.mockResolvedValue(undefined);
+      primeSnapshotMocks(mockProvider);
 
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
         path: '/test/repo',
@@ -113,10 +168,24 @@ describe('git_set_working_dir tool', () => {
       expect(result.success).toBe(true);
       expect(result.path).toBe('/test/repo');
       expect(result.message).toContain('/test/repo');
+      expect(result.repository).toBeDefined();
+      expect(result.repository!.status.branch).toBe('main');
+      expect(result.repository!.status.upstream).toBe('origin/main');
+      expect(result.repository!.recentCommits).toHaveLength(1);
+      expect(result.repository!.recentTags[0]!.name).toBe('v1.0.0');
+      expect(result.repository!.recentTags[0]!.annotationSubject).toBe(
+        'Initial release',
+      );
+      expect(result.repository!.recentTags[0]!.annotationBody).toBe(
+        'First stable release.',
+      );
+      expect(result.repository!.remotes).toHaveLength(1);
+      expect(result.enrichmentWarnings).toBeUndefined();
     });
 
     it('stores working directory in session storage', async () => {
       mockProvider.validateRepository.mockResolvedValue(undefined);
+      primeSnapshotMocks(mockProvider);
 
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
         path: '/test/repo',
@@ -126,7 +195,6 @@ describe('git_set_working_dir tool', () => {
 
       await gitSetWorkingDirTool.logic(parsedInput, appContext, sdkContext);
 
-      // Verify the working directory was stored
       const storedPath = await mockStorage.get<string>(
         'session:workingDir:test-tenant',
         appContext,
@@ -135,6 +203,8 @@ describe('git_set_working_dir tool', () => {
     });
 
     it('skips validation when validateGitRepo is false', async () => {
+      primeSnapshotMocks(mockProvider);
+
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
         path: '/test/repo',
         validateGitRepo: false,
@@ -162,6 +232,7 @@ describe('git_set_working_dir tool', () => {
         bare: false,
         initialBranch: 'main',
       });
+      primeSnapshotMocks(mockProvider);
 
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
         path: '/test/repo',
@@ -181,92 +252,32 @@ describe('git_set_working_dir tool', () => {
       expect(result.success).toBe(true);
     });
 
-    it('includes repository metadata when includeMetadata is true', async () => {
-      mockProvider.validateRepository.mockResolvedValue(undefined);
-
-      const mockStatusResult: GitStatusResult = {
-        currentBranch: 'main',
-        isClean: true,
-        stagedChanges: {},
-        unstagedChanges: {},
-        untrackedFiles: [],
-        conflictedFiles: [],
-      };
-
-      const mockBranchResult: GitBranchResult = {
-        mode: 'list',
-        branches: [
-          {
-            name: 'main',
-            current: true,
-            commitHash: 'abc123',
-            upstream: 'origin/main',
-            ahead: 0,
-            behind: 0,
-          },
-        ],
-      };
-
-      const mockRemoteResult: GitRemoteResult = {
-        mode: 'list',
-        remotes: [
-          {
-            name: 'origin',
-            fetchUrl: 'https://github.com/test/repo.git',
-            pushUrl: 'https://github.com/test/repo.git',
-          },
-        ],
-      };
-
-      const mockLogResult: GitLogResult = {
-        commits: [
-          {
-            hash: 'abc123def456',
-            shortHash: 'abc123d',
-            author: 'Test User',
-            authorEmail: 'test@example.com',
-            timestamp: 1704067200,
-            subject: 'Initial commit',
-            body: '',
-            parents: [],
-          },
-        ],
-        totalCount: 1,
-      };
-
-      mockProvider.status.mockResolvedValue(mockStatusResult);
-      mockProvider.branch.mockResolvedValue(mockBranchResult);
-      mockProvider.remote.mockResolvedValue(mockRemoteResult);
-      mockProvider.log.mockResolvedValue(mockLogResult);
+    it('throws an actionable McpError when validation fails without init fallback', async () => {
+      mockProvider.validateRepository.mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
-        path: '/test/repo',
-        includeMetadata: true,
+        path: '/not/a/repo',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
 
-      const result = await gitSetWorkingDirTool.logic(
-        parsedInput,
-        appContext,
-        sdkContext,
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.repositoryContext).toBeDefined();
-      expect(result.repositoryContext!.status.branch).toBe('main');
-      expect(result.repositoryContext!.status.isClean).toBe(true);
-      expect(result.repositoryContext!.branches.current).toBe('main');
-      expect(result.repositoryContext!.remotes).toHaveLength(1);
-      expect(result.repositoryContext!.recentCommits).toHaveLength(1);
+      await expect(
+        gitSetWorkingDirTool.logic(parsedInput, appContext, sdkContext),
+      ).rejects.toThrow(/initializeIfNotPresent: true/);
     });
 
-    it('omits repository metadata when includeMetadata is false', async () => {
-      mockProvider.validateRepository.mockResolvedValue(undefined);
+    it('collapses snapshot failures into a single warning when path is not a repo', async () => {
+      const notARepo = new Error('fatal: not a git repository');
+      mockProvider.status.mockRejectedValue(notARepo);
+      mockProvider.log.mockRejectedValue(notARepo);
+      mockProvider.tag.mockRejectedValue(notARepo);
+      mockProvider.remote.mockRejectedValue(notARepo);
 
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
-        path: '/test/repo',
-        includeMetadata: false,
+        path: '/not/a/repo',
+        validateGitRepo: false,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -277,12 +288,14 @@ describe('git_set_working_dir tool', () => {
         sdkContext,
       );
 
-      expect(result.repositoryContext).toBeUndefined();
-      expect(mockProvider.status).not.toHaveBeenCalled();
+      expect(result.repository).toBeUndefined();
+      expect(result.enrichmentWarnings).toHaveLength(1);
+      expect(result.enrichmentWarnings![0]).toMatch(/git repository/);
     });
 
     it('applies graceful tenantId default when missing', async () => {
       mockProvider.validateRepository.mockResolvedValue(undefined);
+      primeSnapshotMocks(mockProvider);
 
       const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
         path: '/test/repo',
@@ -292,7 +305,6 @@ describe('git_set_working_dir tool', () => {
 
       await gitSetWorkingDirTool.logic(parsedInput, appContext, sdkContext);
 
-      // Verify default tenant was used for storage
       const storedPath = await mockStorage.get<string>(
         'session:workingDir:default-tenant',
         appContext,
@@ -307,45 +319,54 @@ describe('git_set_working_dir tool', () => {
         success: true,
         path: '/test/repo',
         message: 'Working directory set to: /test/repo',
-        repositoryContext: undefined,
       };
 
       const content = gitSetWorkingDirTool.responseFormatter!(result);
 
-      assertJsonContent(content, {
-        success: true,
-        path: '/test/repo',
-      });
-
+      assertJsonContent(content, { success: true, path: '/test/repo' });
       assertJsonField(content, 'path', '/test/repo');
       assertJsonField(
         content,
         'message',
         'Working directory set to: /test/repo',
       );
-
       assertLlmFriendlyFormat(content);
     });
 
-    it('formats result with repository context', () => {
+    it('formats result with repository snapshot', () => {
       const result = {
         success: true,
         path: '/test/repo',
         message: 'Working directory set to: /test/repo',
-        repositoryContext: {
+        repository: {
           status: {
             branch: 'main',
             isClean: true,
-            stagedCount: 0,
-            unstagedCount: 0,
-            untrackedCount: 0,
-            conflictsCount: 0,
+            staged: [],
+            unstaged: [],
+            untracked: [],
+            conflicts: [],
+            upstream: 'origin/main',
+            ahead: 0,
+            behind: 0,
           },
-          branches: {
-            current: 'main',
-            totalLocal: 1,
-            totalRemote: 1,
-          },
+          recentCommits: [
+            {
+              hash: 'abc123d',
+              author: 'Test User',
+              date: '2024-01-01T00:00:00.000Z',
+              subject: 'Initial commit',
+            },
+          ],
+          recentTags: [
+            {
+              name: 'v1.0.0',
+              date: '2024-01-01T00:00:00.000Z',
+              tagger: 'Test User <test@example.com>',
+              annotationSubject: 'Initial release',
+              annotationBody: 'First stable release.',
+            },
+          ],
           remotes: [
             {
               name: 'origin',
@@ -353,34 +374,26 @@ describe('git_set_working_dir tool', () => {
               pushUrl: 'https://github.com/test/repo.git',
             },
           ],
-          recentCommits: [
-            {
-              hash: 'abc123d',
-              author: 'Test User',
-              date: '2024-01-01T00:00:00.000Z',
-              message: 'Initial commit',
-            },
-          ],
         },
       };
 
       const content = gitSetWorkingDirTool.responseFormatter!(result);
-
-      assertJsonContent(content, {
-        success: true,
-        path: '/test/repo',
-      });
+      assertJsonContent(content, { success: true, path: '/test/repo' });
 
       const parsed = parseJsonContent(content) as {
-        repositoryContext: {
-          status: { branch: string };
+        repository: {
+          status: { branch: string; upstream: string };
           remotes: Array<{ name: string }>;
+          recentTags: Array<{ annotationBody: string }>;
         };
       };
 
-      expect(parsed.repositoryContext).toBeDefined();
-      expect(parsed.repositoryContext.status.branch).toBe('main');
-      expect(parsed.repositoryContext.remotes).toHaveLength(1);
+      expect(parsed.repository.status.branch).toBe('main');
+      expect(parsed.repository.status.upstream).toBe('origin/main');
+      expect(parsed.repository.remotes).toHaveLength(1);
+      expect(parsed.repository.recentTags[0]!.annotationBody).toBe(
+        'First stable release.',
+      );
     });
   });
 
@@ -408,12 +421,13 @@ describe('git_set_working_dir tool', () => {
       const inputShape = gitSetWorkingDirTool.inputSchema.shape;
       expect(inputShape.path).toBeDefined();
       expect(inputShape.validateGitRepo).toBeDefined();
-      expect(inputShape.includeMetadata).toBeDefined();
+      expect(inputShape.initializeIfNotPresent).toBeDefined();
 
       const outputShape = gitSetWorkingDirTool.outputSchema.shape;
       expect(outputShape.success).toBeDefined();
       expect(outputShape.path).toBeDefined();
       expect(outputShape.message).toBeDefined();
+      expect(outputShape.repository).toBeDefined();
     });
   });
 });
