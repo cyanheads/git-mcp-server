@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.15.0 - 2026-04-28
+
+MCP surface tightening pass: every tool's Zod input schema is now `.strict()`, so unknown fields raise `ZodError` instead of being silently stripped — the same failure mode behind v2.14.1, where service-layer additions reached the executor but vanished at the MCP boundary because nobody noticed the schema hadn't been updated. While the surface was already breaking, also normalized the input names that drift between tools (`mode`/`branchName`/`paths`/`filePath`/`path`) so multi-mode tools speak the same language and `git_show` now actually populates its `metadata` field — previously always `{}` despite being part of the output schema.
+
+**Breaking**: Renamed inputs and outputs on `git_add`, `git_blame`, `git_branch`, and `git_clone`. Strict schemas reject unknown fields across every tool. `git_clone.url` no longer requires URL syntax (SSH, `file://`, and bare paths now work). `git_reflog.ref` and `git_reset.target` default to `'HEAD'` instead of being optional.
+
+### Added
+
+- **`git_show.metadata` is populated for commit objects**: A third parallel query (`git log -1 --format=<NUL-delimited fields>`) runs alongside the existing `cat-file -t` and `show` calls via `Promise.allSettled`. Parses `%H`, `%h`, author/committer name+email+date (ISO 8601), parents, subject, and body into the metadata object. Best-effort: failures or non-commit objects (blob/tree/tag) leave `metadata` as `{}` rather than failing the whole operation. Closes the schema-vs-implementation gap that has been there since the field was first added.
+- **`git_cherry_pick.message` and `git_rebase.message` output fields (optional)**: Human-readable next-step guidance set only when the operation paused on conflicts (e.g. `Rebase paused with conflicts in 3 file(s). Resolve them, then run git_rebase with mode='continue' (or mode='abort' to cancel, mode='skip' to drop the current commit).`). LLM callers shouldn't have to reverse-engineer the recovery path from `conflicts: true`.
+- **Strict-mode rejection tests**: Added explicit "passing the old name fails" assertions on `git_add`, `git_blame`, `git_branch`, `git_clone` so future schema renames don't silently regress to permissive behavior.
+
+### Changed
+
+- **All tool input schemas now use `.strict()`**: Unknown fields raise a Zod validation error instead of being silently dropped. Catches the v2.14.1 regression class at validation time. Affects every tool — callers passing extra keys will now get a clear error pointing at the unrecognized field.
+- **`git_add.files` → `git_add.paths`**: The argument accepts both file and directory paths; `paths` is more accurate and matches the service layer's `paths` field.
+- **`git_blame.file` → `git_blame.filePath`** (input and output): Matches `git_log.filePath` and `git_show.filePath`. Bare `file` was the only outlier.
+- **`git_branch` input/output renames**: `operation` → `mode`, `name` → `branchName`, `newName` → `newBranchName` on the input; `operation` → `mode` on the output. Aligns with every other multi-mode tool (`git_remote`, `git_stash`, `git_tag`, `git_worktree`, `git_rebase`, `git_reset`).
+- **`git_clone.localPath` → `git_clone.path`** (input and output): Matches every other tool's destination/working-tree input. Output `localPath` field renamed in lockstep.
+- **`git_clone.url` accepts non-URL sources**: Was `z.string().url()`, which rejected SSH (`git@host:path`), `git://`, `file://`, and bare filesystem paths — all valid clone sources. Now `z.string().min(1)` with a description that names every accepted form. The provider already handled them; only the schema was rejecting.
+- **`git_reflog.ref` defaults to `'HEAD'`**: Was optional with `undefined` meaning HEAD. The provider treated absent and `'HEAD'` identically, so the default makes the contract explicit and the executor receives a string in every case.
+- **`git_reset.target` defaults to `'HEAD'`**: Same rationale — was optional, now defaults to the value the executor was using anyway.
+- **`git_worktree.branch` and `commitish` descriptions**: Now explicitly call out the create-vs-checkout distinction. `branch` creates a NEW branch and fails if it already exists; `commitish` checks out an existing branch/commit/tag without creating anything. Passing an existing branch name to `branch` previously returned a confusing raw git error.
+
+### Removed
+
+- **Unused exports from `src/mcp-server/tools/schemas/common.ts`**: `ConfirmSchema`, `AuthorSchema`, `SuccessResponseSchema`, `FilePathSchema`, `VerboseSchema`, `QuietSchema`, `RecursiveSchema`. None were imported anywhere — dead code from earlier iterations. Schemas that are still in use (`PathSchema`, `BranchNameSchema`, `CommitRefSchema`, `RemoteNameSchema`, `TagNameSchema`, `LimitSchema`, `SkipSchema`, `AllSchema`, `ForceSchema`, `DepthSchema`, `DryRunSchema`, `NoVerifySchema`, `MergeStrategySchema`, `PruneSchema`, `CommitMessageSchema`) are unchanged.
+
+### Internal
+
+- **Test coverage — `git_show` metadata**: Added three service-layer tests covering metadata parsing for commit objects, the empty-metadata fallback for non-commit object types, and the empty-metadata fallback when the third (log) call rejects.
+- **Test coverage — schema strictness**: One "rejects unknown fields (strict)" test per renamed tool, paired with renamed-field acceptance tests so the contract change is visible in the suite.
+
 ## v2.14.2 - 2026-04-23
 
 Closes [#46](https://github.com/cyanheads/git-mcp-server/issues/46): `git_tag` gains a `verify` mode so callers can confirm a tag signature without falling back to a raw `git tag -v` shell call. Runs `git tag -v <tagName>` at the service layer with `allowNonZeroExit` and parses the stderr into a structured result that distinguishes the five real outcomes — valid signature, unsigned tag, missing local trust configuration (e.g. `gpg.ssh.allowedSignersFile`), bad signature, and tag-not-found. Only the last throws; the other four return `verified: false` with a `warning` explaining why, so verification drift never disappears into an exception.
