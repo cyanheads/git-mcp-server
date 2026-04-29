@@ -46,7 +46,7 @@ describe('git_blame tool', () => {
 
   describe('Input Schema', () => {
     it('validates correct input with defaults', () => {
-      const input = { path: '.', file: 'src/index.ts' };
+      const input = { path: '.', filePath: 'src/index.ts' };
       const result = gitBlameTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -57,7 +57,7 @@ describe('git_blame tool', () => {
     it('accepts line range parameters', () => {
       const input = {
         path: '.',
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
         startLine: 10,
         endLine: 20,
       };
@@ -72,7 +72,7 @@ describe('git_blame tool', () => {
     it('accepts ignoreWhitespace flag', () => {
       const input = {
         path: '.',
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
         ignoreWhitespace: true,
       };
       const result = gitBlameTool.inputSchema.safeParse(input);
@@ -82,26 +82,32 @@ describe('git_blame tool', () => {
       }
     });
 
-    it('rejects missing file parameter', () => {
+    it('rejects missing filePath parameter', () => {
       const input = { path: '.' };
       const result = gitBlameTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
 
-    it('rejects empty file parameter', () => {
-      const input = { path: '.', file: '' };
+    it('rejects empty filePath parameter', () => {
+      const input = { path: '.', filePath: '' };
+      const result = gitBlameTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unknown fields (strict)', () => {
+      const input = { path: '.', file: 'src/index.ts' };
       const result = gitBlameTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
 
     it('rejects invalid line numbers', () => {
-      const input = { path: '.', file: 'src/index.ts', startLine: 0 };
+      const input = { path: '.', filePath: 'src/index.ts', startLine: 0 };
       const result = gitBlameTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
 
     it('rejects invalid path type', () => {
-      const input = { path: 123, file: 'src/index.ts' };
+      const input = { path: 123, filePath: 'src/index.ts' };
       const result = gitBlameTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
@@ -135,7 +141,7 @@ describe('git_blame tool', () => {
 
       const parsedInput = gitBlameTool.inputSchema.parse({
         path: '.',
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -154,7 +160,7 @@ describe('git_blame tool', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.file).toBe('src/index.ts');
+      expect(result.filePath).toBe('src/index.ts');
       expect(result.lines).toHaveLength(2);
       expect(result.totalLines).toBe(2);
       expect(result.lines[0]!.author).toBe('Test User');
@@ -180,7 +186,7 @@ describe('git_blame tool', () => {
 
       const parsedInput = gitBlameTool.inputSchema.parse({
         path: '.',
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
         startLine: 10,
         endLine: 20,
       });
@@ -207,7 +213,7 @@ describe('git_blame tool', () => {
 
       const parsedInput = gitBlameTool.inputSchema.parse({
         path: '.',
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
         ignoreWhitespace: true,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -231,7 +237,7 @@ describe('git_blame tool', () => {
 
       const parsedInput = gitBlameTool.inputSchema.parse({
         path: '/absolute/repo/path',
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -250,7 +256,7 @@ describe('git_blame tool', () => {
     it('formats blame output correctly', () => {
       const result = {
         success: true,
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
         lines: [
           {
             lineNumber: 1,
@@ -274,11 +280,11 @@ describe('git_blame tool', () => {
 
       assertJsonContent(content, {
         success: true,
-        file: 'src/index.ts',
+        filePath: 'src/index.ts',
         totalLines: 2,
       });
 
-      assertJsonField(content, 'file', 'src/index.ts');
+      assertJsonField(content, 'filePath', 'src/index.ts');
       assertJsonField(content, 'totalLines', 2);
 
       const parsed = parseJsonContent(content) as {
@@ -295,7 +301,7 @@ describe('git_blame tool', () => {
     it('formats empty blame output', () => {
       const result = {
         success: true,
-        file: 'empty.ts',
+        filePath: 'empty.ts',
         lines: [],
         totalLines: 0,
       };
@@ -304,7 +310,7 @@ describe('git_blame tool', () => {
 
       assertJsonContent(content, {
         success: true,
-        file: 'empty.ts',
+        filePath: 'empty.ts',
         totalLines: 0,
       });
 
@@ -332,7 +338,7 @@ describe('git_blame tool', () => {
       expect(gitBlameTool.outputSchema).toBeDefined();
 
       const inputShape = gitBlameTool.inputSchema.shape;
-      expect(inputShape.file).toBeDefined();
+      expect(inputShape.filePath).toBeDefined();
       expect(inputShape.startLine).toBeDefined();
 
       const outputShape = gitBlameTool.outputSchema.shape;

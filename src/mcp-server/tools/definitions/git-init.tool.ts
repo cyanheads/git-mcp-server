@@ -21,17 +21,19 @@ const TOOL_TITLE = 'Git Init';
 const TOOL_DESCRIPTION =
   'Initialize a new Git repository at the specified path. Creates a .git directory and sets up the initial branch.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  initialBranch: z
-    .string()
-    .optional()
-    .describe('Name of the initial branch (default: main).'),
-  bare: z
-    .boolean()
-    .default(false)
-    .describe('Create a bare repository (no working directory).'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    initialBranch: z
+      .string()
+      .optional()
+      .describe('Name of the initial branch (default: main).'),
+    bare: z
+      .boolean()
+      .default(false)
+      .describe('Create a bare repository (no working directory).'),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

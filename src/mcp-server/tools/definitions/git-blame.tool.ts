@@ -21,29 +21,31 @@ const TOOL_TITLE = 'Git Blame';
 const TOOL_DESCRIPTION =
   'Show line-by-line authorship information for a file, displaying who last modified each line and when. For large files, use startLine/endLine to limit output.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  file: z
-    .string()
-    .min(1)
-    .describe('Path to the file to blame (relative to repository root).'),
-  startLine: z
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .describe('Start line number (1-indexed).'),
-  endLine: z
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .describe('End line number (1-indexed).'),
-  ignoreWhitespace: z
-    .boolean()
-    .default(false)
-    .describe('Ignore whitespace changes.'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    filePath: z
+      .string()
+      .min(1)
+      .describe('Path to the file to blame (relative to repository root).'),
+    startLine: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe('Start line number (1-indexed).'),
+    endLine: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe('End line number (1-indexed).'),
+    ignoreWhitespace: z
+      .boolean()
+      .default(false)
+      .describe('Ignore whitespace changes.'),
+  })
+  .strict();
 
 const BlameLineSchema = z.object({
   lineNumber: z
@@ -64,7 +66,7 @@ const BlameLineSchema = z.object({
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
-  file: z.string().describe('The file that was blamed.'),
+  filePath: z.string().describe('The file that was blamed.'),
   lines: z
     .array(BlameLineSchema)
     .describe('Array of blame information for each line.'),
@@ -78,14 +80,13 @@ async function gitBlameLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Build options object with only defined properties
   const blameOptions: {
     file: string;
     startLine?: number;
     endLine?: number;
     ignoreWhitespace?: boolean;
   } = {
-    file: input.file,
+    file: input.filePath,
     ignoreWhitespace: input.ignoreWhitespace,
   };
 
@@ -104,7 +105,7 @@ async function gitBlameLogic(
 
   return {
     success: result.success,
-    file: result.file,
+    filePath: result.file,
     lines: result.lines,
     totalLines: result.totalLines,
   };
@@ -122,17 +123,13 @@ function filterGitBlameOutput(
   result: ToolOutput,
   level: VerbosityLevel,
 ): Partial<ToolOutput> {
-  // minimal: Essential summary only
   if (level === 'minimal') {
     return {
       success: result.success,
-      file: result.file,
+      filePath: result.filePath,
       totalLines: result.totalLines,
     };
   }
-
-  // standard & full: Complete output
-  // (LLMs need complete context - include all line details)
   return result;
 }
 

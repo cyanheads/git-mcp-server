@@ -47,7 +47,7 @@ describe('git_clone tool', () => {
     it('validates correct input with defaults', () => {
       const input = {
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
       };
       const result = gitCloneTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
@@ -57,10 +57,37 @@ describe('git_clone tool', () => {
       }
     });
 
+    it('accepts SSH URL', () => {
+      const input = {
+        url: 'git@github.com:test/repo.git',
+        path: '/test/clone',
+      };
+      const result = gitCloneTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts file:// URL', () => {
+      const input = {
+        url: 'file:///tmp/repo.git',
+        path: '/test/clone',
+      };
+      const result = gitCloneTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts bare filesystem path as url', () => {
+      const input = {
+        url: '/tmp/repo.git',
+        path: '/test/clone',
+      };
+      const result = gitCloneTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
     it('accepts branch option', () => {
       const input = {
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'develop',
       };
       const result = gitCloneTool.inputSchema.safeParse(input);
@@ -73,7 +100,7 @@ describe('git_clone tool', () => {
     it('accepts depth option', () => {
       const input = {
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         depth: 1,
       };
       const result = gitCloneTool.inputSchema.safeParse(input);
@@ -86,7 +113,7 @@ describe('git_clone tool', () => {
     it('accepts bare flag', () => {
       const input = {
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         bare: true,
       };
       const result = gitCloneTool.inputSchema.safeParse(input);
@@ -99,7 +126,7 @@ describe('git_clone tool', () => {
     it('accepts mirror flag', () => {
       const input = {
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         mirror: true,
       };
       const result = gitCloneTool.inputSchema.safeParse(input);
@@ -109,16 +136,25 @@ describe('git_clone tool', () => {
       }
     });
 
-    it('rejects invalid URL', () => {
-      const input = { url: 'not-a-url', localPath: '/test/clone' };
+    it('rejects empty url', () => {
+      const input = { url: '', path: '/test/clone' };
       const result = gitCloneTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
 
-    it('rejects empty localPath', () => {
+    it('rejects empty path', () => {
       const input = {
         url: 'https://github.com/test/repo.git',
-        localPath: '',
+        path: '',
+      };
+      const result = gitCloneTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unknown fields (strict)', () => {
+      const input = {
+        url: 'https://github.com/test/repo.git',
+        localPath: '/test/clone',
       };
       const result = gitCloneTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
@@ -138,7 +174,7 @@ describe('git_clone tool', () => {
 
       const parsedInput = gitCloneTool.inputSchema.parse({
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -157,7 +193,7 @@ describe('git_clone tool', () => {
       expect(result).toMatchObject({
         success: true,
         remoteUrl: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'main',
       });
     });
@@ -174,7 +210,7 @@ describe('git_clone tool', () => {
 
       const parsedInput = gitCloneTool.inputSchema.parse({
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'develop',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -203,7 +239,7 @@ describe('git_clone tool', () => {
 
       const parsedInput = gitCloneTool.inputSchema.parse({
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         depth: 1,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -227,7 +263,7 @@ describe('git_clone tool', () => {
 
       const parsedInput = gitCloneTool.inputSchema.parse({
         url: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         bare: true,
         mirror: true,
       });
@@ -247,7 +283,7 @@ describe('git_clone tool', () => {
       const result = {
         success: true,
         remoteUrl: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'main',
         commitHash: 'abc123',
       };
@@ -257,12 +293,12 @@ describe('git_clone tool', () => {
       assertJsonContent(content, {
         success: true,
         remoteUrl: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'main',
       });
 
       assertJsonField(content, 'remoteUrl', 'https://github.com/test/repo.git');
-      assertJsonField(content, 'localPath', '/test/clone');
+      assertJsonField(content, 'path', '/test/clone');
       assertJsonField(content, 'branch', 'main');
       assertLlmFriendlyFormat(content);
     });
@@ -271,7 +307,7 @@ describe('git_clone tool', () => {
       const result = {
         success: true,
         remoteUrl: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'main',
       };
 
@@ -285,7 +321,6 @@ describe('git_clone tool', () => {
       const parsed = parseJsonContent(content) as {
         commitHash?: string;
       };
-      // commitHash is optional, so may not be present
       expect(parsed).not.toHaveProperty('commitHash');
     });
 
@@ -293,7 +328,7 @@ describe('git_clone tool', () => {
       const result = {
         success: true,
         remoteUrl: 'https://github.com/test/repo.git',
-        localPath: '/test/clone',
+        path: '/test/clone',
         branch: 'feature-x',
       };
 
@@ -324,13 +359,13 @@ describe('git_clone tool', () => {
 
       const inputShape = gitCloneTool.inputSchema.shape;
       expect(inputShape.url).toBeDefined();
-      expect(inputShape.localPath).toBeDefined();
+      expect(inputShape.path).toBeDefined();
       expect(inputShape.branch).toBeDefined();
 
       const outputShape = gitCloneTool.outputSchema.shape;
       expect(outputShape.success).toBeDefined();
       expect(outputShape.remoteUrl).toBeDefined();
-      expect(outputShape.localPath).toBeDefined();
+      expect(outputShape.path).toBeDefined();
       expect(outputShape.branch).toBeDefined();
     });
   });

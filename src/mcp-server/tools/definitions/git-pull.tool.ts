@@ -25,23 +25,25 @@ const TOOL_TITLE = 'Git Pull';
 const TOOL_DESCRIPTION =
   'Pull changes from a remote repository. Fetches and integrates changes into the current branch.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  remote: RemoteNameSchema.optional().describe(
-    'Remote name (default: origin).',
-  ),
-  branch: BranchNameSchema.optional().describe(
-    'Branch name (default: current branch).',
-  ),
-  rebase: z
-    .boolean()
-    .default(false)
-    .describe('Use rebase instead of merge when integrating changes.'),
-  fastForwardOnly: z
-    .boolean()
-    .default(false)
-    .describe("Fail if can't fast-forward (no merge commit)."),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    remote: RemoteNameSchema.optional().describe(
+      'Remote name (default: origin).',
+    ),
+    branch: BranchNameSchema.optional().describe(
+      'Branch name (default: current branch).',
+    ),
+    rebase: z
+      .boolean()
+      .default(false)
+      .describe('Use rebase instead of merge when integrating changes.'),
+    fastForwardOnly: z
+      .boolean()
+      .default(false)
+      .describe("Fail if can't fast-forward (no merge commit)."),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

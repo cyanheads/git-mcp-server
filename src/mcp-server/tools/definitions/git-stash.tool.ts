@@ -25,36 +25,38 @@ const TOOL_TITLE = 'Git Stash';
 const TOOL_DESCRIPTION =
   'Manage stashes: list stashes, save current changes (push), restore changes (pop/apply), or remove stashes (drop/clear).';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  mode: z
-    .enum(['list', 'push', 'pop', 'apply', 'drop', 'clear'])
-    .default('push')
-    .describe(
-      'The stash operation to perform. Defaults to push (save current changes).',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    mode: z
+      .enum(['list', 'push', 'pop', 'apply', 'drop', 'clear'])
+      .default('push')
+      .describe(
+        'The stash operation to perform. Defaults to push (save current changes).',
+      ),
+    message: z
+      .string()
+      .optional()
+      .describe('Stash message description (for push operation).'),
+    stashRef: z
+      .string()
+      .optional()
+      .describe(
+        'Stash reference like stash@{0} (for pop/apply/drop operations).',
+      ),
+    includeUntracked: z
+      .boolean()
+      .default(false)
+      .describe('Include untracked files in the stash (for push operation).'),
+    keepIndex: z
+      .boolean()
+      .default(false)
+      .describe("Don't revert staged changes (for push operation)."),
+    limit: LimitSchema.describe(
+      'For list mode: cap the number of stash entries returned (applied at the git command).',
     ),
-  message: z
-    .string()
-    .optional()
-    .describe('Stash message description (for push operation).'),
-  stashRef: z
-    .string()
-    .optional()
-    .describe(
-      'Stash reference like stash@{0} (for pop/apply/drop operations).',
-    ),
-  includeUntracked: z
-    .boolean()
-    .default(false)
-    .describe('Include untracked files in the stash (for push operation).'),
-  keepIndex: z
-    .boolean()
-    .default(false)
-    .describe("Don't revert staged changes (for push operation)."),
-  limit: LimitSchema.describe(
-    'For list mode: cap the number of stash entries returned (applied at the git command).',
-  ),
-});
+  })
+  .strict();
 
 const StashInfoSchema = z.object({
   ref: z.string().describe('Stash reference (e.g., stash@{0}).'),

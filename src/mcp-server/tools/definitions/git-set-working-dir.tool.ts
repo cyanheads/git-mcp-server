@@ -28,22 +28,24 @@ const TOOL_TITLE = 'Git Set Working Directory';
 const TOOL_DESCRIPTION =
   'Set the session working directory for all git operations so subsequent calls can omit the path parameter. Always returns a repository snapshot (status, recent commits, recent tags, remotes) to orient the caller.';
 
-const InputSchema = z.object({
-  path: z
-    .string()
-    .min(1)
-    .describe(
-      'Absolute path to the git repository to use as the working directory.',
-    ),
-  validateGitRepo: z
-    .boolean()
-    .default(true)
-    .describe('Validate that the path is a Git repository.'),
-  initializeIfNotPresent: z
-    .boolean()
-    .default(false)
-    .describe("If not a Git repository, initialize it with 'git init'."),
-});
+const InputSchema = z
+  .object({
+    path: z
+      .string()
+      .min(1)
+      .describe(
+        'Absolute path to the git repository to use as the working directory.',
+      ),
+    validateGitRepo: z
+      .boolean()
+      .default(true)
+      .describe('Validate that the path is a Git repository.'),
+    initializeIfNotPresent: z
+      .boolean()
+      .default(false)
+      .describe("If not a Git repository, initialize it with 'git init'."),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

@@ -35,6 +35,7 @@ const InputSchema = z
       .default(false)
       .describe('Remove ignored files as well.'),
   })
+  .strict()
   .refine((data) => data.force === true || data.dryRun === true, {
     message:
       'force flag must be set to true to clean untracked files (or use dryRun to preview)',

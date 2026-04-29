@@ -21,28 +21,30 @@ const TOOL_TITLE = 'Git Show';
 const TOOL_DESCRIPTION =
   'Show details of a git object (commit, tree, blob, or tag). Displays commit information and the diff of changes introduced.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  object: CommitRefSchema.describe(
-    'Git object to show (commit hash, branch, tag, tree, or blob).',
-  ),
-  format: z
-    .enum(['raw'])
-    .optional()
-    .describe(
-      'Output format for the git object. Use "raw" for unprocessed git output.',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    object: CommitRefSchema.describe(
+      'Git object to show (commit hash, branch, tag, tree, or blob).',
     ),
-  stat: z
-    .boolean()
-    .default(false)
-    .describe('Show diffstat instead of full diff.'),
-  filePath: z
-    .string()
-    .optional()
-    .describe(
-      'View specific file at a given commit reference. When provided, shows the file content from the specified object.',
-    ),
-});
+    format: z
+      .enum(['raw'])
+      .optional()
+      .describe(
+        'Output format for the git object. Use "raw" for unprocessed git output.',
+      ),
+    stat: z
+      .boolean()
+      .default(false)
+      .describe('Show diffstat instead of full diff.'),
+    filePath: z
+      .string()
+      .optional()
+      .describe(
+        'View specific file at a given commit reference. When provided, shows the file content from the specified object.',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

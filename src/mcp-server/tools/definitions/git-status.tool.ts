@@ -21,13 +21,15 @@ const TOOL_TITLE = 'Git Status';
 const TOOL_DESCRIPTION =
   'Show the working tree status including staged, unstaged, and untracked files.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  includeUntracked: z
-    .boolean()
-    .default(true)
-    .describe('Include untracked files in the output.'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    includeUntracked: z
+      .boolean()
+      .default(true)
+      .describe('Include untracked files in the output.'),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

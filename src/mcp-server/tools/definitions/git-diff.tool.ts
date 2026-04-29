@@ -46,54 +46,56 @@ const AUTO_EXCLUDE_PATTERNS = [
   'packages.lock.json',
 ] as const;
 
-const InputSchema = z.object({
-  path: PathSchema,
-  target: CommitRefSchema.optional().describe(
-    'Target commit/branch to compare against. If not specified, shows unstaged changes in working tree.',
-  ),
-  source: CommitRefSchema.optional().describe(
-    'Source commit/branch to compare from. If target is specified but not source, compares target against working tree.',
-  ),
-  paths: z
-    .array(z.string())
-    .optional()
-    .describe(
-      'Limit diff to specific file paths (relative to repository root).',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    target: CommitRefSchema.optional().describe(
+      'Target commit/branch to compare against. If not specified, shows unstaged changes in working tree.',
     ),
-  staged: z
-    .boolean()
-    .default(false)
-    .describe('Show diff of staged changes instead of unstaged.'),
-  includeUntracked: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Include untracked files in the diff. Useful for reviewing all upcoming changes.',
+    source: CommitRefSchema.optional().describe(
+      'Source commit/branch to compare from. If target is specified but not source, compares target against working tree.',
     ),
-  nameOnly: z
-    .boolean()
-    .default(false)
-    .describe('Show only names of changed files, not the diff content.'),
-  stat: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Show diffstat (summary of changes) instead of full diff content.',
-    ),
-  contextLines: z
-    .number()
-    .int()
-    .min(0)
-    .max(100)
-    .default(3)
-    .describe('Number of context lines to show around changes.'),
-  autoExclude: z
-    .boolean()
-    .default(true)
-    .describe(
-      'Automatically exclude lock files and other generated files (e.g., package-lock.json, yarn.lock, bun.lock, poetry.lock, go.sum) from diff output to reduce context bloat. Set to false if you need to inspect these files.',
-    ),
-});
+    paths: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Limit diff to specific file paths (relative to repository root).',
+      ),
+    staged: z
+      .boolean()
+      .default(false)
+      .describe('Show diff of staged changes instead of unstaged.'),
+    includeUntracked: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Include untracked files in the diff. Useful for reviewing all upcoming changes.',
+      ),
+    nameOnly: z
+      .boolean()
+      .default(false)
+      .describe('Show only names of changed files, not the diff content.'),
+    stat: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Show diffstat (summary of changes) instead of full diff content.',
+      ),
+    contextLines: z
+      .number()
+      .int()
+      .min(0)
+      .max(100)
+      .default(3)
+      .describe('Number of context lines to show around changes.'),
+    autoExclude: z
+      .boolean()
+      .default(true)
+      .describe(
+        'Automatically exclude lock files and other generated files (e.g., package-lock.json, yarn.lock, bun.lock, poetry.lock, go.sum) from diff output to reduce context bloat. Set to false if you need to inspect these files.',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

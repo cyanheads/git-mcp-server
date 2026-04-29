@@ -29,37 +29,39 @@ const TOOL_TITLE = 'Git Tag';
 const TOOL_DESCRIPTION =
   'Manage tags: list all tags, create a new tag, delete a tag, or verify a signed tag. Tags are used to mark specific points in history (releases, milestones). Verify runs `git tag -v` and returns a structured result distinguishing unsigned tags, missing trust configuration, bad signatures, and valid signatures.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  mode: z
-    .enum(['list', 'create', 'delete', 'verify'])
-    .default('list')
-    .describe('The tag operation to perform.'),
-  tagName: TagNameSchema.optional().describe(
-    'Tag name for create/delete/verify operations.',
-  ),
-  commit: CommitRefSchema.optional().describe(
-    'Commit to tag (default: HEAD for create operation).',
-  ),
-  message: z
-    .string()
-    .optional()
-    .describe(
-      'Tag message. Providing a message always produces an annotated tag (git does not support messages on lightweight tags). For release tags, summarize notable changes.',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    mode: z
+      .enum(['list', 'create', 'delete', 'verify'])
+      .default('list')
+      .describe('The tag operation to perform.'),
+    tagName: TagNameSchema.optional().describe(
+      'Tag name for create/delete/verify operations.',
     ),
-  annotated: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Create an annotated tag with a default "Tag <name>" message. Only effective when no message is provided and signing is disabled — otherwise the tag is always annotated.',
+    commit: CommitRefSchema.optional().describe(
+      'Commit to tag (default: HEAD for create operation).',
     ),
-  force: ForceSchema.describe(
-    'Overwrite an existing tag (create mode only; has no effect on list or delete).',
-  ),
-  limit: LimitSchema.describe(
-    'For list mode: cap the number of tags returned (applied at the git command via `--count=N`). Use on repos with many tags.',
-  ),
-});
+    message: z
+      .string()
+      .optional()
+      .describe(
+        'Tag message. Providing a message always produces an annotated tag (git does not support messages on lightweight tags). For release tags, summarize notable changes.',
+      ),
+    annotated: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Create an annotated tag with a default "Tag <name>" message. Only effective when no message is provided and signing is disabled — otherwise the tag is always annotated.',
+      ),
+    force: ForceSchema.describe(
+      'Overwrite an existing tag (create mode only; has no effect on list or delete).',
+    ),
+    limit: LimitSchema.describe(
+      'For list mode: cap the number of tags returned (applied at the git command via `--count=N`). Use on repos with many tags.',
+    ),
+  })
+  .strict();
 
 const TagInfoSchema = z.object({
   name: z.string().describe('Tag name.'),

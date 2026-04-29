@@ -92,42 +92,44 @@ Examine commit history and changelog entries for code quality and process health
 // Input schema
 // ---------------------------------------------------------------------------
 
-const InputSchema = z.object({
-  path: PathSchema,
-  reviewTypes: z
-    .array(ReviewTypeSchema)
-    .min(1)
-    .describe(
-      'Types of changelog review to perform. At least one required. Options: security, features, storyline, gaps, breaking_changes, quality.',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    reviewTypes: z
+      .array(ReviewTypeSchema)
+      .min(1)
+      .describe(
+        'Types of changelog review to perform. At least one required. Options: security, features, storyline, gaps, breaking_changes, quality.',
+      ),
+    maxCommits: z
+      .number()
+      .int()
+      .min(1)
+      .max(1000)
+      .default(200)
+      .describe(
+        'Maximum recent commits to fetch for cross-referencing (1-1000).',
+      ),
+    maxTags: z
+      .number()
+      .int()
+      .min(1)
+      .max(1000)
+      .default(100)
+      .describe(
+        'Maximum recent tags to fetch for release context (1-1000). Applied at the git command so large tag catalogs do not bloat the response.',
+      ),
+    sinceTag: z
+      .string()
+      .optional()
+      .describe(
+        'Only include git history since this tag (e.g., "v1.2.0"). Narrows the analysis window.',
+      ),
+    branch: CommitRefSchema.optional().describe(
+      'Branch to analyze (defaults to current branch).',
     ),
-  maxCommits: z
-    .number()
-    .int()
-    .min(1)
-    .max(1000)
-    .default(200)
-    .describe(
-      'Maximum recent commits to fetch for cross-referencing (1-1000).',
-    ),
-  maxTags: z
-    .number()
-    .int()
-    .min(1)
-    .max(1000)
-    .default(100)
-    .describe(
-      'Maximum recent tags to fetch for release context (1-1000). Applied at the git command so large tag catalogs do not bloat the response.',
-    ),
-  sinceTag: z
-    .string()
-    .optional()
-    .describe(
-      'Only include git history since this tag (e.g., "v1.2.0"). Narrows the analysis window.',
-    ),
-  branch: CommitRefSchema.optional().describe(
-    'Branch to analyze (defaults to current branch).',
-  ),
-});
+  })
+  .strict();
 
 // ---------------------------------------------------------------------------
 // Output schema

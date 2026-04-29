@@ -44,52 +44,62 @@ describe('git_branch tool', () => {
   });
 
   describe('Input Schema', () => {
-    it('validates list operation with defaults', () => {
+    it('validates list mode with defaults', () => {
       const input = { path: '.' };
       const result = gitBranchTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.operation).toBe('list');
+        expect(result.data.mode).toBe('list');
         expect(result.data.force).toBe(false);
         expect(result.data.all).toBe(false);
         expect(result.data.remote).toBe(false);
       }
     });
 
-    it('accepts create operation with branch name', () => {
-      const input = { path: '.', operation: 'create', name: 'feature-branch' };
-      const result = gitBranchTool.inputSchema.safeParse(input);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.operation).toBe('create');
-        expect(result.data.name).toBe('feature-branch');
-      }
-    });
-
-    it('accepts delete operation', () => {
-      const input = { path: '.', operation: 'delete', name: 'old-branch' };
-      const result = gitBranchTool.inputSchema.safeParse(input);
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts rename operation with newName', () => {
+    it('accepts create mode with branchName', () => {
       const input = {
         path: '.',
-        operation: 'rename',
-        name: 'old-name',
-        newName: 'new-name',
+        mode: 'create',
+        branchName: 'feature-branch',
       };
       const result = gitBranchTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.newName).toBe('new-name');
+        expect(result.data.mode).toBe('create');
+        expect(result.data.branchName).toBe('feature-branch');
       }
     });
 
-    it('accepts show-current operation', () => {
-      const input = { path: '.', operation: 'show-current' };
+    it('accepts delete mode', () => {
+      const input = { path: '.', mode: 'delete', branchName: 'old-branch' };
       const result = gitBranchTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
+    });
+
+    it('accepts rename mode with newBranchName', () => {
+      const input = {
+        path: '.',
+        mode: 'rename',
+        branchName: 'old-name',
+        newBranchName: 'new-name',
+      };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.newBranchName).toBe('new-name');
+      }
+    });
+
+    it('accepts show-current mode', () => {
+      const input = { path: '.', mode: 'show-current' };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects unknown fields (strict)', () => {
+      const input = { path: '.', operation: 'create', name: 'feature' };
+      const result = gitBranchTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(false);
     });
 
     it('coerces string "true" to boolean true for merged', () => {
@@ -172,7 +182,7 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'list',
+        mode: 'list',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -185,7 +195,7 @@ describe('git_branch tool', () => {
 
       expect(mockProvider.branch).toHaveBeenCalledTimes(1);
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('list');
+      expect(result.mode).toBe('list');
       expect(result.branches).toHaveLength(2);
       expect(result.currentBranch).toBe('main');
     });
@@ -200,7 +210,7 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'list',
+        mode: 'list',
         all: true,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -213,7 +223,7 @@ describe('git_branch tool', () => {
     });
   });
 
-  describe('Tool Logic - Create Operation', () => {
+  describe('Tool Logic - Create Mode', () => {
     it('creates branch successfully', async () => {
       const mockResult: GitBranchResult = {
         mode: 'create',
@@ -224,8 +234,8 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'create',
-        name: 'feature-branch',
+        mode: 'create',
+        branchName: 'feature-branch',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -237,13 +247,13 @@ describe('git_branch tool', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('create');
+      expect(result.mode).toBe('create');
       expect(result.message).toContain('feature-branch');
       expect(result.message).toContain('created');
     });
   });
 
-  describe('Tool Logic - Delete Operation', () => {
+  describe('Tool Logic - Delete Mode', () => {
     it('deletes branch successfully', async () => {
       const mockResult: GitBranchResult = {
         mode: 'delete',
@@ -254,8 +264,8 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'delete',
-        name: 'old-branch',
+        mode: 'delete',
+        branchName: 'old-branch',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -267,13 +277,13 @@ describe('git_branch tool', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('delete');
+      expect(result.mode).toBe('delete');
       expect(result.message).toContain('old-branch');
       expect(result.message).toContain('deleted');
     });
   });
 
-  describe('Tool Logic - show-current operation', () => {
+  describe('Tool Logic - show-current mode', () => {
     it('calls provider with mode show-current (cheap path)', async () => {
       mockProvider.branch.mockResolvedValue({
         mode: 'show-current',
@@ -282,7 +292,7 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'show-current',
+        mode: 'show-current',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -295,7 +305,7 @@ describe('git_branch tool', () => {
 
       const [opts] = mockProvider.branch.mock.calls[0]!;
       expect(opts).toEqual({ mode: 'show-current' });
-      expect(result.operation).toBe('show-current');
+      expect(result.mode).toBe('show-current');
       expect(result.currentBranch).toBe('main');
       expect(result.message).toContain('main');
     });
@@ -308,7 +318,7 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'show-current',
+        mode: 'show-current',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -330,7 +340,7 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'list',
+        mode: 'list',
         limit: 10,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -343,7 +353,7 @@ describe('git_branch tool', () => {
     });
   });
 
-  describe('Tool Logic - Rename Operation', () => {
+  describe('Tool Logic - Rename Mode', () => {
     it('renames branch successfully', async () => {
       const mockResult: GitBranchResult = {
         mode: 'rename',
@@ -354,9 +364,9 @@ describe('git_branch tool', () => {
 
       const parsedInput = gitBranchTool.inputSchema.parse({
         path: '.',
-        operation: 'rename',
-        name: 'old-name',
-        newName: 'new-name',
+        mode: 'rename',
+        branchName: 'old-name',
+        newBranchName: 'new-name',
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -368,7 +378,7 @@ describe('git_branch tool', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.operation).toBe('rename');
+      expect(result.mode).toBe('rename');
       expect(result.message).toContain('old-name');
       expect(result.message).toContain('new-name');
     });
@@ -378,7 +388,7 @@ describe('git_branch tool', () => {
     it('formats branch list with current branch', () => {
       const result = {
         success: true,
-        operation: 'list' as const,
+        mode: 'list' as const,
         branches: [
           {
             name: 'main',
@@ -402,12 +412,12 @@ describe('git_branch tool', () => {
 
       assertJsonContent(content, {
         success: true,
-        operation: 'list',
+        mode: 'list',
         currentBranch: 'main',
       });
 
       assertJsonField(content, 'currentBranch', 'main');
-      assertJsonField(content, 'operation', 'list');
+      assertJsonField(content, 'mode', 'list');
 
       const parsed = parseJsonContent(content) as {
         branches: Array<{ name: string; current: boolean }>;
@@ -421,10 +431,10 @@ describe('git_branch tool', () => {
       assertLlmFriendlyFormat(content);
     });
 
-    it('formats create operation result', () => {
+    it('formats create mode result', () => {
       const result = {
         success: true,
-        operation: 'create' as const,
+        mode: 'create' as const,
         branches: undefined,
         currentBranch: undefined,
         message: "Branch 'feature-x' created successfully.",
@@ -434,10 +444,10 @@ describe('git_branch tool', () => {
 
       assertJsonContent(content, {
         success: true,
-        operation: 'create',
+        mode: 'create',
       });
 
-      assertJsonField(content, 'operation', 'create');
+      assertJsonField(content, 'mode', 'create');
       assertJsonField(
         content,
         'message',
@@ -445,10 +455,10 @@ describe('git_branch tool', () => {
       );
     });
 
-    it('formats delete operation result', () => {
+    it('formats delete mode result', () => {
       const result = {
         success: true,
-        operation: 'delete' as const,
+        mode: 'delete' as const,
         branches: undefined,
         currentBranch: undefined,
         message: "Branch 'old-branch' deleted successfully.",
@@ -458,10 +468,10 @@ describe('git_branch tool', () => {
 
       assertJsonContent(content, {
         success: true,
-        operation: 'delete',
+        mode: 'delete',
       });
 
-      assertJsonField(content, 'operation', 'delete');
+      assertJsonField(content, 'mode', 'delete');
       assertJsonField(
         content,
         'message',
@@ -490,12 +500,12 @@ describe('git_branch tool', () => {
       expect(gitBranchTool.outputSchema).toBeDefined();
 
       const inputShape = gitBranchTool.inputSchema.shape;
-      expect(inputShape.operation).toBeDefined();
-      expect(inputShape.name).toBeDefined();
+      expect(inputShape.mode).toBeDefined();
+      expect(inputShape.branchName).toBeDefined();
 
       const outputShape = gitBranchTool.outputSchema.shape;
       expect(outputShape.success).toBeDefined();
-      expect(outputShape.operation).toBeDefined();
+      expect(outputShape.mode).toBeDefined();
     });
   });
 });

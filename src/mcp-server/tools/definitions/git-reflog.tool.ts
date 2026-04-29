@@ -21,14 +21,16 @@ const TOOL_TITLE = 'Git Reflog';
 const TOOL_DESCRIPTION =
   'View the reference logs (reflog) to track when branch tips and other references were updated. Useful for recovering lost commits.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  ref: z
-    .string()
-    .optional()
-    .describe('Show reflog for specific reference (default: HEAD).'),
-  maxCount: LimitSchema.default(25),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    ref: z
+      .string()
+      .default('HEAD')
+      .describe('Reference whose reflog to show. Defaults to HEAD.'),
+    maxCount: LimitSchema.default(25),
+  })
+  .strict();
 
 const ReflogEntrySchema = z.object({
   hash: z.string().describe('Commit hash for this reflog entry.'),
@@ -59,15 +61,13 @@ async function gitReflogLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Build options object with only defined properties
   const reflogOptions: {
-    ref?: string;
+    ref: string;
     maxCount?: number;
-  } = {};
+  } = {
+    ref: input.ref,
+  };
 
-  if (input.ref !== undefined) {
-    reflogOptions.ref = input.ref;
-  }
   if (input.maxCount !== undefined) {
     reflogOptions.maxCount = input.maxCount;
   }

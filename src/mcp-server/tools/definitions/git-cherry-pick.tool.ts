@@ -25,37 +25,39 @@ const TOOL_TITLE = 'Git Cherry-Pick';
 const TOOL_DESCRIPTION =
   'Cherry-pick commits from other branches. Apply specific commits to the current branch without merging entire branches.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  commits: z
-    .array(CommitRefSchema)
-    .min(1)
-    .describe('Commit hashes to cherry-pick.'),
-  noCommit: z
-    .boolean()
-    .default(false)
-    .describe("Don't create commit (stage changes only)."),
-  continueOperation: z
-    .boolean()
-    .default(false)
-    .describe('Continue cherry-pick after resolving conflicts.'),
-  abort: z.boolean().default(false).describe('Abort cherry-pick operation.'),
-  mainline: z
-    .number()
-    .int()
-    .min(1)
-    .optional()
-    .describe(
-      'For merge commits, specify which parent to follow (1 for first parent, 2 for second, etc.).',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    commits: z
+      .array(CommitRefSchema)
+      .min(1)
+      .describe('Commit hashes to cherry-pick.'),
+    noCommit: z
+      .boolean()
+      .default(false)
+      .describe("Don't create commit (stage changes only)."),
+    continueOperation: z
+      .boolean()
+      .default(false)
+      .describe('Continue cherry-pick after resolving conflicts.'),
+    abort: z.boolean().default(false).describe('Abort cherry-pick operation.'),
+    mainline: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe(
+        'For merge commits, specify which parent to follow (1 for first parent, 2 for second, etc.).',
+      ),
+    strategy: MergeStrategySchema.describe(
+      'Merge strategy to use for cherry-pick.',
     ),
-  strategy: MergeStrategySchema.describe(
-    'Merge strategy to use for cherry-pick.',
-  ),
-  signoff: z
-    .boolean()
-    .default(false)
-    .describe('Add Signed-off-by line to the commit message.'),
-});
+    signoff: z
+      .boolean()
+      .default(false)
+      .describe('Add Signed-off-by line to the commit message.'),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
@@ -66,6 +68,10 @@ const OutputSchema = z.object({
   conflictedFiles: z
     .array(z.string())
     .describe('Files with conflicts that need resolution.'),
+  message: z
+    .string()
+    .optional()
+    .describe('Human-readable next-step guidance, especially for conflicts.'),
 });
 
 type ToolInput = z.infer<typeof InputSchema>;
@@ -105,11 +111,16 @@ async function gitCherryPickLogic(
     tenantId: appContext.tenantId || 'default-tenant',
   });
 
+  const message = result.conflicts
+    ? `Cherry-pick paused with conflicts in ${result.conflictedFiles.length} file(s). Resolve them and run git_cherry_pick with continueOperation=true, or pass abort=true to cancel.`
+    : undefined;
+
   return {
     success: result.success,
     pickedCommits: result.pickedCommits,
     conflicts: result.conflicts,
     conflictedFiles: result.conflictedFiles,
+    message,
   };
 }
 

@@ -26,15 +26,20 @@ const TOOL_TITLE = 'Git Fetch';
 const TOOL_DESCRIPTION =
   'Fetch updates from a remote repository. Downloads objects and refs without merging them.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  remote: RemoteNameSchema.optional().describe(
-    'Remote name (default: origin).',
-  ),
-  prune: PruneSchema,
-  tags: z.boolean().default(false).describe('Fetch all tags from the remote.'),
-  depth: DepthSchema,
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    remote: RemoteNameSchema.optional().describe(
+      'Remote name (default: origin).',
+    ),
+    prune: PruneSchema,
+    tags: z
+      .boolean()
+      .default(false)
+      .describe('Fetch all tags from the remote.'),
+    depth: DepthSchema,
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

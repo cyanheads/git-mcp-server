@@ -30,17 +30,19 @@ const TOOL_TITLE = 'Git Wrap-up Instructions';
 const TOOL_DESCRIPTION =
   "Returns a Git wrap-up protocol: an acceptance-criteria checklist the agent must satisfy before the session is considered shipped. Uses the operator's custom instructions if configured, otherwise emits a generic goals-strict/mechanism-generic default. Enriches the response with a repository snapshot (status, recent commits, recent tags) so the agent has immediate orientation for the commit and release steps.";
 
-const InputSchema = z.object({
-  acknowledgement: z
-    .enum(['Y', 'y', 'Yes', 'yes'])
-    .describe('Acknowledgement to initiate the wrap-up workflow.'),
-  createTag: z
-    .boolean()
-    .optional()
-    .describe(
-      'Controls whether the tag criterion appears in the emitted protocol. Omit or set `true` to include the tag step. Set `false` to omit it entirely — e.g., when tagging is deferred to a separate release step.',
-    ),
-});
+const InputSchema = z
+  .object({
+    acknowledgement: z
+      .enum(['Y', 'y', 'Yes', 'yes'])
+      .describe('Acknowledgement to initiate the wrap-up workflow.'),
+    createTag: z
+      .boolean()
+      .optional()
+      .describe(
+        'Controls whether the tag criterion appears in the emitted protocol. Omit or set `true` to include the tag step. Set `false` to omit it entirely — e.g., when tagging is deferred to a separate release step.',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   instructions: z

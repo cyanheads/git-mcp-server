@@ -275,4 +275,77 @@ Date:   Mon Jan 1 00:00:00 2024 +0000
       ).rejects.toThrow();
     });
   });
+
+  describe('commit metadata', () => {
+    it('populates parsed commit metadata when log output is available', async () => {
+      const NUL = '\x00';
+      const metaStdout = [
+        'abc123def456789',
+        'abc123d',
+        'Field Test',
+        'field-test@example.com',
+        '2024-01-01T00:00:00+00:00',
+        'Field Test',
+        'field-test@example.com',
+        '2024-01-01T00:00:00+00:00',
+        'parent1abc parent2def',
+        'feat: add thing',
+        'detailed body line 1\ndetailed body line 2\n',
+      ].join(NUL);
+
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }) // show
+        .mockResolvedValueOnce({ stdout: metaStdout, stderr: '' }); // log
+
+      const result = await executeShow(
+        { object: 'abc123' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.metadata).toMatchObject({
+        hash: 'abc123def456789',
+        shortHash: 'abc123d',
+        author: {
+          name: 'Field Test',
+          email: 'field-test@example.com',
+          date: '2024-01-01T00:00:00+00:00',
+        },
+        parents: ['parent1abc', 'parent2def'],
+        subject: 'feat: add thing',
+        body: 'detailed body line 1\ndetailed body line 2',
+      });
+    });
+
+    it('leaves metadata empty for non-commit objects', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'blob\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'file content', stderr: '' }) // show
+        .mockResolvedValueOnce({ stdout: 'should-be-ignored', stderr: '' }); // log
+
+      const result = await executeShow(
+        { object: 'abc123:file.txt' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.metadata).toEqual({});
+    });
+
+    it('leaves metadata empty when log call rejects', async () => {
+      mockExecGit
+        .mockResolvedValueOnce({ stdout: 'commit\n', stderr: '' }) // cat-file -t
+        .mockResolvedValueOnce({ stdout: 'commit abc123', stderr: '' }) // show
+        .mockRejectedValueOnce(new Error('log failed')); // log
+
+      const result = await executeShow(
+        { object: 'abc123' },
+        mockContext,
+        mockExecGit,
+      );
+
+      expect(result.metadata).toEqual({});
+    });
+  });
 });

@@ -26,26 +26,28 @@ const TOOL_TITLE = 'Git Merge';
 const TOOL_DESCRIPTION =
   'Merge branches together. Integrates changes from another branch into the current branch with optional merge strategies.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  branch: BranchNameSchema.describe('Branch to merge into current branch.'),
-  strategy: MergeStrategySchema,
-  noFastForward: z
-    .boolean()
-    .default(false)
-    .describe('Prevent fast-forward merge (create merge commit).'),
-  squash: z
-    .boolean()
-    .default(false)
-    .describe('Squash all commits from the branch into a single commit.'),
-  message: CommitMessageSchema.optional().describe(
-    'Custom merge commit message.',
-  ),
-  abort: z
-    .boolean()
-    .default(false)
-    .describe('Abort an in-progress merge that has conflicts.'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    branch: BranchNameSchema.describe('Branch to merge into current branch.'),
+    strategy: MergeStrategySchema,
+    noFastForward: z
+      .boolean()
+      .default(false)
+      .describe('Prevent fast-forward merge (create merge commit).'),
+    squash: z
+      .boolean()
+      .default(false)
+      .describe('Squash all commits from the branch into a single commit.'),
+    message: CommitMessageSchema.optional().describe(
+      'Custom merge commit message.',
+    ),
+    abort: z
+      .boolean()
+      .default(false)
+      .describe('Abort an in-progress merge that has conflicts.'),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

@@ -25,47 +25,49 @@ const TOOL_TITLE = 'Git Worktree';
 const TOOL_DESCRIPTION =
   'Manage multiple working trees: list worktrees, add new worktrees for parallel work, remove worktrees, or move worktrees to new locations.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  mode: z
-    .enum(['list', 'add', 'remove', 'move', 'prune'])
-    .default('list')
-    .describe('The worktree operation to perform.'),
-  worktreePath: z
-    .string()
-    .optional()
-    .describe('Path for the new worktree (for add/move operations).'),
-  branch: BranchNameSchema.optional().describe(
-    'Branch to checkout in the new worktree (for add operation).',
-  ),
-  commitish: CommitRefSchema.optional().describe(
-    'Commit/branch to base the worktree on (for add operation).',
-  ),
-  force: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Force operation (for remove operation with uncommitted changes).',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    mode: z
+      .enum(['list', 'add', 'remove', 'move', 'prune'])
+      .default('list')
+      .describe('The worktree operation to perform.'),
+    worktreePath: z
+      .string()
+      .optional()
+      .describe('Path for the new worktree (for add/move operations).'),
+    branch: BranchNameSchema.optional().describe(
+      'For add operation: create a NEW branch with this name in the new worktree. Fails if the branch already exists — use `commitish` to check out an existing branch instead.',
     ),
-  newPath: z
-    .string()
-    .optional()
-    .describe('New path for the worktree (for move operation).'),
-  detach: z
-    .boolean()
-    .default(false)
-    .describe('Create worktree with detached HEAD (for add operation).'),
-  verbose: z
-    .boolean()
-    .default(false)
-    .describe('Provide detailed output for worktree operations.'),
-  dryRun: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Preview the operation without executing it (for prune operation).',
+    commitish: CommitRefSchema.optional().describe(
+      'For add operation: check out this existing branch/commit/tag in the new worktree (no new branch is created).',
     ),
-});
+    force: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Force operation (for remove operation with uncommitted changes).',
+      ),
+    newPath: z
+      .string()
+      .optional()
+      .describe('New path for the worktree (for move operation).'),
+    detach: z
+      .boolean()
+      .default(false)
+      .describe('Create worktree with detached HEAD (for add operation).'),
+    verbose: z
+      .boolean()
+      .default(false)
+      .describe('Provide detailed output for worktree operations.'),
+    dryRun: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Preview the operation without executing it (for prune operation).',
+      ),
+  })
+  .strict();
 
 const WorktreeInfoSchema = z.object({
   path: z.string().describe('Absolute path to the worktree.'),

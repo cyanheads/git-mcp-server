@@ -26,54 +26,56 @@ const TOOL_TITLE = 'Git Log';
 const TOOL_DESCRIPTION =
   'View commit history with optional filtering by author, date range, file path, or commit message pattern.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  maxCount: LimitSchema.default(10),
-  skip: SkipSchema,
-  since: z
-    .string()
-    .optional()
-    .describe(
-      'Show commits more recent than a specific date (ISO 8601 format).',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    maxCount: LimitSchema.default(10),
+    skip: SkipSchema,
+    since: z
+      .string()
+      .optional()
+      .describe(
+        'Show commits more recent than a specific date (ISO 8601 format).',
+      ),
+    until: z
+      .string()
+      .optional()
+      .describe('Show commits older than a specific date (ISO 8601 format).'),
+    author: z
+      .string()
+      .optional()
+      .describe('Filter commits by author name or email pattern.'),
+    grep: z
+      .string()
+      .optional()
+      .describe('Filter commits by message pattern (regex supported).'),
+    branch: CommitRefSchema.optional().describe(
+      'Show commits from a specific branch or ref (defaults to current branch).',
     ),
-  until: z
-    .string()
-    .optional()
-    .describe('Show commits older than a specific date (ISO 8601 format).'),
-  author: z
-    .string()
-    .optional()
-    .describe('Filter commits by author name or email pattern.'),
-  grep: z
-    .string()
-    .optional()
-    .describe('Filter commits by message pattern (regex supported).'),
-  branch: CommitRefSchema.optional().describe(
-    'Show commits from a specific branch or ref (defaults to current branch).',
-  ),
-  filePath: z
-    .string()
-    .optional()
-    .describe('Show commits that affected a specific file path.'),
-  oneline: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Abbreviated output: return only hash, shortHash, and subject per commit. Significantly reduces response size.',
-    ),
-  stat: z
-    .boolean()
-    .default(false)
-    .describe('Include file change statistics for each commit.'),
-  patch: z
-    .boolean()
-    .default(false)
-    .describe('Include the full diff patch for each commit.'),
-  showSignature: z
-    .boolean()
-    .default(false)
-    .describe('Show GPG signature verification information for each commit.'),
-});
+    filePath: z
+      .string()
+      .optional()
+      .describe('Show commits that affected a specific file path.'),
+    oneline: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Abbreviated output: return only hash, shortHash, and subject per commit. Significantly reduces response size.',
+      ),
+    stat: z
+      .boolean()
+      .default(false)
+      .describe('Include file change statistics for each commit.'),
+    patch: z
+      .boolean()
+      .default(false)
+      .describe('Include the full diff patch for each commit.'),
+    showSignature: z
+      .boolean()
+      .default(false)
+      .describe('Show GPG signature verification information for each commit.'),
+  })
+  .strict();
 
 const CommitSchema = z.object({
   hash: z.string().describe('Full commit SHA-1 hash.'),

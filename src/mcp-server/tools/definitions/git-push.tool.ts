@@ -28,41 +28,43 @@ const TOOL_TITLE = 'Git Push';
 const TOOL_DESCRIPTION =
   'Push changes to a remote repository. Uploads local commits to the remote branch.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  remote: RemoteNameSchema.optional().describe(
-    'Remote name (default: origin).',
-  ),
-  branch: BranchNameSchema.optional().describe(
-    'Branch name (default: current branch).',
-  ),
-  force: ForceSchema.describe('Force push (overwrites remote history).'),
-  forceWithLease: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Safer force push - only succeeds if remote branch is at expected state.',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    remote: RemoteNameSchema.optional().describe(
+      'Remote name (default: origin).',
     ),
-  setUpstream: z
-    .boolean()
-    .default(false)
-    .describe('Set upstream tracking relationship for the branch.'),
-  tags: z.boolean().default(false).describe('Push all tags to the remote.'),
-  dryRun: DryRunSchema,
-  delete: z
-    .boolean()
-    .default(false)
-    .describe('Delete the specified remote branch.'),
-  remoteBranch: BranchNameSchema.optional().describe(
-    'Remote branch name to push to (if different from local branch name).',
-  ),
-  confirmed: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Explicit confirmation required for force push or branch deletion on protected branches (main, master, production, etc.).',
+    branch: BranchNameSchema.optional().describe(
+      'Branch name (default: current branch).',
     ),
-});
+    force: ForceSchema.describe('Force push (overwrites remote history).'),
+    forceWithLease: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Safer force push - only succeeds if remote branch is at expected state.',
+      ),
+    setUpstream: z
+      .boolean()
+      .default(false)
+      .describe('Set upstream tracking relationship for the branch.'),
+    tags: z.boolean().default(false).describe('Push all tags to the remote.'),
+    dryRun: DryRunSchema,
+    delete: z
+      .boolean()
+      .default(false)
+      .describe('Delete the specified remote branch.'),
+    remoteBranch: BranchNameSchema.optional().describe(
+      'Remote branch name to push to (if different from local branch name).',
+    ),
+    confirmed: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Explicit confirmation required for force push or branch deletion on protected branches (main, master, production, etc.).',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

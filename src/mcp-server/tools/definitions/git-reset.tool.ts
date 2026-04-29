@@ -22,28 +22,30 @@ const TOOL_TITLE = 'Git Reset';
 const TOOL_DESCRIPTION =
   'Reset current HEAD to specified state. Can be used to unstage files (soft), discard commits (mixed), or discard all changes (hard).';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  mode: z
-    .enum(['soft', 'mixed', 'hard', 'merge', 'keep'])
-    .default('mixed')
-    .describe(
-      'Reset mode: soft (keep changes staged), mixed (unstage changes), hard (discard all changes), merge (reset and merge), keep (reset but keep local changes).',
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    mode: z
+      .enum(['soft', 'mixed', 'hard', 'merge', 'keep'])
+      .default('mixed')
+      .describe(
+        'Reset mode: soft (keep changes staged), mixed (unstage changes), hard (discard all changes), merge (reset and merge), keep (reset but keep local changes).',
+      ),
+    target: CommitRefSchema.default('HEAD').describe(
+      'Target commit to reset to. Defaults to HEAD.',
     ),
-  target: CommitRefSchema.optional().describe(
-    'Target commit to reset to (default: HEAD).',
-  ),
-  paths: z
-    .array(z.string())
-    .optional()
-    .describe('Specific file paths to reset (leaves HEAD unchanged).'),
-  confirmed: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Explicit confirmation required for hard, merge, and keep reset modes on protected branches (main, master, production, etc.).',
-    ),
-});
+    paths: z
+      .array(z.string())
+      .optional()
+      .describe('Specific file paths to reset (leaves HEAD unchanged).'),
+    confirmed: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Explicit confirmation required for hard, merge, and keep reset modes on protected branches (main, master, production, etc.).',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),
@@ -94,15 +96,13 @@ async function gitResetLogic(
 
   const resetOptions: {
     mode: 'soft' | 'mixed' | 'hard' | 'merge' | 'keep';
-    commit?: string;
+    commit: string;
     paths?: string[];
   } = {
     mode: input.mode,
+    commit: input.target,
   };
 
-  if (input.target !== undefined) {
-    resetOptions.commit = input.target;
-  }
   if (input.paths !== undefined) {
     resetOptions.paths = input.paths;
   }

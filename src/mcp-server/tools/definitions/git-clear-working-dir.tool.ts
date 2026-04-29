@@ -20,13 +20,15 @@ const TOOL_TITLE = 'Git Clear Working Directory';
 const TOOL_DESCRIPTION =
   'Clear the session working directory setting. This resets the context without restarting the server. Subsequent git operations will require an explicit path parameter unless git_set_working_dir is called again.';
 
-const InputSchema = z.object({
-  confirm: z
-    .enum(['Y', 'y', 'Yes', 'yes'])
-    .describe(
-      "Explicit confirmation required to clear working directory. Accepted values: 'Y', 'y', 'Yes', or 'yes'.",
-    ),
-});
+const InputSchema = z
+  .object({
+    confirm: z
+      .enum(['Y', 'y', 'Yes', 'yes'])
+      .describe(
+        "Explicit confirmation required to clear working directory. Accepted values: 'Y', 'y', 'Yes', or 'yes'.",
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

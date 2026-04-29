@@ -25,11 +25,11 @@ const TOOL_DESCRIPTION =
 const InputSchema = z
   .object({
     path: PathSchema,
-    files: z
+    paths: z
       .array(z.string())
       .default([])
       .describe(
-        'Array of file paths to stage (relative to repository root). Use ["."] to stage all changes. Can be omitted when all or update is true.',
+        'Array of file or directory paths to stage (relative to repository root). Use ["."] to stage all changes. Can be omitted when all or update is true.',
       ),
     update: z
       .boolean()
@@ -43,9 +43,10 @@ const InputSchema = z
       .default(false)
       .describe('Allow adding otherwise ignored files.'),
   })
-  .refine((data) => data.all || data.update || data.files.length > 0, {
-    message: 'Either files must be provided, or all/update must be true.',
-    path: ['files'],
+  .strict()
+  .refine((data) => data.all || data.update || data.paths.length > 0, {
+    message: 'Either paths must be provided, or all/update must be true.',
+    path: ['paths'],
   });
 
 const OutputSchema = z.object({
@@ -84,10 +85,9 @@ async function gitAddLogic(
   input: ToolInput,
   { provider, targetPath, appContext }: ToolLogicDependencies,
 ): Promise<ToolOutput> {
-  // Build options object using modern spread syntax
-  const { path: _path, files, ...rest } = input;
+  const { path: _path, paths, ...rest } = input;
   const addOptions = {
-    paths: files,
+    paths,
     ...rest,
   };
 

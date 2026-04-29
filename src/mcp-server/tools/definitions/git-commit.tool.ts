@@ -34,34 +34,36 @@ Pass commit messages as JSON string parameters. Multi-line messages are supporte
 
 Note: Do not use bash heredoc syntax. Literal escape sequences (\\n, \\t) in the message string are automatically normalized to their actual characters.`;
 
-const InputSchema = z.object({
-  path: PathSchema,
-  message: CommitMessageSchema,
-  author: z
-    .object({
-      name: z.string().min(1).describe("Author's name"),
-      email: z.string().email().describe("Author's email address"),
-    })
-    .optional()
-    .describe('Override commit author (defaults to git config).'),
-  amend: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Amend the previous commit instead of creating a new one. Use with caution.',
-    ),
-  allowEmpty: z
-    .boolean()
-    .default(false)
-    .describe('Allow creating a commit with no changes.'),
-  noVerify: NoVerifySchema,
-  filesToStage: z
-    .array(z.string())
-    .optional()
-    .describe(
-      'File paths to stage before committing (atomic stage+commit operation).',
-    ),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    message: CommitMessageSchema,
+    author: z
+      .object({
+        name: z.string().min(1).describe("Author's name"),
+        email: z.string().email().describe("Author's email address"),
+      })
+      .optional()
+      .describe('Override commit author (defaults to git config).'),
+    amend: z
+      .boolean()
+      .default(false)
+      .describe(
+        'Amend the previous commit instead of creating a new one. Use with caution.',
+      ),
+    allowEmpty: z
+      .boolean()
+      .default(false)
+      .describe('Allow creating a commit with no changes.'),
+    noVerify: NoVerifySchema,
+    filesToStage: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'File paths to stage before committing (atomic stage+commit operation).',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

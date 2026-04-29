@@ -50,7 +50,7 @@ describe('git_reflog tool', () => {
       const result = gitReflogTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.ref).toBeUndefined();
+        expect(result.data.ref).toBe('HEAD');
         expect(result.data.maxCount).toBe(25);
       }
     });

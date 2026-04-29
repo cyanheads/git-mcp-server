@@ -42,19 +42,6 @@ export const DryRunSchema = z
   .describe('Preview the operation without executing it.');
 
 /**
- * Confirmation flag for protected operations
- *
- * Required for operations on protected branches (main, master, production, etc.)
- * or other dangerous operations that could result in data loss.
- */
-export const ConfirmSchema = z
-  .enum(['Y', 'y', 'Yes', 'yes'])
-  .optional()
-  .describe(
-    'Explicit confirmation required for protected operations (Y/y/Yes/yes).',
-  );
-
-/**
  * Branch name with validation
  *
  * Must follow git branch naming conventions:
@@ -87,16 +74,6 @@ export const CommitRefSchema = z
   );
 
 /**
- * Author information
- *
- * Used for commits, filtering logs, etc.
- */
-export const AuthorSchema = z.object({
-  name: z.string().min(1).describe("Author's name"),
-  email: z.string().email().describe("Author's email address"),
-});
-
-/**
  * Remote name
  *
  * Must contain only alphanumeric characters, dots, dashes, and underscores.
@@ -108,28 +85,6 @@ export const RemoteNameSchema = z
   .max(255)
   .regex(/^[a-zA-Z0-9._-]+$/, 'Invalid remote name format')
   .describe('Remote name (alphanumeric, dots, dashes, underscores only).');
-
-/**
- * Standard success response
- *
- * Used by tools that return a simple success/failure status.
- */
-export const SuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful.'),
-  message: z.string().describe('Human-readable summary of the result.'),
-});
-
-/**
- * File path (relative to repository root)
- *
- * Must be relative (no leading /) and cannot contain directory traversal (..)
- */
-export const FilePathSchema = z
-  .string()
-  .min(1)
-  .regex(/^[^/].*$/, 'File path must be relative to repository root')
-  .regex(/^(?!.*\.\.).*$/, 'File path cannot contain directory traversal')
-  .describe('File path relative to repository root.');
 
 /**
  * Tag name
@@ -198,36 +153,6 @@ export const SkipSchema = z
   .nonnegative()
   .optional()
   .describe('Number of items to skip for pagination.');
-
-/**
- * Verbose flag
- *
- * When true, includes more detailed information in the output.
- */
-export const VerboseSchema = z
-  .boolean()
-  .default(false)
-  .describe('Include verbose/detailed information in output.');
-
-/**
- * Quiet flag
- *
- * When true, suppresses informational output (only shows errors).
- */
-export const QuietSchema = z
-  .boolean()
-  .default(false)
-  .describe('Suppress informational output (errors only).');
-
-/**
- * Recursive flag
- *
- * When true, operates recursively on subdirectories.
- */
-export const RecursiveSchema = z
-  .boolean()
-  .default(false)
-  .describe('Operate recursively on subdirectories.');
 
 /**
  * All flag

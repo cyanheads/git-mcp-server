@@ -21,28 +21,30 @@ const TOOL_TITLE = 'Git Remote';
 const TOOL_DESCRIPTION =
   'Manage remote repositories: list remotes, add new remotes, remove remotes, rename remotes, or get/set remote URLs.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  mode: z
-    .enum(['list', 'add', 'remove', 'rename', 'get-url', 'set-url'])
-    .default('list')
-    .describe('The remote operation to perform.'),
-  name: RemoteNameSchema.optional().describe(
-    'Remote name for add/remove/rename/get-url/set-url operations.',
-  ),
-  url: z
-    .string()
-    .url()
-    .optional()
-    .describe('Remote URL for add/set-url operations.'),
-  newName: RemoteNameSchema.optional().describe(
-    'New remote name for rename operation.',
-  ),
-  push: z
-    .boolean()
-    .default(false)
-    .describe('Set push URL separately (for set-url operation).'),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    mode: z
+      .enum(['list', 'add', 'remove', 'rename', 'get-url', 'set-url'])
+      .default('list')
+      .describe('The remote operation to perform.'),
+    name: RemoteNameSchema.optional().describe(
+      'Remote name for add/remove/rename/get-url/set-url operations.',
+    ),
+    url: z
+      .string()
+      .url()
+      .optional()
+      .describe('Remote URL for add/set-url operations.'),
+    newName: RemoteNameSchema.optional().describe(
+      'New remote name for rename operation.',
+    ),
+    push: z
+      .boolean()
+      .default(false)
+      .describe('Set push URL separately (for set-url operation).'),
+  })
+  .strict();
 
 const RemoteInfoSchema = z.object({
   name: z.string().describe('Remote name.'),

@@ -44,7 +44,7 @@ describe('git_add tool', () => {
 
   describe('Input Schema', () => {
     it('validates correct input with defaults', () => {
-      const input = { path: '.', files: ['file.txt'] };
+      const input = { path: '.', paths: ['file.txt'] };
       const result = gitAddTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -55,22 +55,22 @@ describe('git_add tool', () => {
     });
 
     it('accepts multiple files', () => {
-      const input = { path: '.', files: ['file1.txt', 'file2.txt', 'dir/'] };
+      const input = { path: '.', paths: ['file1.txt', 'file2.txt', 'dir/'] };
       const result = gitAddTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.files).toHaveLength(3);
+        expect(result.data.paths).toHaveLength(3);
       }
     });
 
     it('accepts all files shorthand', () => {
-      const input = { path: '.', files: ['.'] };
+      const input = { path: '.', paths: ['.'] };
       const result = gitAddTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
     });
 
     it('accepts update flag', () => {
-      const input = { path: '.', files: ['.'], update: true };
+      const input = { path: '.', paths: ['.'], update: true };
       const result = gitAddTool.inputSchema.safeParse(input);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -78,8 +78,14 @@ describe('git_add tool', () => {
       }
     });
 
-    it('rejects empty files array', () => {
-      const input = { path: '.', files: [] };
+    it('rejects empty paths array', () => {
+      const input = { path: '.', paths: [] };
+      const result = gitAddTool.inputSchema.safeParse(input);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unknown fields (strict)', () => {
+      const input = { path: '.', files: ['file.txt'] };
       const result = gitAddTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
@@ -106,7 +112,7 @@ describe('git_add tool', () => {
 
       const parsedInput = gitAddTool.inputSchema.parse({
         path: '.',
-        files: ['file.txt'],
+        paths: ['file.txt'],
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -149,7 +155,7 @@ describe('git_add tool', () => {
 
       const parsedInput = gitAddTool.inputSchema.parse({
         path: '.',
-        files: ['file1.txt', 'file2.txt', 'dir/file3.txt'],
+        paths: ['file1.txt', 'file2.txt', 'dir/file3.txt'],
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -184,7 +190,7 @@ describe('git_add tool', () => {
 
       const parsedInput = gitAddTool.inputSchema.parse({
         path: '.',
-        files: ['.'],
+        paths: ['.'],
         update: true,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -216,7 +222,7 @@ describe('git_add tool', () => {
 
       const parsedInput = gitAddTool.inputSchema.parse({
         path: '.',
-        files: ['ignored.txt'],
+        paths: ['ignored.txt'],
         force: true,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -248,7 +254,7 @@ describe('git_add tool', () => {
 
       const parsedInput = gitAddTool.inputSchema.parse({
         path: '/absolute/path',
-        files: ['file.txt'],
+        paths: ['file.txt'],
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
       const sdkContext = createTestSdkContext();
@@ -283,7 +289,7 @@ describe('git_add tool', () => {
 
       const parsedInput = gitAddTool.inputSchema.parse({
         path: '.',
-        files: ['.'],
+        paths: ['.'],
         all: true,
       });
       const appContext = createTestContext({ tenantId: 'test-tenant' });
@@ -428,7 +434,7 @@ describe('git_add tool', () => {
       expect(gitAddTool.outputSchema).toBeDefined();
 
       const inputShape = gitAddTool.inputSchema.shape;
-      expect(inputShape.files).toBeDefined();
+      expect(inputShape.paths).toBeDefined();
       expect(inputShape.update).toBeDefined();
 
       const outputShape = gitAddTool.outputSchema.shape;

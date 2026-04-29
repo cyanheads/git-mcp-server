@@ -26,29 +26,31 @@ const TOOL_TITLE = 'Git Checkout';
 const TOOL_DESCRIPTION =
   'Switch branches or restore working tree files. Can checkout an existing branch, create a new branch, or restore specific files.';
 
-const InputSchema = z.object({
-  path: PathSchema,
-  target: z
-    .union([BranchNameSchema, CommitRefSchema])
-    .describe('Branch name, commit hash, or tag to checkout.'),
-  createBranch: z
-    .boolean()
-    .default(false)
-    .describe('Create a new branch with the specified name.'),
-  force: ForceSchema,
-  paths: z
-    .array(z.string())
-    .optional()
-    .describe(
-      'Specific file paths to checkout/restore (relative to repository root).',
-    ),
-  track: z
-    .boolean()
-    .optional()
-    .describe(
-      'Set up tracking relationship with remote branch when creating new branch.',
-    ),
-});
+const InputSchema = z
+  .object({
+    path: PathSchema,
+    target: z
+      .union([BranchNameSchema, CommitRefSchema])
+      .describe('Branch name, commit hash, or tag to checkout.'),
+    createBranch: z
+      .boolean()
+      .default(false)
+      .describe('Create a new branch with the specified name.'),
+    force: ForceSchema,
+    paths: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Specific file paths to checkout/restore (relative to repository root).',
+      ),
+    track: z
+      .boolean()
+      .optional()
+      .describe(
+        'Set up tracking relationship with remote branch when creating new branch.',
+      ),
+  })
+  .strict();
 
 const OutputSchema = z.object({
   success: z.boolean().describe('Indicates if the operation was successful.'),

@@ -12,13 +12,80 @@ import type {
 } from '../../../../types.js';
 import { buildGitCommand, mapGitError } from '../../utils/index.js';
 
+const NUL = '\x00';
+const COMMIT_META_FORMAT = [
+  '%H',
+  '%h',
+  '%an',
+  '%ae',
+  '%aI',
+  '%cn',
+  '%ce',
+  '%cI',
+  '%P',
+  '%s',
+  '%b',
+].join(NUL);
+
+interface CommitMetadata {
+  hash: string;
+  shortHash: string;
+  author: { name: string; email: string; date: string };
+  committer: { name: string; email: string; date: string };
+  parents: string[];
+  subject: string;
+  body: string;
+}
+
+function parseCommitMetadata(stdout: string): CommitMetadata | null {
+  const fields = stdout.split(NUL);
+  if (fields.length < 11) return null;
+  const [
+    hash,
+    shortHash,
+    authorName,
+    authorEmail,
+    authorDate,
+    committerName,
+    committerEmail,
+    committerDate,
+    parents,
+    subject,
+    body,
+  ] = fields as [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  return {
+    hash,
+    shortHash,
+    author: { name: authorName, email: authorEmail, date: authorDate },
+    committer: {
+      name: committerName,
+      email: committerEmail,
+      date: committerDate,
+    },
+    parents: parents.trim().split(' ').filter(Boolean),
+    subject,
+    body: body.replace(/\n+$/, ''),
+  };
+}
+
 /**
- * Execute git show to display commit details.
+ * Execute git show to display object details.
  *
- * @param options - Show options
- * @param context - Operation context
- * @param execGit - Function to execute git commands
- * @returns Show result
+ * Issues `cat-file -t`, `show`, and (for commits) `log -1 --format` in parallel.
+ * The metadata fetch is best-effort: if it fails, metadata stays empty rather
+ * than failing the whole operation.
  */
 export async function executeShow(
   options: GitShowOptions,
@@ -40,40 +107,56 @@ export async function executeShow(
       args.push('--format=raw');
     }
 
-    // If filePath is specified, use commit:path syntax to show a specific file
     if (options.filePath) {
       args.push(`${options.object}:${options.filePath}`);
     } else {
       args.push(options.object);
     }
 
-    // Fetch type and content concurrently — they're independent queries against the same object.
     const typeCmd = buildGitCommand({
       command: 'cat-file',
       args: ['-t', options.object],
     });
     const cmd = buildGitCommand({ command: 'show', args });
+    const metaCmd = buildGitCommand({
+      command: 'log',
+      args: ['-1', `--format=${COMMIT_META_FORMAT}`, options.object],
+    });
 
-    const [typeResult, result] = await Promise.all([
-      execGit(typeCmd, context.workingDirectory, context.requestContext),
-      execGit(cmd, context.workingDirectory, context.requestContext),
-    ]);
+    const [typeSettled, contentSettled, metaSettled] = await Promise.allSettled(
+      [
+        execGit(typeCmd, context.workingDirectory, context.requestContext),
+        execGit(cmd, context.workingDirectory, context.requestContext),
+        execGit(metaCmd, context.workingDirectory, context.requestContext),
+      ],
+    );
 
-    const detectedType = typeResult.stdout.trim();
+    if (typeSettled.status === 'rejected') throw typeSettled.reason;
+    if (contentSettled.status === 'rejected') throw contentSettled.reason;
+
+    const detectedType = typeSettled.value.stdout.trim();
     const objectType = (['commit', 'tree', 'blob', 'tag'] as const).includes(
       detectedType as 'commit' | 'tree' | 'blob' | 'tag',
     )
       ? (detectedType as 'commit' | 'tree' | 'blob' | 'tag')
       : 'commit';
 
-    const showResult = {
+    let metadata: Record<string, unknown> = {};
+    if (
+      objectType === 'commit' &&
+      metaSettled.status === 'fulfilled' &&
+      metaSettled.value?.stdout
+    ) {
+      const parsed = parseCommitMetadata(metaSettled.value.stdout);
+      if (parsed) metadata = parsed as unknown as Record<string, unknown>;
+    }
+
+    return {
       object: options.object,
       type: objectType,
-      content: result.stdout,
-      metadata: {},
+      content: contentSettled.value.stdout,
+      metadata,
     };
-
-    return showResult;
   } catch (error) {
     throw mapGitError(error, 'show');
   }
