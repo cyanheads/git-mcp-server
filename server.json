@@ -107,5 +107,6 @@
         "url": "http://localhost:3015/mcp"
       }
     }
-  ]
+  ],
+  "mcpName": "io.github.cyanheads/git-mcp-server"
 }
