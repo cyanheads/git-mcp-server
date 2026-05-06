@@ -33,9 +33,11 @@ const InputSchema = z
     ),
     url: z
       .string()
-      .url()
+      .min(1)
       .optional()
-      .describe('Remote URL for add/set-url operations.'),
+      .describe(
+        'Remote URL for add/set-url operations. Accepts HTTP(S), SSH (ssh://… or git@host:path), git://, or file:// URLs.',
+      ),
     newName: RemoteNameSchema.optional().describe(
       'New remote name for rename operation.',
     ),
