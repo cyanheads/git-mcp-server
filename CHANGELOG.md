@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.15.1 - 2026-05-06
+
+Closes [#47](https://github.com/cyanheads/git-mcp-server/issues/47): `git_remote.url` was emitted as `format: "uri"` in the JSON Schema, which OpenAI's tool validator rejects (`'uri' is not a valid format`). The provider already accepted SSH (`git@host:path`), `git://`, `file://`, and bare paths — only the schema was rejecting them, and only OpenAI clients surfaced it. Mirrors the same `.url()` → `.min(1)` change applied to `git_clone.url` in v2.15.0. Sweeps the remaining `format`-emitting Zod call (`git_commit.author.email`'s `.email()`) at the same time so a stricter client doesn't surface the next variant of this bug.
+
+Also pins `zod` to `~4.3.6` (patch-only) to keep JSON Schema emission stable across minor releases — the `format` keyword behavior has shifted between Zod 4 minors before, and this is exactly the kind of surface that breaks downstream validators when it drifts.
+
+### Fixed
+
+- **`git_remote.url` rejected as invalid OpenAI schema**: Was `z.string().url()`, which serialized to `{ "type": "string", "format": "uri" }`. OpenAI's `tools[].parameters` validator only accepts a narrow set of `format` values; `uri` isn't one of them, so `gpt-5-codex` (and any other strict-validating client) refused the entire `git_remote` tool with `Invalid schema for function 'git_git_remote'`. Now `z.string().min(1)` with a description that names every accepted form.
+- **`git_commit.author.email` emitted `format: "email"` for cross-client portability**: Was `z.string().email()`, which serializes to `{ "type": "string", "format": "email" }`. OpenAI's documented allowlist (date-time, time, date, duration, email, hostname, ipv4, ipv6, uuid) does accept `email`, so this wasn't actively breaking on OpenAI — but other clients publish narrower lists and waiting for the next report is the wrong default. Now `z.string().min(1)` with a description that names the expected form. The corresponding schema test pivoted from "rejects invalid author email" to "rejects empty author email" so the assertion still matches the actual contract.
+
+### Changed
+
+- **`zod` constrained to `~4.3.6`**: Patch-only range instead of caret. JSON Schema `format` emission has changed between Zod 4 minors before; pinning prevents a transitive Zod bump from re-introducing the kind of validator-rejected schema this release fixes.
+- **Dependency refresh**: `@cloudflare/workers-types`, `@hono/node-server`, `@opentelemetry/*` (auto-instrumentations-node, exporter-metrics-otlp-http, exporter-trace-otlp-http, instrumentation-pino, resources, sdk-metrics, sdk-node, sdk-trace-node), `@supabase/supabase-js`, `eslint`, `globals`, `hono`, `msw`, `typescript-eslint`. No code changes required.
+
+### Internal
+
+- **Shell-injection regression tests for `spawnGitCommand`**: Stages a fake `git` shim on `PATH` that records argv to a sandbox file, then sends payloads containing `$(...)`, backticks, `;`, `&&`, and `|` as a `--branch` value. Each test asserts the marker file is never created (no shell evaluation occurred) and the payload appears in argv verbatim. Locks in the argv-based spawning contract — a future regression to `shell: true` would break every assertion.
+
 ## v2.15.0 - 2026-04-28
 
 MCP surface tightening pass: every tool's Zod input schema is now `.strict()`, so unknown fields raise `ZodError` instead of being silently stripped — the same failure mode behind v2.14.1, where service-layer additions reached the executor but vanished at the MCP boundary because nobody noticed the schema hadn't been updated. While the surface was already breaking, also normalized the input names that drift between tools (`mode`/`branchName`/`paths`/`filePath`/`path`) so multi-mode tools speak the same language and `git_show` now actually populates its `metadata` field — previously always `{}` despite being part of the output schema.
