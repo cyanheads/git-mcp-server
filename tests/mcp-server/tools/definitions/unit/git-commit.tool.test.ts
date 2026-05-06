@@ -101,11 +101,11 @@ describe('git_commit tool', () => {
       expect(result.success).toBe(false);
     });
 
-    it('rejects invalid author email', () => {
+    it('rejects empty author email', () => {
       const input = {
         path: '.',
         message: 'Test',
-        author: { name: 'Test', email: 'not-an-email' },
+        author: { name: 'Test', email: '' },
       };
       const result = gitCommitTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);

@@ -41,7 +41,10 @@ const InputSchema = z
     author: z
       .object({
         name: z.string().min(1).describe("Author's name"),
-        email: z.string().email().describe("Author's email address"),
+        email: z
+          .string()
+          .min(1)
+          .describe("Author's email address (e.g. user@example.com)."),
       })
       .optional()
       .describe('Override commit author (defaults to git config).'),
