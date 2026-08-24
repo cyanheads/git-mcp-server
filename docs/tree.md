@@ -1,6 +1,6 @@
 # git-mcp-server - Directory Structure
 
-Generated on: 2026-08-24 20:46:46
+Generated on: 2026-08-24 21:54:10
 
 ```
 git-mcp-server
@@ -9,7 +9,8 @@ git-mcp-server
 │   │   └── codeql-config.yml
 │   ├── workflows
 │   │   └── ci.yml
-│   └── FUNDING.yml
+│   ├── FUNDING.yml
+│   └── SECURITY.md
 ├── .husky
 ├── .vscode
 ├── claude-plans
@@ -305,6 +306,7 @@ git-mcp-server
 │   │       │       ├── authUtils.test.ts
 │   │       │       └── withAuth.test.ts
 │   │       └── stdio
+│   │           ├── tool-argv.e2e.test.ts
 │   │           └── tool-listing.e2e.test.ts
 │   ├── mocks
 │   │   ├── handlers.ts
@@ -353,6 +355,7 @@ git-mcp-server
 │   │                   ├── allow-list-coverage.test.ts
 │   │                   ├── command-builder.test.ts
 │   │                   ├── git-executor.test.ts
+│   │                   ├── git-validators.test.ts
 │   │                   └── runtime-adapter.test.ts
 │   ├── storage
 │   │   ├── providers

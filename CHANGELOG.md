@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v2.15.3 - 2026-08-24
+
+Fixes a regression shipped in v2.15.2. The strict git flag allow-list introduced there never covered the `git rev-parse` probes the pre-flight validators emit, so `git_set_working_dir` — whose `validateGitRepo` input defaults to `true` — failed on every path with `Unsafe git flag rejected: --is-inside-work-tree`. The same allow-list rejected a commit, merge, stash, or tag message beginning with `-`, which the input schemas accept.
+
+### Fixed
+
+- **`git rev-parse` probes rejected by the allow-list**: `--is-inside-work-tree`, `--show-toplevel`, and `--verify` are now in `SAFE_GIT_OPTIONS`. The pre-flight validators in `src/services/git/providers/cli/utils/git-validators.ts` emit all three — `validateGitRepository`, `getGitRoot`, `validateBranchExists`, `validateCommitRef` — and none of them could reach git while those flags were missing.
+- **A message beginning with `-` rejected at runtime**: `git_commit`, `git_merge`, `git_stash`, and `git_tag` accept such a message at the schema, but the operations emitted it as a standalone argv entry after `-m` — where the validator must reject it, since git would otherwise parse the message as options. The four operations now emit `--message=<text>`, which is allow-listed and reaches git as data.
+- **A failed probe reported as "not a git repository"**: `git_set_working_dir` wrapped every `validateRepository` failure in `Path is not a git repository` with the `initializeIfNotPresent` hint, and with `initializeIfNotPresent: true` would have run `git init` after a probe that never returned an answer. Only a genuine not-a-repository or missing-path result takes that branch now; anything else — a rejected flag, git missing from `PATH`, a timeout — is rethrown untouched.
+
+### Internal
+
+- **Every tool's real argv is exercised over stdio**: `tests/mcp-server/transports/stdio/tool-argv.e2e.test.ts` spawns the real server over stdio with an SDK client and drives all 28 tools against temporary repositories and a local bare remote, so each tool's actual argv passes through the real `validateGitArgs` — the layer mocked-`execGit` unit tests cannot see. A closing assertion compares the set of tools exercised against `allToolDefinitions`, so a new tool cannot land without argv coverage, and leading-dash messages are pinned end to end on `git_commit`, `git_merge`, `git_stash`, and `git_tag`.
+- **Pre-flight validators tested against a real git binary**: `tests/services/git/providers/cli/utils/git-validators.test.ts` runs `validateGitRepository`, `getGitRoot`, `validateBranchExists`, and `validateCommitRef` on temp repositories with no `execGit` mock, and asserts a plain directory reports as not a repository rather than as a rejected flag.
+- **Allow-list sweep widened past `operations/`**: `tests/services/git/providers/cli/utils/allow-list-coverage.test.ts` scraped flag literals only out of `src/services/git/providers/cli/operations/`, which is why the validators' probes were never checked. It now sweeps the whole `src/services/git/providers/cli/` tree — the validators and `CliGitProvider` included, skipping the allow-list file itself — and asserts no operation emits a message as a standalone argv entry after `-m`.
+
 ## v2.15.2 - 2026-08-24
 
 Closes [#57](https://github.com/cyanheads/git-mcp-server/issues/57): every tool's advertised `inputSchema` and `outputSchema` now declares JSON Schema 2020-12 instead of draft-07. The MCP SDK's built-in `tools/list` handler converts Zod schemas with a hardcoded `draft-7` target and no override, so a client whose validator registers only the 2020-12 meta-schema refused the dialect label before reading the schema body and disabled every tool at registration. The schema bodies were never the problem — only the label.
