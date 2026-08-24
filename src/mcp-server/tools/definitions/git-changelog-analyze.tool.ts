@@ -119,12 +119,9 @@ const InputSchema = z
       .describe(
         'Maximum recent tags to fetch for release context (1-1000). Applied at the git command so large tag catalogs do not bloat the response.',
       ),
-    sinceTag: z
-      .string()
-      .optional()
-      .describe(
-        'Only include git history since this tag (e.g., "v1.2.0"). Narrows the analysis window.',
-      ),
+    sinceTag: CommitRefSchema.optional().describe(
+      'Only include git history since this tag (e.g., "v1.2.0"). Narrows the analysis window. Must not start with "-".',
+    ),
     branch: CommitRefSchema.optional().describe(
       'Branch to analyze (defaults to current branch).',
     ),

@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema, LimitSchema } from '../schemas/common.js';
+import { CommitRefSchema, PathSchema, LimitSchema } from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -24,10 +24,9 @@ const TOOL_DESCRIPTION =
 const InputSchema = z
   .object({
     path: PathSchema,
-    ref: z
-      .string()
-      .default('HEAD')
-      .describe('Reference whose reflog to show. Defaults to HEAD.'),
+    ref: CommitRefSchema.default('HEAD').describe(
+      'Reference whose reflog to show. Defaults to HEAD. Must not start with "-".',
+    ),
     maxCount: LimitSchema.default(25),
   })
   .strict();

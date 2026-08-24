@@ -9,6 +9,7 @@ import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
 import {
   PathSchema,
   CommitRefSchema,
+  GitFilePathSchema,
   LimitSchema,
   SkipSchema,
 } from '../schemas/common.js';
@@ -52,10 +53,9 @@ const InputSchema = z
     branch: CommitRefSchema.optional().describe(
       'Show commits from a specific branch or ref (defaults to current branch).',
     ),
-    filePath: z
-      .string()
-      .optional()
-      .describe('Show commits that affected a specific file path.'),
+    filePath: GitFilePathSchema.optional().describe(
+      'Show commits that affected a specific file path. Must not start with "-".',
+    ),
     oneline: z
       .boolean()
       .default(false)

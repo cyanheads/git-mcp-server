@@ -159,10 +159,111 @@ describe('Command Builder', () => {
       expect(() => validateGitArgs(['--oneline'])).not.toThrow();
     });
 
-    it('should accept flags with values', () => {
+    it('should accept allow-listed flags with values', () => {
+      // Acceptance is gated on the flag NAME being in SAFE_GIT_OPTIONS,
+      // not merely on the presence of `=`. This is the security contract:
+      // an unknown flag with a value is still rejected.
       expect(() => validateGitArgs(['--format=%H'])).not.toThrow();
       expect(() => validateGitArgs(['--max-count=10'])).not.toThrow();
       expect(() => validateGitArgs(['--initial-branch=main'])).not.toThrow();
+      expect(() => validateGitArgs(['--depth=1'])).not.toThrow();
+    });
+
+    describe('argument injection (CVE-2017-1000117 class)', () => {
+      // Each case below is a known attack payload from public CVEs or the
+      // same vulnerability family. validateGitArgs must reject them — they
+      // were the failure mode in GHSA-86j2-w37r-q256.
+
+      it('rejects --config=core.sshCommand= (advisory PoC)', () => {
+        expect(() =>
+          validateGitArgs([
+            '--config=core.sshCommand=sh -c "touch /tmp/pwned"',
+          ]),
+        ).toThrow(/Unsafe git flag|argument injection/i);
+      });
+
+      it('rejects --upload-pack= (CVE-2017-1000117 family)', () => {
+        expect(() =>
+          validateGitArgs(['--upload-pack=touch /tmp/pwned']),
+        ).toThrow(/Unsafe git flag/i);
+      });
+
+      it('rejects --exec= (option-injection variant)', () => {
+        expect(() => validateGitArgs(['--exec=touch /tmp/pwned'])).toThrow(
+          /Unsafe git flag/i,
+        );
+      });
+
+      it('rejects --receive-pack= (push-side variant)', () => {
+        expect(() =>
+          validateGitArgs(['--receive-pack=touch /tmp/pwned']),
+        ).toThrow(/Unsafe git flag/i);
+      });
+
+      it('rejects standalone --config (not in allow-list)', () => {
+        expect(() => validateGitArgs(['--config'])).toThrow(/Unsafe git flag/i);
+      });
+
+      it('rejects unknown long flags without values', () => {
+        expect(() => validateGitArgs(['--unknown-flag'])).toThrow(
+          /Unsafe git flag/i,
+        );
+        expect(() => validateGitArgs(['--evil'])).toThrow(/Unsafe git flag/i);
+      });
+
+      it('rejects unknown long flags with values (= bypass closed)', () => {
+        // The previous bug: any --flag=value passed unchecked. Closed now.
+        expect(() => validateGitArgs(['--unknown-flag=value'])).toThrow(
+          /Unsafe git flag/i,
+        );
+        expect(() =>
+          validateGitArgs(['--ProxyCommand=touch /tmp/pwned']),
+        ).toThrow(/Unsafe git flag/i);
+      });
+
+      it('rejects malicious URL-shaped args that start with dash', () => {
+        // Even if a leading-dash URL slips past schema validation,
+        // validateGitArgs catches it because git's option parser would
+        // treat it as a flag.
+        expect(() =>
+          validateGitArgs(['--upload-pack=evil', '/tmp/dest']),
+        ).toThrow(/Unsafe git flag/i);
+      });
+
+      it('rejects --server-option= (smuggled config)', () => {
+        expect(() =>
+          validateGitArgs(['--server-option=core.sshCommand=evil']),
+        ).toThrow(/Unsafe git flag/i);
+      });
+
+      it('error message names the offending flag for debuggability', () => {
+        try {
+          validateGitArgs(['--evil-flag=payload']);
+          throw new Error('should have thrown');
+        } catch (err) {
+          expect((err as Error).message).toContain('--evil-flag');
+        }
+      });
+    });
+
+    describe('--end-of-options separator', () => {
+      it('accepts --end-of-options as a safe flag', () => {
+        expect(() => validateGitArgs(['--end-of-options'])).not.toThrow();
+      });
+
+      it('still rejects `-`-prefixed args after --end-of-options', () => {
+        /**
+         * Design choice: `validateGitArgs` validates every arg in isolation.
+         * It does NOT model git's parser state — anything `-`-prefixed must
+         * still pass the allow-list, even after `--end-of-options`. Schema-
+         * layer leading-`-` rejection is the primary defense for user input
+         * that's expected to land positionally; this validator is the safety
+         * net that catches anything slipping past the schema layer.
+         */
+        expect(() =>
+          validateGitArgs(['--end-of-options', '--upload-pack=evil']),
+        ).toThrow(/Unsafe git flag/i);
+      });
     });
 
     it('should handle shell metacharacters safely (array spawn protection)', () => {

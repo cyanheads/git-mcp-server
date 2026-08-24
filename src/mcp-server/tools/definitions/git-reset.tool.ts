@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema, CommitRefSchema } from '../schemas/common.js';
+import {
+  PathSchema,
+  CommitRefSchema,
+  GitFilePathSchema,
+} from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -35,9 +39,11 @@ const InputSchema = z
       'Target commit to reset to. Defaults to HEAD.',
     ),
     paths: z
-      .array(z.string())
+      .array(GitFilePathSchema)
       .optional()
-      .describe('Specific file paths to reset (leaves HEAD unchanged).'),
+      .describe(
+        'Specific file paths to reset (leaves HEAD unchanged). Entries must not start with "-".',
+      ),
     confirmed: z
       .boolean()
       .default(false)

@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema } from '../schemas/common.js';
+import { GitFilePathSchema, PathSchema } from '../schemas/common.js';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import {
   createToolHandler,
@@ -24,10 +24,9 @@ const TOOL_DESCRIPTION =
 const InputSchema = z
   .object({
     path: PathSchema,
-    filePath: z
-      .string()
-      .min(1)
-      .describe('Path to the file to blame (relative to repository root).'),
+    filePath: GitFilePathSchema.describe(
+      'Path to the file to blame (relative to repository root). Must not start with "-".',
+    ),
     startLine: z
       .number()
       .int()

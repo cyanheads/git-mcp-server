@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema, RemoteNameSchema } from '../schemas/common.js';
+import {
+  GitUrlSchema,
+  PathSchema,
+  RemoteNameSchema,
+} from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -31,13 +35,9 @@ const InputSchema = z
     name: RemoteNameSchema.optional().describe(
       'Remote name for add/remove/rename/get-url/set-url operations.',
     ),
-    url: z
-      .string()
-      .min(1)
-      .optional()
-      .describe(
-        'Remote URL for add/set-url operations. Accepts HTTP(S), SSH (ssh://… or git@host:path), git://, or file:// URLs.',
-      ),
+    url: GitUrlSchema.optional().describe(
+      'Remote URL for add/set-url operations. Accepts HTTP(S), SSH (ssh://… or user@host:path), git://, or file:// URLs. Must not start with "-".',
+    ),
     newName: RemoteNameSchema.optional().describe(
       'New remote name for rename operation.',
     ),

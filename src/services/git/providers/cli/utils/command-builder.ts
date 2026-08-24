@@ -102,32 +102,49 @@ export function buildGitEnv(
 }
 
 /**
- * Known safe git options that are commonly used.
- * This is a baseline set - expand as needed for your specific use cases.
+ * Allow-list of git option flags this server is permitted to pass.
+ *
+ * Any `-`-prefixed argument reaching `validateGitArgs` must be on this list
+ * (matched on the flag name, before any `=value`). This is the primary
+ * defense against argument injection via attacker-controlled refs, URLs,
+ * or paths (CVE-2017-1000117 / CVE-2018-17456 class).
+ *
+ * To add a flag: only add it if it is genuinely needed by an operation.
+ * Dangerous flags like `--upload-pack`, `--exec`, `--config`,
+ * `--receive-pack`, `--server-option` must NEVER be added — they enable
+ * arbitrary command execution by the git binary.
  */
 const SAFE_GIT_OPTIONS = new Set([
+  // Separators: `--end-of-options` stops option parsing; `--` is the pathspec
+  // separator every path-taking operation emits before user-supplied paths.
+  '--end-of-options',
+  '--',
   // Common flags
   '--version',
   '--help',
   '--all',
   '--force',
+  '--force-with-lease',
   '--quiet',
   '--verbose',
   '-v',
   '-f',
   '-q',
+  '-S',
   // Status flags
   '--porcelain',
-  '--porcelain=v2',
   '-b',
-  '--untracked-files=no',
+  '--untracked-files',
   '--ignore-submodules',
   '--short',
-  '--branch',
   // Branch flags
   '--list',
   '--remote',
   '--no-abbrev',
+  '--track',
+  '--count',
+  '--merged',
+  '--no-merged',
   '-m',
   '-d',
   '-D',
@@ -136,6 +153,13 @@ const SAFE_GIT_OPTIONS = new Set([
   '--oneline',
   '--graph',
   '--decorate',
+  '--max-count',
+  '--skip',
+  '--author',
+  '--since',
+  '--until',
+  '--grep',
+  '--abbrev-ref',
   // Add flags
   '--update',
   '-u',
@@ -149,6 +173,11 @@ const SAFE_GIT_OPTIONS = new Set([
   '--cached',
   '--staged',
   '--unified',
+  '--name-only',
+  '--name-status',
+  '--no-index',
+  '--others',
+  '--exclude-standard',
   // Reset flags
   '--soft',
   '--mixed',
@@ -163,74 +192,95 @@ const SAFE_GIT_OPTIONS = new Set([
   '--no-commit',
   '--abort',
   '--continue',
+  '--no-ff',
+  '--ff-only',
+  '--squash',
+  '--interactive',
+  '--preserve-merges',
+  '--onto',
+  // Clone flags
+  '--branch',
+  '--depth',
+  '--bare',
+  '--mirror',
+  '--recurse-submodules',
+  // Fetch/push/pull flags
+  '--prune',
+  '--tags',
+  '--set-upstream',
+  '--delete',
+  '--rebase',
+  '--push',
+  // Tag flags
+  '--annotate',
+  '--sort',
+  '-a',
+  '-t',
+  // Stash flags
+  '--include-untracked',
+  '--keep-index',
   // Worktree flags
   '--dry-run',
   '--detach',
-  // Misc flags
-  '--bare',
-  '--tags',
-  '--prune',
-  '--no-ff',
+  // Show/log/blame flags
+  '-L',
+  '-w',
+  // Format flags (accept any --pretty=..., --format=... value)
+  '--format',
+  '--initial-branch',
 ]);
 
 /**
  * Validate git command arguments for safety.
  *
  * SECURITY MODEL:
- * We use the runtime adapter which spawns processes with array arguments
- * (not shell strings), providing inherent protection from shell injection attacks.
- * This works in both Bun (Bun.spawn) and Node.js (child_process.spawn) runtimes.
+ * Process spawning uses array arguments (`Bun.spawn` / `child_process.spawn`),
+ * which makes shell-metacharacter injection (`;`, `|`, `$`, backticks, etc.)
+ * impossible — those characters reach git as literal data, not shell syntax.
  *
- * Characters like ;, |, $, etc. cannot be used for command chaining because
- * arguments are passed directly to the git process, not interpreted by a shell.
+ * The remaining attack class is **argument injection** — values that look like
+ * git options (start with `-`) being parsed by git's own argument parser.
+ * Examples: a clone URL like `--config=core.sshCommand=<cmd>` (the classic
+ * CVE-2017-1000117 vector), or a branch ref like `--upload-pack=<cmd>`.
  *
- * This function focuses on Git-specific security concerns:
- * 1. Null bytes (universally dangerous in many contexts)
- * 2. Option flag validation (prevent option injection)
- * 3. Path safety (handled elsewhere with sanitization utilities)
+ * Defense:
+ * 1. Null bytes are rejected (corrupt many internal C string boundaries).
+ * 2. Every `-`-prefixed argument must be a short flag (`-x`), one of the
+ *    attached-value short forms the operations emit (`-n<count>`,
+ *    `-L<start>,<end>`), or a long flag whose **name** (the part before any
+ *    `=value`) is in `SAFE_GIT_OPTIONS`. Unknown flags throw — there is no
+ *    "permissive" path.
+ * 3. Operations that pass user-controlled values positionally MUST also
+ *    insert `--end-of-options` before the positional segment, so even a
+ *    schema bypass can't escalate to argument injection.
  *
- * WHAT WE DON'T NEED TO VALIDATE:
- * - Newlines in commit messages (safe with array spawn, required for multi-line messages)
- * - Shell metacharacters like ;, |, $, <, > (safe with array spawn)
- * - Backticks and $() (safe with array spawn)
- *
- * @param args - Arguments to validate
- * @throws Error if arguments contain unsafe patterns
+ * @param args - Arguments to validate (after the git subcommand)
+ * @throws Error if any argument is unsafe
  */
+/** Short flags the operations emit with the value attached: `-n<count>`, `-L<start>,<end>`. */
+const SHORT_FLAG_WITH_VALUE = /^-(?:n\d+|L\d+,\d*)$/;
+
 export function validateGitArgs(args: string[]): void {
   for (const arg of args) {
-    // Critical: Prevent null bytes which can cause issues in many contexts
-    // Null bytes can truncate strings unexpectedly and bypass security checks
     if (arg.includes('\0')) {
       throw new Error(`Null byte detected in git argument: ${arg}`);
     }
 
-    // Validate option flags (arguments starting with -)
-    // Allow short flags like -v, -f, etc. which match /-\w/
-    // Allow long flags that are in our safe list
-    // Allow flags with values like --format=..., --initial-branch=...
-    if (arg.startsWith('-')) {
-      // Extract the flag name (before = if present)
-      const flagName = arg.split('=')[0] || arg;
+    if (!arg.startsWith('-')) {
+      continue;
+    }
 
-      // Short flags (single dash + single letter) are generally safe
-      const isShortFlag = /^-[a-zA-Z]$/.test(flagName);
+    const flagName = arg.split('=')[0] || arg;
+    const isShortFlag =
+      /^-[a-zA-Z]$/.test(flagName) || SHORT_FLAG_WITH_VALUE.test(arg);
+    const isSafeOption = SAFE_GIT_OPTIONS.has(flagName);
 
-      // Check if it's a known safe option
-      const isSafeOption = SAFE_GIT_OPTIONS.has(flagName);
-
-      // Flags with values (e.g., --format=..., --max-count=...)
-      const isFlagWithValue = arg.includes('=');
-
-      // If it's not a short flag, not in our safe list, and not a recognized pattern,
-      // we should be cautious. For development, we'll allow it but could make this
-      // stricter in production environments.
-      if (!isShortFlag && !isSafeOption && !isFlagWithValue) {
-        // In a high-security production environment, you might want to throw here
-        // For now, we allow it to maintain flexibility
-        // Uncomment the line below for strict validation:
-        // throw new Error(`Unknown or potentially unsafe git flag: ${arg}`);
-      }
+    if (!isShortFlag && !isSafeOption) {
+      throw new Error(
+        `Unsafe git flag rejected: ${arg}. ` +
+          `Flag name "${flagName}" is not in the allow-list. ` +
+          `This protects against argument injection (CVE-2017-1000117 class).`,
+      );
     }
   }
 }

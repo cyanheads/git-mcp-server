@@ -10,6 +10,7 @@ import {
   PathSchema,
   BranchNameSchema,
   CommitRefSchema,
+  GitFilePathSchema,
 } from '../schemas/common.js';
 import {
   createToolHandler,
@@ -32,10 +33,9 @@ const InputSchema = z
       .enum(['list', 'add', 'remove', 'move', 'prune'])
       .default('list')
       .describe('The worktree operation to perform.'),
-    worktreePath: z
-      .string()
-      .optional()
-      .describe('Path for the new worktree (for add/move operations).'),
+    worktreePath: GitFilePathSchema.optional().describe(
+      'Path for the new worktree (for add/move operations). Must not start with "-".',
+    ),
     branch: BranchNameSchema.optional().describe(
       'For add operation: create a NEW branch with this name in the new worktree. Fails if the branch already exists — use `commitish` to check out an existing branch instead.',
     ),
@@ -48,10 +48,9 @@ const InputSchema = z
       .describe(
         'Force operation (for remove operation with uncommitted changes).',
       ),
-    newPath: z
-      .string()
-      .optional()
-      .describe('New path for the worktree (for move operation).'),
+    newPath: GitFilePathSchema.optional().describe(
+      'New path for the worktree (for move operation). Must not start with "-".',
+    ),
     detach: z
       .boolean()
       .default(false)

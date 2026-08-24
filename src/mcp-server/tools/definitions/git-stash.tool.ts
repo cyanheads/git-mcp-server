@@ -7,6 +7,7 @@ import { z } from 'zod';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
 import {
+  CommitRefSchema,
   LimitSchema,
   PathSchema,
   normalizeMessage,
@@ -38,12 +39,9 @@ const InputSchema = z
       .string()
       .optional()
       .describe('Stash message description (for push operation).'),
-    stashRef: z
-      .string()
-      .optional()
-      .describe(
-        'Stash reference like stash@{0} (for pop/apply/drop operations).',
-      ),
+    stashRef: CommitRefSchema.optional().describe(
+      'Stash reference like stash@{0} (for pop/apply/drop operations). Must not start with "-".',
+    ),
     includeUntracked: z
       .boolean()
       .default(false)

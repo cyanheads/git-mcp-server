@@ -10,6 +10,7 @@ import {
   BranchNameSchema,
   CommitRefSchema,
   ForceSchema,
+  GitFilePathSchema,
 } from '../schemas/common.js';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import {
@@ -38,10 +39,10 @@ const InputSchema = z
       .describe('Create a new branch with the specified name.'),
     force: ForceSchema,
     paths: z
-      .array(z.string())
+      .array(GitFilePathSchema)
       .optional()
       .describe(
-        'Specific file paths to checkout/restore (relative to repository root).',
+        'Specific file paths to checkout/restore (relative to repository root). Entries must not start with "-".',
       ),
     track: z
       .boolean()

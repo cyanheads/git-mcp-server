@@ -36,7 +36,14 @@ export async function executeClone(
     );
     const cloneCwd = dirname(resolvedLocalPath);
 
-    const args: string[] = [options.remoteUrl, resolvedLocalPath];
+    /**
+     * Flags first, then `--end-of-options`, then positional args.
+     * `--end-of-options` stops git's option parser, so even a remoteUrl like
+     * `--config=core.sshCommand=<cmd>` is treated as a URL, not an option.
+     * Defense in depth — `GitUrlSchema` rejects leading-`-` URLs at the tool
+     * boundary; this guards against future code paths that bypass the schema.
+     */
+    const args: string[] = [];
 
     if (options.branch) {
       args.push('--branch', options.branch);
@@ -57,6 +64,8 @@ export async function executeClone(
     if (options.recurseSubmodules) {
       args.push('--recurse-submodules');
     }
+
+    args.push('--end-of-options', options.remoteUrl, resolvedLocalPath);
 
     const cmd = buildGitCommand({ command: 'clone', args });
     await execGit(cmd, cloneCwd, context.requestContext);

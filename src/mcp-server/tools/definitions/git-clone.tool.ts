@@ -6,7 +6,12 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { DepthSchema } from '../schemas/common.js';
+import {
+  BranchNameSchema,
+  DepthSchema,
+  GitFilePathSchema,
+  GitUrlSchema,
+} from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -23,20 +28,13 @@ const TOOL_DESCRIPTION =
 
 const InputSchema = z
   .object({
-    url: z
-      .string()
-      .min(1)
-      .describe(
-        'Source to clone from: HTTP(S) URL, SSH URL (ssh://… or git@host:path), git:// URL, file:// URL, or a bare filesystem path (e.g. /tmp/repo.git).',
-      ),
-    path: z
-      .string()
-      .min(1)
-      .describe('Destination path where the repository should be cloned.'),
-    branch: z
-      .string()
-      .optional()
-      .describe('Specific branch to clone (defaults to remote HEAD).'),
+    url: GitUrlSchema,
+    path: GitFilePathSchema.describe(
+      'Destination path where the repository should be cloned. Must not start with "-".',
+    ),
+    branch: BranchNameSchema.optional().describe(
+      'Specific branch to clone (defaults to remote HEAD). Must not start with "-".',
+    ),
     depth: DepthSchema,
     bare: z
       .boolean()

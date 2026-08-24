@@ -239,4 +239,74 @@ describe('executeClone', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('argv ordering (argument-injection defense)', () => {
+    // GHSA-86j2-w37r-q256 / CVE-2017-1000117 class. Even if the schema layer
+    // is bypassed and a leading-dash URL reaches the service, --end-of-options
+    // tells git's parser to stop interpreting flags. These tests pin that
+    // contract — if anyone reorders the args array, the test fails loudly.
+
+    it('emits --end-of-options before the remoteUrl', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeClone(
+        {
+          remoteUrl: 'https://github.com/user/repo.git',
+          localPath: '/clone/target',
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const endIdx = args.indexOf('--end-of-options');
+      const urlIdx = args.indexOf('https://github.com/user/repo.git');
+
+      expect(endIdx).toBeGreaterThanOrEqual(0);
+      expect(urlIdx).toBeGreaterThan(endIdx);
+    });
+
+    it('emits --end-of-options before localPath too', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeClone(
+        {
+          remoteUrl: 'https://github.com/user/repo.git',
+          localPath: '/clone/target',
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const endIdx = args.indexOf('--end-of-options');
+      const pathIdx = args.indexOf('/clone/target');
+
+      expect(endIdx).toBeGreaterThanOrEqual(0);
+      expect(pathIdx).toBeGreaterThan(endIdx);
+    });
+
+    it('keeps option flags before --end-of-options', async () => {
+      mockExecGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await executeClone(
+        {
+          remoteUrl: 'https://github.com/user/repo.git',
+          localPath: '/clone/target',
+          branch: 'feature',
+          depth: 5,
+          bare: true,
+        },
+        mockContext,
+        mockExecGit,
+      );
+
+      const [args] = mockExecGit.mock.calls[0]!;
+      const endIdx = args.indexOf('--end-of-options');
+
+      expect(args.indexOf('--branch')).toBeLessThan(endIdx);
+      expect(args.indexOf('--depth')).toBeLessThan(endIdx);
+      expect(args.indexOf('--bare')).toBeLessThan(endIdx);
+    });
+  });
 });

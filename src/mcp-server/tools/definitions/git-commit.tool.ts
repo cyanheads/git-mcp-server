@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
 import {
   CommitMessageSchema,
+  GitFilePathSchema,
   NoVerifySchema,
   PathSchema,
 } from '../schemas/common.js';
@@ -60,10 +61,10 @@ const InputSchema = z
       .describe('Allow creating a commit with no changes.'),
     noVerify: NoVerifySchema,
     filesToStage: z
-      .array(z.string())
+      .array(GitFilePathSchema)
       .optional()
       .describe(
-        'File paths to stage before committing (atomic stage+commit operation).',
+        'File paths to stage before committing (atomic stage+commit operation). Entries must not start with "-".',
       ),
   })
   .strict();

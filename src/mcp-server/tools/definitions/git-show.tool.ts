@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema, CommitRefSchema } from '../schemas/common.js';
+import {
+  PathSchema,
+  CommitRefSchema,
+  GitFilePathSchema,
+} from '../schemas/common.js';
 import {
   createToolHandler,
   type ToolLogicDependencies,
@@ -37,12 +41,9 @@ const InputSchema = z
       .boolean()
       .default(false)
       .describe('Show diffstat instead of full diff.'),
-    filePath: z
-      .string()
-      .optional()
-      .describe(
-        'View specific file at a given commit reference. When provided, shows the file content from the specified object.',
-      ),
+    filePath: GitFilePathSchema.optional().describe(
+      'View specific file at a given commit reference. When provided, shows the file content from the specified object. Must not start with "-".',
+    ),
   })
   .strict();
 

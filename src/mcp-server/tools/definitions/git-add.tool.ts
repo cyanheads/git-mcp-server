@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { PathSchema, AllSchema } from '../schemas/common.js';
+import { PathSchema, AllSchema, GitFilePathSchema } from '../schemas/common.js';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import {
   createToolHandler,
@@ -26,10 +26,10 @@ const InputSchema = z
   .object({
     path: PathSchema,
     paths: z
-      .array(z.string())
+      .array(GitFilePathSchema)
       .default([])
       .describe(
-        'Array of file or directory paths to stage (relative to repository root). Use ["."] to stage all changes. Can be omitted when all or update is true.',
+        'Array of file or directory paths to stage (relative to repository root). Use ["."] to stage all changes. Paths must not start with "-" — use "./-name" for filenames starting with a dash. Can be omitted when all or update is true.',
       ),
     update: z
       .boolean()

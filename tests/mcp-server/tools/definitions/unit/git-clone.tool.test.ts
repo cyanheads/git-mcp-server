@@ -159,6 +159,80 @@ describe('git_clone tool', () => {
       const result = gitCloneTool.inputSchema.safeParse(input);
       expect(result.success).toBe(false);
     });
+
+    describe('argument injection — URL field (GHSA-86j2-w37r-q256)', () => {
+      // The reporter's advisory PoC and the broader CVE-2017-1000117 class.
+      // Each input below is a real-world or canonical attack payload —
+      // the schema must reject every one.
+
+      it('rejects URL starting with --config=core.sshCommand= (advisory PoC)', () => {
+        const input = {
+          url: '--config=core.sshCommand=touch /tmp/pwned',
+          path: '/tmp/dest',
+        };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects URL starting with --upload-pack= (CVE-2017-1000117)', () => {
+        const input = {
+          url: '--upload-pack=touch /tmp/pwned',
+          path: '/tmp/dest',
+        };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects URL starting with -oProxyCommand= (canonical example)', () => {
+        const input = {
+          url: '-oProxyCommand=touch /tmp/pwned',
+          path: '/tmp/dest',
+        };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects URL that is just a single dash', () => {
+        const input = { url: '-', path: '/tmp/dest' };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects URL with unrecognized scheme', () => {
+        const input = { url: 'javascript:alert(1)', path: '/tmp/dest' };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects scp-style URL with leading-dash path (smuggled option)', () => {
+        // git@host:-flag — the colon-separated path can't start with -
+        const input = {
+          url: 'git@github.com:-upload-pack=evil',
+          path: '/tmp/dest',
+        };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects path field starting with dash', () => {
+        const input = {
+          url: 'https://github.com/test/repo.git',
+          path: '--evil',
+        };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+
+      it('rejects branch field starting with dash', () => {
+        const input = {
+          url: 'https://github.com/test/repo.git',
+          path: '/tmp/dest',
+          branch: '--upload-pack=evil',
+        };
+        const result = gitCloneTool.inputSchema.safeParse(input);
+        expect(result.success).toBe(false);
+      });
+    });
   });
 
   describe('Tool Logic', () => {

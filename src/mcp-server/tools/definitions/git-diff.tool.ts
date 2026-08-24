@@ -5,7 +5,11 @@
 import { z } from 'zod';
 
 import { withToolAuth } from '@/mcp-server/transports/auth/lib/withAuth.js';
-import { CommitRefSchema, PathSchema } from '../schemas/common.js';
+import {
+  CommitRefSchema,
+  GitFilePathSchema,
+  PathSchema,
+} from '../schemas/common.js';
 import type { ToolDefinition } from '../utils/toolDefinition.js';
 import {
   createToolHandler,
@@ -56,10 +60,10 @@ const InputSchema = z
       'Source commit/branch to compare from. If target is specified but not source, compares target against working tree.',
     ),
     paths: z
-      .array(z.string())
+      .array(GitFilePathSchema)
       .optional()
       .describe(
-        'Limit diff to specific file paths (relative to repository root).',
+        'Limit diff to specific file paths (relative to repository root). Entries must not start with "-".',
       ),
     staged: z
       .boolean()

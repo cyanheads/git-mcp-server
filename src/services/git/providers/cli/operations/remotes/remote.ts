@@ -79,7 +79,7 @@ export async function executeRemote(
           throw new Error('Remote name and URL are required for add operation');
         }
 
-        args.push('add', options.name, options.url);
+        args.push('add', '--end-of-options', options.name, options.url);
 
         const cmd = buildGitCommand({ command: 'remote', args });
         await execGit(cmd, context.workingDirectory, context.requestContext);
@@ -163,11 +163,13 @@ export async function executeRemote(
           );
         }
 
-        args.push('set-url', options.name, options.url);
+        args.push('set-url');
 
         if (options.push) {
           args.push('--push');
         }
+
+        args.push('--end-of-options', options.name, options.url);
 
         const cmd = buildGitCommand({ command: 'remote', args });
         await execGit(cmd, context.workingDirectory, context.requestContext);
