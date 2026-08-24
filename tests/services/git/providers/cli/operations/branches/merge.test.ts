@@ -255,8 +255,7 @@ Automatic merge failed; fix conflicts and then commit the result.`;
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('-m');
-      expect(args).toContain('Merge feature branch');
+      expect(args).toContain('--message=Merge feature branch');
     });
 
     it('returns custom message in result', async () => {
@@ -305,8 +304,7 @@ Automatic merge failed; fix conflicts and then commit the result.`;
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('--no-ff');
       expect(args).toContain('--squash');
-      expect(args).toContain('-m');
-      expect(args).toContain('Squash merge');
+      expect(args).toContain('--message=Squash merge');
     });
   });
 

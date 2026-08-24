@@ -1,9 +1,12 @@
 /**
- * @fileoverview Pins the `validateGitArgs` allow-list to what the CLI
- * operations actually emit. Every `-`-prefixed literal in
- * `src/services/git/providers/cli/operations/` must pass the validator —
- * a flag the operations use but the allow-list omits is a runtime failure
- * for that tool path that mocked-`execGit` unit tests never see.
+ * @fileoverview Pins the `validateGitArgs` allow-list to what the CLI provider
+ * actually emits. Every `-`-prefixed literal anywhere under
+ * `src/services/git/providers/cli/` — the operations, the pre-flight
+ * validators, and the provider itself — must pass the validator. A flag the
+ * provider uses but the allow-list omits is a runtime failure for that tool
+ * path that mocked-`execGit` unit tests never see (2.15.2 shipped exactly that:
+ * `git rev-parse --is-inside-work-tree` in the validators was never swept, so
+ * `git_set_working_dir` failed on every path).
  * @module tests/services/git/providers/cli/utils/allow-list-coverage.test
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -12,7 +15,9 @@ import { describe, expect, it } from 'vitest';
 
 import { validateGitArgs } from '@/services/git/providers/cli/utils/command-builder.js';
 
-const OPERATIONS_DIR = 'src/services/git/providers/cli/operations';
+/** The whole CLI provider — every file that can reach `executeGitCommand`. */
+const OPERATIONS_DIR = 'src/services/git/providers/cli';
+const ALLOW_LIST_FILE = join(OPERATIONS_DIR, 'utils', 'command-builder.ts');
 
 function listSourceFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -34,6 +39,7 @@ function stripComments(source: string): string {
 function collectFlagLiterals(): Map<string, string[]> {
   const flags = new Map<string, string[]>();
   for (const file of listSourceFiles(OPERATIONS_DIR)) {
+    if (file === ALLOW_LIST_FILE) continue; // the list itself is not an emitter
     const source = stripComments(readFileSync(file, 'utf8'));
     for (const match of source.matchAll(/['"`](-{1,2}[A-Za-z][\w-]*|--)/g)) {
       const flag = match[1]!;
@@ -50,6 +56,46 @@ describe('validateGitArgs allow-list covers every flag the operations emit', () 
 
   it('finds the operation sources', () => {
     expect(flags.size).toBeGreaterThan(50);
+  });
+
+  it('sweeps the pre-flight validators and the provider, not only operations/', () => {
+    const files = new Set([...flags.values()].flat());
+    expect(files).toContain('utils/git-validators.ts');
+    expect(files).toContain('CliGitProvider.ts');
+    expect(flags.has('--is-inside-work-tree')).toBe(true);
+  });
+
+  it('accepts every rev-parse probe the validators emit', () => {
+    expect(() =>
+      validateGitArgs(['rev-parse', '--is-inside-work-tree']),
+    ).not.toThrow();
+    expect(() =>
+      validateGitArgs(['rev-parse', '--show-toplevel']),
+    ).not.toThrow();
+    expect(() =>
+      validateGitArgs(['rev-parse', '--verify', 'refs/heads/main']),
+    ).not.toThrow();
+  });
+
+  it('a message that starts with "-" is safe when attached to --message=', () => {
+    expect(() =>
+      validateGitArgs(['--message=-fix: leading dash']),
+    ).not.toThrow();
+    expect(() => validateGitArgs(['--message=--amend'])).not.toThrow();
+    // The two-argv form the operations used to emit is exactly what the
+    // validator must keep rejecting — the message would parse as a flag.
+    expect(() => validateGitArgs(['-m', '-fix: leading dash'])).toThrow(
+      /Unsafe git flag/i,
+    );
+  });
+
+  it('no operation emits a message as a standalone argv entry after -m', () => {
+    for (const file of listSourceFiles(OPERATIONS_DIR)) {
+      const source = stripComments(readFileSync(file, 'utf8'));
+      expect(source, relative(OPERATIONS_DIR, file)).not.toMatch(
+        /'-m',\s*(?:options\.)?message\b/,
+      );
+    }
   });
 
   for (const [flag, files] of [...flags.entries()].sort()) {

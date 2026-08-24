@@ -40,7 +40,7 @@ export async function executeCommit(
       await execGit(addCmd, context.workingDirectory, context.requestContext);
     }
 
-    const args: string[] = ['-m', options.message];
+    const args: string[] = [`--message=${options.message}`];
 
     if (options.amend) {
       args.push('--amend');

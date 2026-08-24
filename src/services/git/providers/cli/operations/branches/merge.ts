@@ -54,7 +54,7 @@ export async function executeMerge(
       }
 
       if (options.message) {
-        args.push('-m', options.message);
+        args.push(`--message=${options.message}`);
       }
 
       if (shouldSignCommits()) {

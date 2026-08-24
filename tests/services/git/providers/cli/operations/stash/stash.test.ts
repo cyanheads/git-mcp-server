@@ -150,8 +150,7 @@ describe('executeStash', () => {
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('-m');
-      expect(args).toContain('save my work');
+      expect(args).toContain('--message=save my work');
     });
 
     it('includes untracked files when includeUntracked is true', async () => {
@@ -204,8 +203,7 @@ describe('executeStash', () => {
       );
 
       const [args] = mockExecGit.mock.calls[0]!;
-      expect(args).toContain('-m');
-      expect(args).toContain('wip');
+      expect(args).toContain('--message=wip');
       expect(args).toContain('--include-untracked');
       expect(args).toContain('--keep-index');
     });

@@ -94,7 +94,7 @@ export async function executeStash(
 
       case 'push': {
         if (options.message) {
-          args.push('-m', options.message);
+          args.push(`--message=${options.message}`);
         }
 
         if (options.includeUntracked) {

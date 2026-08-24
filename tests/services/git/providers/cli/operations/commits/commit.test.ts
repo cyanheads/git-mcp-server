@@ -67,7 +67,7 @@ describe('executeCommit', () => {
       expect(result.filesChanged).toContain('README.md');
     });
 
-    it('passes -m flag with the commit message', async () => {
+    it('passes the commit message attached to --message=', async () => {
       mockExecGit
         .mockResolvedValueOnce({ stdout: '', stderr: '' })
         .mockResolvedValueOnce({ stdout: 'abc123\n', stderr: '' })
@@ -84,8 +84,7 @@ describe('executeCommit', () => {
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('commit');
-      expect(args).toContain('-m');
-      expect(args).toContain('fix: resolve bug');
+      expect(args).toContain('--message=fix: resolve bug');
     });
   });
 

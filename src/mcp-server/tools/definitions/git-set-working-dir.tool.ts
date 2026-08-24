@@ -80,10 +80,23 @@ type ToolInput = z.infer<typeof InputSchema>;
 type ToolOutput = z.infer<typeof OutputSchema>;
 
 /**
+ * True only when the validator established that git ran and answered "not a
+ * repository" (or the path does not exist). Anything else — the argument
+ * validator rejecting the probe, git missing from PATH, a timeout — is an
+ * infrastructure failure and must surface verbatim, never as "not a repo".
+ */
+function isNotARepositoryError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /not a git repository|does not exist|not a directory/i.test(message);
+}
+
+/**
  * Ensure the target path is a git repository before we pin it as the session
  * working directory. Owns its own try/catch because the fallback path
- * (initialize-if-missing) treats the thrown validation error as a signal rather
- * than a failure. Throws an actionable McpError when no fallback is available.
+ * (initialize-if-missing) treats a genuine "not a repository" answer as a
+ * signal rather than a failure. Throws an actionable McpError when no fallback
+ * is available, and rethrows every other failure untouched so a broken probe
+ * can never trigger `git init` or read as a verdict about the path.
  */
 async function ensureRepositoryReady(
   input: ToolInput,
@@ -103,6 +116,9 @@ async function ensureRepositoryReady(
     await provider.validateRepository(input.path, opContext);
     return;
   } catch (error) {
+    if (!isNotARepositoryError(error)) {
+      throw error;
+    }
     if (input.initializeIfNotPresent) {
       await provider.init(
         { path: input.path, initialBranch: 'main', bare: false },

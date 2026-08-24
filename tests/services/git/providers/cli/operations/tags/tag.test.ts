@@ -147,7 +147,7 @@ describe('executeTag', () => {
       expect(args).toContain('tag');
       expect(args).toContain('v1.0.0');
       expect(args).not.toContain('-a');
-      expect(args).not.toContain('-m');
+      expect(args.some((a: string) => a.startsWith('--message='))).toBe(false);
       expect(result.mode).toBe('create');
       expect(result.created).toBe('v1.0.0');
     });
@@ -191,8 +191,7 @@ describe('executeTag', () => {
       expect(args).toContain('tag');
       expect(args).toContain('v2.0.0');
       expect(args).toContain('-a');
-      expect(args).toContain('-m');
-      expect(args).toContain('Release version 2.0.0');
+      expect(args).toContain('--message=Release version 2.0.0');
       expect(result.created).toBe('v2.0.0');
     });
 
@@ -242,7 +241,7 @@ describe('executeTag', () => {
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).not.toContain('-a');
-      expect(args).not.toContain('-m');
+      expect(args.some((a: string) => a.startsWith('--message='))).toBe(false);
     });
 
     it('creates a signed tag and reports signed: true when GIT_SIGN_COMMITS is enabled and signing succeeds', async () => {
@@ -262,8 +261,7 @@ describe('executeTag', () => {
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-s');
-      expect(args).toContain('-m');
-      expect(args).toContain('Tag v1.0.0');
+      expect(args).toContain('--message=Tag v1.0.0');
       expect(result.signed).toBe(true);
       expect(result.signingWarning).toBeUndefined();
     });
@@ -289,8 +287,7 @@ describe('executeTag', () => {
 
       const [args] = mockExecGit.mock.calls[0]!;
       expect(args).toContain('-s');
-      expect(args).toContain('-m');
-      expect(args).toContain('Custom message');
+      expect(args).toContain('--message=Custom message');
       expect(result.signed).toBe(true);
     });
 

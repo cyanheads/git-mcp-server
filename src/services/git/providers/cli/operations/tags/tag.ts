@@ -121,13 +121,13 @@ export async function executeTag(
 
           if (sign) {
             const message = options.message || `Tag ${options.tagName}`;
-            createArgs.push('-s', '-m', message);
+            createArgs.push('-s', `--message=${message}`);
           } else if (options.message) {
-            createArgs.push('-a', '-m', options.message);
+            createArgs.push('-a', `--message=${options.message}`);
           } else if (options.annotated) {
             // Annotated without message — git would open an editor,
             // which doesn't work in MCP context. Use tag name as default message.
-            createArgs.push('-a', '-m', `Tag ${options.tagName}`);
+            createArgs.push('-a', `--message=Tag ${options.tagName}`);
           }
 
           if (options.commit) {

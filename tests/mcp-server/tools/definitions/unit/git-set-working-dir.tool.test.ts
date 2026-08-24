@@ -252,6 +252,50 @@ describe('git_set_working_dir tool', () => {
       expect(result.success).toBe(true);
     });
 
+    it('rethrows a validator infrastructure failure verbatim instead of calling it "not a repository"', async () => {
+      mockProvider.validateRepository.mockRejectedValue(
+        new Error(
+          'Git rev-parse failed: Unsafe git flag rejected: --is-inside-work-tree',
+        ),
+      );
+
+      const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
+        path: '/real/repo',
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      const outcome = await gitSetWorkingDirTool
+        .logic(parsedInput, appContext, sdkContext)
+        .then(
+          () => null,
+          (error: unknown) => error as Error,
+        );
+
+      expect(outcome).toBeInstanceOf(Error);
+      expect(outcome!.message).toMatch(/Unsafe git flag rejected/);
+      expect(outcome!.message).not.toMatch(/not a git repository/i);
+      expect(outcome!.message).not.toMatch(/initializeIfNotPresent/);
+    });
+
+    it('never runs git init when the validator itself failed, even with initializeIfNotPresent', async () => {
+      mockProvider.validateRepository.mockRejectedValue(
+        new Error('Git command timed out after 60s: git rev-parse'),
+      );
+
+      const parsedInput = gitSetWorkingDirTool.inputSchema.parse({
+        path: '/real/repo',
+        initializeIfNotPresent: true,
+      });
+      const appContext = createTestContext({ tenantId: 'test-tenant' });
+      const sdkContext = createTestSdkContext();
+
+      await expect(
+        gitSetWorkingDirTool.logic(parsedInput, appContext, sdkContext),
+      ).rejects.toThrow(/timed out/);
+      expect(mockProvider.init).not.toHaveBeenCalled();
+    });
+
     it('throws an actionable McpError when validation fails without init fallback', async () => {
       mockProvider.validateRepository.mockRejectedValue(
         new Error('Not a git repository'),
