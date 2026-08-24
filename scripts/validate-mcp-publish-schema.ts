@@ -20,7 +20,7 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import axios from 'axios';
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -32,6 +32,46 @@ const MCP_SCHEMA_URL =
 const MCP_REGISTRY_URL = 'https://registry.modelcontextprotocol.io/v0/servers';
 
 // --- Helper Functions ---
+
+/**
+ * Authenticate mcp-publisher with GitHub. Uses the PAT stored in the macOS
+ * Keychain (service `mcp-publisher-github-pat`) when present so the step runs
+ * unattended; otherwise falls back to the interactive device-code login.
+ */
+function loginToRegistry() {
+  let token = '';
+  try {
+    token = execFileSync(
+      'security',
+      [
+        'find-generic-password',
+        '-a',
+        process.env.USER ?? '',
+        '-s',
+        'mcp-publisher-github-pat',
+        '-w',
+      ],
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    )
+      .toString()
+      .trim();
+  } catch (_error) {
+    token = '';
+  }
+  if (!token) {
+    runCommand('mcp-publisher login github', 'Authenticate with GitHub');
+    return;
+  }
+  console.log(
+    '\n--- 🚀 Starting Step: Authenticate with GitHub (Keychain token) ---',
+  );
+  execFileSync('mcp-publisher', ['login', 'github', '-token', token], {
+    stdio: 'inherit',
+  });
+  console.log(
+    '--- ✅ Finished Step: Authenticate with GitHub (Keychain token) ---',
+  );
+}
 
 function runCommand(command: string, stepName: string) {
   console.log(`\n--- 🚀 Starting Step: ${stepName} ---`);
@@ -193,7 +233,7 @@ async function main() {
     console.log(
       '\n⚪ --publish-only flag detected. Skipping local file changes.',
     );
-    runCommand('mcp-publisher login github', 'Authenticate with GitHub');
+    loginToRegistry();
     runCommand('mcp-publisher publish', 'Publish to MCP Registry');
     const pkg = JSON.parse(await fs.readFile(PACKAGE_JSON_PATH, 'utf-8'));
     await verifyPublication(pkg.mcpName);
@@ -221,7 +261,7 @@ async function main() {
     console.log('\n⚪ --no-commit flag detected. Skipping auto-commit.');
   }
 
-  runCommand('mcp-publisher login github', 'Authenticate with GitHub');
+  loginToRegistry();
   runCommand('mcp-publisher publish', 'Publish to MCP Registry');
   await verifyPublication(mcpName);
 
