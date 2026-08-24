@@ -8,15 +8,20 @@ import {
   McpServer,
   type ToolCallback,
 } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { type DependencyContainer, injectable, injectAll } from 'tsyringe';
 import type { z } from 'zod';
 
-import { ToolDefinitions } from '@/container/index.js';
+import { ToolDefinitions } from '@/container/tokens.js';
 import { JsonRpcErrorCode } from '@/types-global/errors.js';
 import { ErrorHandler, logger, requestContextService } from '@/utils/index.js';
 import { allToolDefinitions } from '@/mcp-server/tools/definitions/index.js';
 import type { ToolDefinition } from '@/mcp-server/tools/utils/toolDefinition.js';
 import { createMcpToolHandler } from '@/mcp-server/tools/utils/toolHandlerFactory.js';
+import {
+  buildToolListing,
+  deriveToolTitle,
+} from '@/mcp-server/tools/utils/toolListing.js';
 
 @injectable()
 export class ToolRegistry {
@@ -29,7 +34,11 @@ export class ToolRegistry {
   ) {}
 
   /**
-   * Registers all resolved tool definitions with the provided McpServer instance.
+   * Registers all resolved tool definitions with the provided McpServer instance,
+   * then replaces the SDK's `tools/list` handler with one that advertises every
+   * schema as JSON Schema 2020-12 (see `buildToolListing`). `registerTool` keeps
+   * the Zod schemas for `tools/call` argument and result validation; only the
+   * advertised listing changes.
    * @param {McpServer} server - The server instance to register tools with.
    */
   public async registerAll(server: McpServer): Promise<void> {
@@ -40,12 +49,14 @@ export class ToolRegistry {
     for (const toolDef of this.toolDefs) {
       await this.registerTool(server, toolDef);
     }
-  }
 
-  private deriveTitleFromName(name: string): string {
-    return name
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+    server.server.setRequestHandler(ListToolsRequestSchema, () =>
+      buildToolListing(this.toolDefs),
+    );
+    logger.debug(
+      'tools/list handler installed (JSON Schema 2020-12 emission).',
+      context,
+    );
   }
 
   private async registerTool<
@@ -74,9 +85,7 @@ export class ToolRegistry {
         });
 
         const title =
-          tool.title ??
-          tool.annotations?.title ??
-          this.deriveTitleFromName(tool.name);
+          tool.title ?? tool.annotations?.title ?? deriveToolTitle(tool.name);
 
         server.registerTool(
           tool.name,
