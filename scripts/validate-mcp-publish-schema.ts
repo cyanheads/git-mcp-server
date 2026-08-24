@@ -111,7 +111,10 @@ async function syncMetadata(): Promise<{ version: string; mcpName: string }> {
       console.log(`Updated version for ${server.packages.length} package(s).`);
     }
 
-    await fs.writeFile(SERVER_JSON_PATH, JSON.stringify(server, null, 2));
+    await fs.writeFile(
+      SERVER_JSON_PATH,
+      `${JSON.stringify(server, null, 2)}\n`,
+    );
     console.log(`Synced server.json to version "${version}".`);
     console.log(`--- ✅ Finished Step: ${stepName} ---`);
     return { version, mcpName };
