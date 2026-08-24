@@ -1,8 +1,8 @@
 # Agent Protocol & Architectural Mandate
 
-**Version:** 2.15.0
+**Version:** 2.15.2
 **Target Project:** git-mcp-server
-**Last Updated:** 2026-04-28
+**Last Updated:** 2026-08-24
 
 This document defines the operational rules for contributing to this codebase. Follow it exactly.
 

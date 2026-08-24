@@ -1,6 +1,6 @@
 # git-mcp-server - Directory Structure
 
-Generated on: 2026-04-24 01:48:15
+Generated on: 2026-08-24 20:46:46
 
 ```
 git-mcp-server
@@ -100,7 +100,8 @@ git-mcp-server
 │   │   │   │   ├── markdown-builder.ts
 │   │   │   │   ├── repo-snapshot.ts
 │   │   │   │   ├── toolDefinition.ts
-│   │   │   │   └── toolHandlerFactory.ts
+│   │   │   │   ├── toolHandlerFactory.ts
+│   │   │   │   └── toolListing.ts
 │   │   │   └── tool-registration.ts
 │   │   ├── transports
 │   │   │   ├── auth
@@ -289,20 +290,27 @@ git-mcp-server
 │   │   │   │   │   └── git-wrapup-instructions.tool.test.ts
 │   │   │   │   └── README.md
 │   │   │   ├── schemas
-│   │   │   │   └── common.test.ts
-│   │   │   └── utils
-│   │   │       ├── git-validators.test.ts
-│   │   │       ├── json-response-formatter.test.ts
-│   │   │       ├── markdown-builder.test.ts
-│   │   │       └── repo-snapshot.test.ts
+│   │   │   │   ├── common.test.ts
+│   │   │   │   └── positional-fields.test.ts
+│   │   │   ├── utils
+│   │   │   │   ├── git-validators.test.ts
+│   │   │   │   ├── json-response-formatter.test.ts
+│   │   │   │   ├── markdown-builder.test.ts
+│   │   │   │   ├── repo-snapshot.test.ts
+│   │   │   │   └── toolListing.test.ts
+│   │   │   └── tool-registration.test.ts
 │   │   └── transports
-│   │       └── auth
-│   │           └── lib
-│   │               ├── authUtils.test.ts
-│   │               └── withAuth.test.ts
+│   │       ├── auth
+│   │       │   └── lib
+│   │       │       ├── authUtils.test.ts
+│   │       │       └── withAuth.test.ts
+│   │       └── stdio
+│   │           └── tool-listing.e2e.test.ts
 │   ├── mocks
 │   │   ├── handlers.ts
 │   │   └── server.ts
+│   ├── security
+│   │   └── argument-injection.test.ts
 │   ├── services
 │   │   └── git
 │   │       └── providers
@@ -342,6 +350,7 @@ git-mcp-server
 │   │               │   └── worktree
 │   │               │       └── worktree.test.ts
 │   │               └── utils
+│   │                   ├── allow-list-coverage.test.ts
 │   │                   ├── command-builder.test.ts
 │   │                   ├── git-executor.test.ts
 │   │                   └── runtime-adapter.test.ts
