@@ -336,12 +336,16 @@ const ALL_CHECKS: Check[] = [
       }
 
       // It exits with a non-zero code if outdated packages are found.
-      // We consider this a "success" for our script's purposes if only 'zod' is outdated.
+      // Deliberately held packages are allowed to show as outdated:
+      //   zod                       — patch-pinned (~) so JSON Schema emission stays stable across Zod 4 minors
+      //   typescript                — typescript-eslint peers `<6.1.0`; TypeScript 7 is not yet supported
+      //   @cloudflare/workers-types — 5.20260817.1+ declares a global `Buffer: any` that degrades every Node Buffer type
+      const heldPackages = ['zod', 'typescript', '@cloudflare/workers-types'];
       const lines = result.stdout.trim().split('\n');
       const otherOutdated = lines.filter(
         (line) =>
           line.includes('|') && // Actual package lines contain pipes
-          !line.includes('zod') &&
+          !heldPackages.some((pkg) => line.includes(`| ${pkg} `)) &&
           !line.includes('Package') && // Exclude header
           !line.includes('---'), // Exclude separator
       );
@@ -350,7 +354,7 @@ const ALL_CHECKS: Check[] = [
       return otherOutdated.length === 0;
     },
     tip: (c) =>
-      `Run ${c.bold('bun update')} to upgrade dependencies, but be mindful of the 'zod' constraint due to the MCP SDK's hard requirements.`,
+      `Run ${c.bold('bun update')} to upgrade dependencies. zod, typescript, and @cloudflare/workers-types are deliberately held (see heldPackages above).`,
   },
 ];
 
