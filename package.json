@@ -137,7 +137,7 @@
     "version-control",
     "worktree"
   ],
-  "author": "cyanheads <casey@caseyjhand.com> (https://github.com/cyanheads/git-mcp-server#readme)",
+  "author": "Casey Hand <casey@caseyjhand.com> (https://caseyjhand.com)",
   "license": "Apache-2.0",
   "funding": [
     {
