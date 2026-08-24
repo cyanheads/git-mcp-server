@@ -105,7 +105,8 @@ describe('stdio transport: every tool runs through the real argument validator',
 
     const env = { ...(process.env as Record<string, string>) };
     delete env.GIT_BASE_DIR;
-    delete env.GIT_SIGN_COMMITS;
+    // Signing defaults to on; the runner has no key and this suite tests argv, not signing.
+    env.GIT_SIGN_COMMITS = 'false';
     client = new Client({ name: 'tool-argv-e2e', version: '0.0.0' });
     await client.connect(
       new StdioClientTransport({
